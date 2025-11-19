@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>SE7EN</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchScreenBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchIcon</string>
+	</dict>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>SE7EN needs access to your screen time data to help you stay accountable to your daily app usage goals.</string>
+	<key>NSFamilyControlsUsageDescription</key>
+	<string>SE7EN monitors your app usage to help you maintain discipline and reach your daily goals.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram</string>
+		<string>fb</string>
+		<string>twitter</string>
+		<string>tiktok</string>
+		<string>snapchat</string>
+		<string>youtube</string>
+		<string>reddit</string>
+		<string>whatsapp</string>
+		<string>tg</string>
+		<string>discord</string>
+		<string>nflx</string>
+		<string>spotify</string>
+		<string>amazon</string>
+		<string>uber</string>
+		<string>lyft</string>
+		<string>pinterest</string>
+		<string>linkedin</string>
+		<string>twitch</string>
+		<string>zoomus</string>
+		<string>slack</string>
+		<string>googlegmail</string>
+		<string>googlechrome</string>
+		<string>firefox</string>
+		<string>dbapi-1</string>
+		<string>evernote</string>
+		<string>shazam</string>
+		<string>venmo</string>
+		<string>paypal</string>
+		<string>waze</string>
+		<string>yelp4</string>
+	</array>
+</dict>
+</plist>
+

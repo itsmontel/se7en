@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="21513" systemVersion="22A380" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="AppGoal" representedClassName="AppGoal" syncable="YES" codeGenerationType="class">
+        <attribute name="appBundleID" optional="NO" attributeType="String"/>
+        <attribute name="appName" optional="NO" attributeType="String"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dailyLimitMinutes" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isActive" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="usageRecords" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="AppUsageRecord" inverseName="appGoal" inverseEntity="AppUsageRecord"/>
+    </entity>
+    <entity name="AppUsageRecord" representedClassName="AppUsageRecord" syncable="YES" codeGenerationType="class">
+        <attribute name="actualUsageMinutes" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="didExceedLimit" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="appGoal" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="AppGoal" inverseName="usageRecords" inverseEntity="AppGoal"/>
+        <relationship name="creditLoss" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CreditTransaction" inverseName="usageRecord" inverseEntity="CreditTransaction"/>
+    </entity>
+    <entity name="AchievementRecord" representedClassName="AchievementRecord" syncable="YES" codeGenerationType="class">
+        <attribute name="achievementID" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="unlockedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="CreditTransaction" representedClassName="CreditTransaction" syncable="YES" codeGenerationType="class">
+        <attribute name="amount" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="reason" optional="NO" attributeType="String"/>
+        <attribute name="transactionType" optional="NO" attributeType="String"/>
+        <relationship name="usageRecord" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="AppUsageRecord" inverseName="creditLoss" inverseEntity="AppUsageRecord"/>
+        <relationship name="weeklyPlan" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WeeklyPlan" inverseName="transactions" inverseEntity="WeeklyPlan"/>
+    </entity>
+    <entity name="UserProfile" representedClassName="UserProfile" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="currentStreak" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="hasActiveSubscription" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="longestStreak" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="weeklyPlans" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="WeeklyPlan" inverseName="userProfile" inverseEntity="WeeklyPlan"/>
+    </entity>
+    <entity name="WeeklyPlan" representedClassName="WeeklyPlan" syncable="YES" codeGenerationType="class">
+        <attribute name="creditsRemaining" optional="NO" attributeType="Integer 32" defaultValueString="7" usesScalarValueType="YES"/>
+        <attribute name="endDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isCompleted" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="paymentAmount" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="startDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="transactions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CreditTransaction" inverseName="weeklyPlan" inverseEntity="CreditTransaction"/>
+        <relationship name="userProfile" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="UserProfile" inverseName="weeklyPlans" inverseEntity="UserProfile"/>
+    </entity>
+    <elements>
+        <element name="AppGoal" positionX="-63" positionY="-18" width="128" height="149"/>
+        <element name="AppUsageRecord" positionX="-54" positionY="27" width="128" height="119"/>
+        <element name="AchievementRecord" positionX="-36" positionY="81" width="128" height="74"/>
+        <element name="CreditTransaction" positionX="-18" positionY="108" width="128" height="134"/>
+        <element name="UserProfile" positionX="0" positionY="135" width="128" height="134"/>
+        <element name="WeeklyPlan" positionX="18" positionY="162" width="128" height="149"/>
+    </elements>
+</model>
+
