@@ -52,16 +52,22 @@
 		1043 /* CategoryAppSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2061 /* CategoryAppSelectionView.swift */; };
 		1045 /* PetSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2045 /* PetSelectionView.swift */; };
 		1046 /* PetPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2046 /* PetPreviewView.swift */; };
-		1047 /* MotivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2047 /* MotivationView.swift */; };
-		1048 /* DidYouKnowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2048 /* DidYouKnowView.swift */; };
-		1049 /* ScreenTimeInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2049 /* ScreenTimeInputView.swift */; };
-		1050 /* LifetimeCalculationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2050 /* LifetimeCalculationView.swift */; };
-		1051 /* ScreenTimeConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2051 /* ScreenTimeConnectionView.swift */; };
-		1052 /* PetHealthCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2052 /* PetHealthCard.swift */; };
-		1053 /* WhyChooseSE7ENView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2053 /* WhyChooseSE7ENView.swift */; };
-		1054 /* OnboardingBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2054 /* OnboardingBackButton.swift */; };
-		1055 /* OnboardingHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2055 /* OnboardingHeader.swift */; };
+		1047 /* VideoIntroductionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2062 /* VideoIntroductionView.swift */; };
+		1048 /* MotivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2047 /* MotivationView.swift */; };
+		1049 /* DidYouKnowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2048 /* DidYouKnowView.swift */; };
+		1050 /* ScreenTimeInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2049 /* ScreenTimeInputView.swift */; };
+		1051 /* LifetimeCalculationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2050 /* LifetimeCalculationView.swift */; };
+		1052 /* ScreenTimeConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2051 /* ScreenTimeConnectionView.swift */; };
+		1056 /* PetHealthCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2052 /* PetHealthCard.swift */; };
+		1054 /* WhyChooseSE7ENView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2053 /* WhyChooseSE7ENView.swift */; };
+		1055 /* OnboardingBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2054 /* OnboardingBackButton.swift */; };
+		1057 /* OnboardingHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2055 /* OnboardingHeader.swift */; };
 		1078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3026 /* Assets.xcassets */; };
+		1079 /* dogintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3027 /* dogintro.mp4 */; };
+		1080 /* catintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3028 /* catintro.mp4 */; };
+		1081 /* bunnyintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3029 /* bunnyintro.mp4 */; };
+		1082 /* hamsterintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3030 /* hamsterintro.mp4 */; };
+		1083 /* horseintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3031 /* horseintro.mp4 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -113,6 +119,7 @@
 		2061 /* CategoryAppSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/CategoryAppSelectionView.swift; sourceTree = "<group>"; };
 		2045 /* PetSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PetSelectionView.swift; sourceTree = "<group>"; };
 		2046 /* PetPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PetPreviewView.swift; sourceTree = "<group>"; };
+		2062 /* VideoIntroductionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/VideoIntroductionView.swift; sourceTree = "<group>"; };
 		2047 /* MotivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/MotivationView.swift; sourceTree = "<group>"; };
 		2048 /* DidYouKnowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/DidYouKnowView.swift; sourceTree = "<group>"; };
 		2049 /* ScreenTimeInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/ScreenTimeInputView.swift; sourceTree = "<group>"; };
@@ -123,6 +130,11 @@
 		2054 /* OnboardingBackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingBackButton.swift; sourceTree = "<group>"; };
 		2055 /* OnboardingHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingHeader.swift; sourceTree = "<group>"; };
 		3026 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3027 /* dogintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = dogintro.mp4; sourceTree = "<group>"; };
+		3028 /* catintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = catintro.mp4; sourceTree = "<group>"; };
+		3029 /* bunnyintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = bunnyintro.mp4; sourceTree = "<group>"; };
+		3030 /* hamsterintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = hamsterintro.mp4; sourceTree = "<group>"; };
+		3031 /* horseintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = horseintro.mp4; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -151,6 +163,11 @@
 				2042 /* Seven.entitlements */,
 				2043 /* Info.plist */,
 				3026 /* Assets.xcassets */,
+				3027 /* dogintro.mp4 */,
+				3028 /* catintro.mp4 */,
+				3029 /* bunnyintro.mp4 */,
+				3030 /* hamsterintro.mp4 */,
+				3031 /* horseintro.mp4 */,
 				91 /* Models */,
 				92 /* Views */,
 				93 /* Components */,
@@ -246,6 +263,7 @@
 				2010 /* WelcomeView.swift */,
 				2045 /* PetSelectionView.swift */,
 				2046 /* PetPreviewView.swift */,
+				2062 /* VideoIntroductionView.swift */,
 				2047 /* MotivationView.swift */,
 				2048 /* DidYouKnowView.swift */,
 				2049 /* ScreenTimeInputView.swift */,
@@ -371,6 +389,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				1078 /* Assets.xcassets in Resources */,
+				1079 /* dogintro.mp4 in Resources */,
+				1080 /* catintro.mp4 in Resources */,
+				1081 /* bunnyintro.mp4 in Resources */,
+				1082 /* hamsterintro.mp4 in Resources */,
+				1083 /* horseintro.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -393,20 +416,21 @@
 				1010 /* WelcomeView.swift in Sources */,
 				1045 /* PetSelectionView.swift in Sources */,
 				1046 /* PetPreviewView.swift in Sources */,
-				1047 /* MotivationView.swift in Sources */,
-				1048 /* DidYouKnowView.swift in Sources */,
-				1049 /* ScreenTimeInputView.swift in Sources */,
-				1050 /* LifetimeCalculationView.swift in Sources */,
-			1051 /* ScreenTimeConnectionView.swift in Sources */,
-			1053 /* WhyChooseSE7ENView.swift in Sources */,
-			1054 /* OnboardingBackButton.swift in Sources */,
-			1055 /* OnboardingHeader.swift in Sources */,
+				1047 /* VideoIntroductionView.swift in Sources */,
+				1048 /* MotivationView.swift in Sources */,
+				1049 /* DidYouKnowView.swift in Sources */,
+				1050 /* ScreenTimeInputView.swift in Sources */,
+				1051 /* LifetimeCalculationView.swift in Sources */,
+			1052 /* ScreenTimeConnectionView.swift in Sources */,
+			1054 /* WhyChooseSE7ENView.swift in Sources */,
+			1055 /* OnboardingBackButton.swift in Sources */,
+			1057 /* OnboardingHeader.swift in Sources */,
 			1011 /* HowItWorksView.swift in Sources */,
 				1012 /* WhyItWorksView.swift in Sources */,
 				1013 /* SetGoalsView.swift in Sources */,
 				1014 /* PaywallView.swift in Sources */,
 				1015 /* DashboardView.swift in Sources */,
-				1052 /* PetHealthCard.swift in Sources */,
+				1056 /* PetHealthCard.swift in Sources */,
 				1016 /* CreditRingView.swift in Sources */,
 				1017 /* DailySummaryCard.swift in Sources */,
 				1018 /* AppUsageCard.swift in Sources */,

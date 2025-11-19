@@ -22,7 +22,7 @@ struct ScreenTimeConnectionView: View {
             
             VStack(spacing: 0) {
                 // Header with back button and progress bar
-                OnboardingHeader(currentStep: 8, totalSteps: 8, showBackButton: true, onBack: onBack)
+                OnboardingHeader(currentStep: 10, totalSteps: 11, showBackButton: true, onBack: onBack)
                 
                 Spacer()
                 
@@ -119,7 +119,7 @@ struct ScreenTimeConnectionView: View {
         Task {
             do {
                 // Request notification permission first
-                await NotificationService.shared.requestNotificationPermission()
+                _ = await NotificationService.shared.requestNotificationPermission()
                 
                 // Then request Screen Time authorization
                 try await screenTimeService.requestAuthorization()

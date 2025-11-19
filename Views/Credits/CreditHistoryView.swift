@@ -196,7 +196,7 @@ struct StatsCard: View {
     
     var body: some View {
         HStack(spacing: 20) {
-            StatItem(
+            CreditStatItem(
                 title: "Credits Kept",
                 value: "\(creditsKept)",
                 color: .success
@@ -205,7 +205,7 @@ struct StatsCard: View {
             Divider()
                 .frame(height: 60)
             
-            StatItem(
+            CreditStatItem(
                 title: "Credits Lost",
                 value: "\(creditsLost)",
                 color: .error
@@ -238,7 +238,7 @@ struct StatsCard: View {
     }
 }
 
-struct StatItem: View {
+struct CreditStatItem: View {
     let title: String
     let value: String
     let color: Color

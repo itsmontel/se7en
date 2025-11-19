@@ -27,7 +27,7 @@ struct PetPreviewView: View {
             
             VStack(spacing: 0) {
                 // Header with back button and progress bar
-                OnboardingHeader(currentStep: 3, totalSteps: 8, showBackButton: true, onBack: onBack)
+                OnboardingHeader(currentStep: 4, totalSteps: 9, showBackButton: true, onBack: onBack)
                 
                 Spacer()
                 

@@ -2,28 +2,62 @@ import SwiftUI
 
 struct FAQView: View {
     let faqs = [
-        FAQ(question: "How does SE7EN work?", answer: "SE7EN gives you 7 credits each week. Every time you exceed a daily app limit, you lose 1 credit. At the end of the week, you pay $1 for each lost credit."),
-        FAQ(question: "When do I get charged?", answer: "You're only charged at the end of each week for the credits you lost. If you keep all 7 credits, the week is completely free!"),
-        FAQ(question: "Can I get my credits back?", answer: "No, once you exceed a limit and lose a credit, it's gone for that week. This creates real accountability for your screen time goals."),
-        FAQ(question: "What happens if I lose all 7 credits?", answer: "You'll be charged $7 at the end of the week. The apps you've set limits for will remain blocked until the week resets on Monday."),
-        FAQ(question: "How do I change my app limits?", answer: "Go to the Goals tab and tap on any app to adjust its daily time limit. Changes take effect immediately."),
-        FAQ(question: "Can I pause SE7EN?", answer: "You can disable monitoring in Settings, but any credits already lost that week will still be charged. SE7EN works best with consistent use."),
-        FAQ(question: "What if I need to use a blocked app?", answer: "Once you exceed a limit, the app is blocked for the rest of the day. This is intentional - it helps build better digital habits through accountability."),
-        FAQ(question: "Do you track my app activity?", answer: "SE7EN only monitors the apps you choose to set limits for. We don't track your activity in other apps or share your data with third parties."),
+        FAQ(question: "What is SE7EN?", answer: "SE7EN is your personal screen time companion that helps you break free from 'brain rot'. By caring for your digital pet, you build healthier habits. When you scroll less, your pet thrives!"),
+        
+        FAQ(question: "How do the Credits work?", answer: "You start each week with 7 Credits. Every time you exceed a daily app limit, you lose 1 Credit. If you lose a Credit, you pay $1 at the end of the week. It's real accountability."),
+        
+        FAQ(question: "Why does my Pet's health change?", answer: "Your pet's health is directly tied to your screen time. If you stay within your limits, your pet stays happy and healthy. Excessive screen time makes your pet sick. Keep them healthy by staying off your phone!"),
+        
+        FAQ(question: "What happens if I lose all my Credits?", answer: "If you lose all 7 Credits, you'll be charged $7 for the week. More importantly, your pet will be very unhappy! Use this as motivation to start fresh next Monday."),
+        
+        FAQ(question: "Can I change my App Limits?", answer: "Yes! Go to the Stats page and tap on any app in your list to adjust its daily limit. Changes take effect immediately for the next day."),
+        
+        FAQ(question: "How does the 'Strict Mode' work?", answer: "When Strict Mode is on, you cannot ignore app limits. Once your time is up, the app is blocked until tomorrow. No excuses, no 'one more minute'."),
+        
+        FAQ(question: "I'm going on vacation. Can I pause?", answer: "We believe in consistency, but we understand life happens. You can toggle 'Monitoring' off in Settings, but try to stick to your habits!"),
+        
+        FAQ(question: "Is my data private?", answer: "Absolutely. SE7EN uses Apple's Screen Time API, which means all your usage data stays on your device. We never see your browsing history or personal app data.")
     ]
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(faqs, id: \.question) { faq in
-                    FAQCard(faq: faq)
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 8) {
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.blue, .purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .padding(.top, 20)
+                    
+                    Text("Frequently Asked Questions")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("Everything you need to know about SE7EN")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.bottom, 10)
+                
+                // FAQ List
+                LazyVStack(spacing: 16) {
+                    ForEach(faqs, id: \.question) { faq in
+                        FAQCard(faq: faq)
+                    }
                 }
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.bottom, 40)
         }
-        .background(Color.appBackground)
-        .navigationTitle("faq")
-        .navigationBarTitleDisplayMode(.large)
+        .background(Color.appBackground.ignoresSafeArea())
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -39,44 +73,52 @@ struct FAQCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                     isExpanded.toggle()
                 }
+                HapticFeedback.light.trigger()
             }) {
-                HStack {
+                HStack(alignment: .top, spacing: 16) {
                     Text(faq.question)
-                        .font(.headline)
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.textPrimary)
                         .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     Spacer()
                     
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.textSecondary)
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                        .padding(.top, 4)
                 }
-                .padding()
+                .padding(20)
             }
+            .buttonStyle(PlainButtonStyle())
             
             if isExpanded {
                 Text(faq.answer)
-                    .font(.body)
+                    .font(.system(size: 16, weight: .regular))
                     .foregroundColor(.textSecondary)
-                    .padding(.horizontal)
-                    .padding(.bottom)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .background(Color.cardBackground)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 2)
+        .cornerRadius(20)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(isExpanded ? Color.blue.opacity(0.3) : Color.white.opacity(0.05), lineWidth: 1)
+        )
     }
 }
 
 #Preview {
     NavigationView {
         FAQView()
+            .environmentObject(AppState())
     }
 }
-

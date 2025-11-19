@@ -1,5 +1,47 @@
 import SwiftUI
 
+// MARK: - Coach Insight Model
+struct CoachInsight: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+    let icon: String
+    let type: InsightType
+    let priority: Priority
+
+    enum InsightType {
+        case warning, info, achievement, motivation, strategy, reminder, optimization, reflection, wellness, balance, encouragement, welcome, setup
+    }
+
+    enum Priority: Int {
+        case low = 1, medium = 2, high = 3
+    }
+
+    var iconColor: Color {
+        switch type {
+        case .warning: return .error
+        case .achievement: return .success
+        case .motivation, .encouragement: return .secondary
+        case .reminder: return .warning
+        case .wellness: return Color(hex: "#8B5CF6") // Purple
+        case .welcome, .setup: return .primary
+        default: return .textSecondary
+        }
+    }
+
+    var backgroundColor: Color {
+        switch type {
+        case .warning: return Color.error.opacity(0.1)
+        case .achievement: return Color.success.opacity(0.1)
+        case .motivation, .encouragement: return Color.secondary.opacity(0.1)
+        case .reminder: return Color.warning.opacity(0.1)
+        case .wellness: return Color(hex: "#8B5CF6").opacity(0.1) // Purple
+        case .welcome, .setup: return Color.primary.opacity(0.1)
+        default: return Color.cardBackground
+        }
+    }
+}
+
 struct GoalsView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedWeekOffset: Int = 0 // 0 = current week, -1 = last week, etc.
@@ -169,29 +211,249 @@ struct GoalsView: View {
             .sorted { $0.percentageUsed > $1.percentageUsed }
     }
     
-    private var recommendations: [String] {
+    private var recommendations: [CoachInsight] {
         guard !appState.monitoredApps.isEmpty else {
             return [
-                "Add apps from the Home page to start tracking usage.",
-                "Monitor your screen time to maintain healthy habits."
+                CoachInsight(
+                    title: "Welcome to SE7EN!",
+                    message: "Add apps from the Home page to start your digital wellness journey.",
+                    icon: "hand.wave.fill",
+                    type: .welcome,
+                    priority: .high
+                ),
+                CoachInsight(
+                    title: "Set Your Goals",
+                    message: "Monitor your screen time to build healthier digital habits and maintain balance.",
+                    icon: "target",
+                    type: .setup,
+                    priority: .high
+                )
             ]
         }
-        
-        var tips: [String] = []
-        if let highest = appState.monitoredApps.max(by: { $0.percentageUsed < $1.percentageUsed }) {
-            if highest.percentageUsed > 0.85 {
-                tips.append("Lower \(highest.name)'s limit by 15 mins to stay ahead.")
+
+        var insights: [CoachInsight] = []
+
+        // Analyze usage patterns
+        insights.append(contentsOf: analyzeUsagePatterns())
+
+        // Check discipline and streaks
+        insights.append(contentsOf: analyzeDisciplineAndStreaks())
+
+        // Goal achievement insights
+        insights.append(contentsOf: analyzeGoalAchievement())
+
+        // Behavioral coaching
+        insights.append(contentsOf: analyzeBehavioralPatterns())
+
+        // Time-based insights
+        insights.append(contentsOf: analyzeTimePatterns())
+
+        // Sort by priority and limit to most relevant insights
+        return insights.sorted { $0.priority.rawValue > $1.priority.rawValue }.prefix(6).map { $0 }
+    }
+
+    // MARK: - Insight Analysis Methods
+
+    private func analyzeUsagePatterns() -> [CoachInsight] {
+        var insights: [CoachInsight] = []
+
+        // Find app with highest usage
+        if let highestUsage = appState.monitoredApps.max(by: { $0.percentageUsed < $1.percentageUsed }) {
+            if highestUsage.percentageUsed > 0.9 {
+                insights.append(CoachInsight(
+                    title: "Heavy \(highestUsage.name) Usage",
+                    message: "You're spending \(Int(highestUsage.percentageUsed * 100))% of your \(highestUsage.name) limit. Consider a 10-15 min reduction to create breathing room.",
+                    icon: "exclamationmark.triangle.fill",
+                    type: .warning,
+                    priority: .high
+                ))
+            } else if highestUsage.percentageUsed > 0.7 {
+                insights.append(CoachInsight(
+                    title: "\(highestUsage.name) Check",
+                    message: "You're at \(Int(highestUsage.percentageUsed * 100))% of your \(highestUsage.name) limit. Good awareness - keep monitoring!",
+                    icon: "eye.fill",
+                    type: .info,
+                    priority: .medium
+                ))
             }
         }
-        if disciplineScore < 60 {
-            tips.append("Try a daily review ritual to boost consistency.")
-        } else if disciplineScore > 85 {
-            tips.append("Great control! Consider tightening any limits by 10%.")
+
+        // Check for apps under-utilized
+        let underUtilizedApps = appState.monitoredApps.filter { $0.percentageUsed < 0.3 }
+        if !underUtilizedApps.isEmpty && underUtilizedApps.count > 1 {
+            insights.append(CoachInsight(
+                title: "Room for Adjustment",
+                message: "\(underUtilizedApps.count) apps are well under their limits. Consider redistributing time to more challenging apps.",
+                icon: "arrow.triangle.swap",
+                type: .optimization,
+                priority: .medium
+            ))
         }
-        if tips.isEmpty {
-            tips.append("You're balanced. Keep monitoring and fine-tune weekly.")
+
+        return insights
+    }
+
+    private func analyzeDisciplineAndStreaks() -> [CoachInsight] {
+        var insights: [CoachInsight] = []
+
+        if disciplineScore < 40 {
+            insights.append(CoachInsight(
+                title: "Build Consistency",
+                message: "Your discipline score is \(disciplineScore)%. Try the 5-minute rule: when tempted, wait just 5 minutes before using an app.",
+                icon: "clock.arrow.circlepath",
+                type: .motivation,
+                priority: .high
+            ))
+        } else if disciplineScore < 60 {
+            insights.append(CoachInsight(
+                title: "Steady Progress",
+                message: "You're at \(disciplineScore)% discipline. Consider a daily evening review to celebrate wins and plan tomorrow.",
+                icon: "chart.line.uptrend.xyaxis",
+                type: .motivation,
+                priority: .medium
+            ))
+        } else if disciplineScore > 90 {
+            insights.append(CoachInsight(
+                title: "Master Level Control",
+                message: "Outstanding! Your \(disciplineScore)% discipline shows excellent self-control. Consider mentoring others or tightening limits further.",
+                icon: "star.circle.fill",
+                type: .achievement,
+                priority: .medium
+            ))
         }
-        return tips
+
+        // Streak analysis
+        if appState.currentStreak == 0 && appState.longestStreak > 2 {
+            insights.append(CoachInsight(
+                title: "Restart Your Streak",
+                message: "You had a \(appState.longestStreak)-day streak! Start fresh today - consistency compounds over time.",
+                icon: "flame.fill",
+                type: .motivation,
+                priority: .high
+            ))
+        } else if appState.currentStreak > 0 && appState.currentStreak < 3 {
+            insights.append(CoachInsight(
+                title: "Building Momentum",
+                message: "\(appState.currentStreak) day\(appState.currentStreak > 1 ? "s" : "") in! Each day builds the habit stronger.",
+                icon: "flame",
+                type: .encouragement,
+                priority: .medium
+            ))
+        }
+
+        return insights
+    }
+
+    private func analyzeGoalAchievement() -> [CoachInsight] {
+        var insights: [CoachInsight] = []
+
+        let successfulApps = appState.monitoredApps.filter { !$0.isOverLimit }
+        let totalApps = appState.monitoredApps.count
+        let successRate = Double(successfulApps.count) / Double(totalApps)
+
+        if successRate >= 0.8 {
+            insights.append(CoachInsight(
+                title: "Goal Crusher!",
+                message: "You're meeting \(Int(successRate * 100))% of your daily goals. Consider adding 1-2 more challenging apps to track.",
+                icon: "checkmark.seal.fill",
+                type: .achievement,
+                priority: .high
+            ))
+        } else if successRate < 0.5 {
+            insights.append(CoachInsight(
+                title: "Focus on High-Impact Apps",
+                message: "Only meeting \(Int(successRate * 100))% of goals. Pick your 2-3 most important apps and focus there first.",
+                icon: "scope",
+                type: .strategy,
+                priority: .high
+            ))
+        }
+
+        // Apps near limit
+        let nearLimitApps = appState.monitoredApps.filter { $0.isNearLimit }
+        if !nearLimitApps.isEmpty {
+            insights.append(CoachInsight(
+                title: "Close Calls",
+                message: "\(nearLimitApps.count) app\(nearLimitApps.count > 1 ? "s are" : " is") near limit. Set a reminder for later today to check in.",
+                icon: "bell.badge",
+                type: .reminder,
+                priority: .medium
+            ))
+        }
+
+        return insights
+    }
+
+    private func analyzeBehavioralPatterns() -> [CoachInsight] {
+        var insights: [CoachInsight] = []
+
+        // Check for very short limits (might be unrealistic)
+        let veryShortLimits = appState.monitoredApps.filter { $0.dailyLimit < 30 }
+        if !veryShortLimits.isEmpty {
+            insights.append(CoachInsight(
+                title: "Realistic Goals Matter",
+                message: "Some limits are very short (<30 mins). Consider gradual increases - sustainable change beats perfection.",
+                icon: "gauge.with.dots.needle.bottom.0percent",
+                type: .strategy,
+                priority: .medium
+            ))
+        }
+
+        // Check for balance across apps
+        let totalLimit = appState.monitoredApps.reduce(0) { $0 + $1.dailyLimit }
+        if totalLimit > 8 * 60 { // More than 8 hours total
+            insights.append(CoachInsight(
+                title: "Total Screen Time",
+                message: "Your combined limits total \(totalLimit/60)h \(totalLimit%60)m. Consider if this aligns with your overall screen time goals.",
+                icon: "timer",
+                type: .reflection,
+                priority: .low
+            ))
+        }
+
+        return insights
+    }
+
+    private func analyzeTimePatterns() -> [CoachInsight] {
+        var insights: [CoachInsight] = []
+
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: Date())
+
+        // Time-based coaching
+        if hour >= 20 || hour <= 6 { // Evening/night
+            insights.append(CoachInsight(
+                title: "Wind Down Time",
+                message: "It's getting late. Consider a 'no screens after 9 PM' rule to improve sleep quality and next-day focus.",
+                icon: "moon.stars.fill",
+                type: .wellness,
+                priority: .medium
+            ))
+        } else if hour >= 6 && hour <= 9 { // Morning
+            insights.append(CoachInsight(
+                title: "Fresh Start",
+                message: "Morning momentum! Start your day with intention. Check your goals and set a positive tone for screen time.",
+                icon: "sunrise.fill",
+                type: .motivation,
+                priority: .medium
+            ))
+        }
+
+        // Weekend vs weekday patterns (basic analysis)
+        let weekday = calendar.component(.weekday, from: Date())
+        let isWeekend = weekday == 1 || weekday == 7 // Sunday or Saturday
+
+        if isWeekend {
+            insights.append(CoachInsight(
+                title: "Weekend Balance",
+                message: "It's the weekend! Consider slightly relaxed limits for social/leisure while maintaining healthy boundaries.",
+                icon: "calendar",
+                type: .balance,
+                priority: .low
+            ))
+        }
+
+        return insights
     }
     
     private func binding(for app: MonitoredApp) -> Binding<MonitoredApp> {
@@ -896,29 +1158,72 @@ struct FocusAppsCard: View {
 }
 
 struct GoalRecommendationsCard: View {
-    let recommendations: [String]
-    
+    let recommendations: [CoachInsight]
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Coach Insights")
-                .font(.h4)
-                .foregroundColor(.textPrimary)
-            
-            ForEach(recommendations, id: \.self) { tip in
+            HStack(spacing: 8) {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.primary)
+                Text("Coach Insights")
+                    .font(.h4)
+                    .foregroundColor(.textPrimary)
+            }
+
+            ForEach(recommendations) { insight in
                 HStack(alignment: .top, spacing: 12) {
-                    Circle()
-                        .fill(Color.primary.opacity(0.12))
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Image(systemName: "lightbulb.fill")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.primary)
-                        )
-                    
-                    Text(tip)
-                        .font(.bodyMedium)
-                        .foregroundColor(.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    ZStack {
+                        Circle()
+                            .fill(insight.backgroundColor)
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: insight.icon)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(insight.iconColor)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(insight.title)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.textPrimary)
+
+                        Text(insight.message)
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineSpacing(2)
+                    }
+
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+            }
+
+            if recommendations.isEmpty {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary.opacity(0.1))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Getting to know you...")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.textPrimary)
+
+                        Text("Insights will appear as you use the app and build your digital wellness habits.")
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
                 }
             }
         }
@@ -928,20 +1233,35 @@ struct GoalRecommendationsCard: View {
 }
 
 struct RecommendationSheet: View {
-    let recommendations: [String]
-    
+    let recommendations: [CoachInsight]
+
     var body: some View {
         NavigationView {
             List {
-                ForEach(recommendations, id: \.self) { tip in
-                    Label {
-                        Text(tip)
-                            .font(.bodyMedium)
-                    } icon: {
-                        Image(systemName: "lightbulb")
-                            .foregroundColor(.primary)
+                ForEach(recommendations) { insight in
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(insight.backgroundColor)
+                                .frame(width: 36, height: 36)
+
+                            Image(systemName: insight.icon)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(insight.iconColor)
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(insight.title)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.primary)
+
+                            Text(insight.message)
+                                .font(.bodySmall)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 8)
                 }
             }
             .navigationTitle("Coach Insights")

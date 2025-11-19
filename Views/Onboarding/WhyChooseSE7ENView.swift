@@ -23,7 +23,7 @@ struct WhyChooseSE7ENView: View {
             
             VStack(spacing: 0) {
                 // Header with back button and progress bar
-                OnboardingHeader(currentStep: 7, totalSteps: 8, showBackButton: true, onBack: onBack)
+                OnboardingHeader(currentStep: 9, totalSteps: 11, showBackButton: true, onBack: onBack)
                 
                 Spacer()
                 

@@ -118,7 +118,7 @@ struct PetSelectionView: View {
                 // Pet selection screen
                 VStack(spacing: 0) {
                     // Header with back button and progress bar
-                    OnboardingHeader(currentStep: 2, totalSteps: 8, showBackButton: true, onBack: onBack)
+                    OnboardingHeader(currentStep: 2, totalSteps: 11, showBackButton: true, onBack: onBack)
                     
                     // Paw prints header like BrainRot
                     VStack(spacing: 24) {
@@ -138,7 +138,7 @@ struct PetSelectionView: View {
                         .padding(.top, 60)
                         
                         VStack(spacing: 16) {
-                            Text("Choose your companion")
+                            Text("Choose your pet")
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                 .foregroundColor(.textPrimary)
                                 .multilineTextAlignment(.center)

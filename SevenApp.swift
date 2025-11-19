@@ -20,7 +20,6 @@ struct SE7ENApp: App {
             ContentView()
                 .environmentObject(appState)
                 .environment(\.managedObjectContext, persistentContainer.viewContext)
-                .environment(\.textCase, nil) // Disable automatic uppercase transformation
                 .preferredColorScheme(isDarkMode ? .dark : .light)
         }
     }

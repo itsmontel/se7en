@@ -47,35 +47,12 @@ struct DashboardView: View {
                 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Header with greeting and date selection
+                        // Header with greeting
                         VStack(alignment: .leading, spacing: 12) {
                             // Time-based greeting
                             Text(timeBasedGreeting(userName: appState.userName))
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundColor(.textPrimary)
-                            
-                            // Date selector - clickable to show picker
-                            HStack {
-                                Button(action: {
-                                    showingDatePicker = true
-                                }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "calendar")
-                                            .font(.system(size: 14, weight: .semibold))
-                                        Text(selectedDate.formatted(date: .abbreviated, time: .omitted))
-                                            .font(.system(size: 16, weight: .semibold))
-                                        Image(systemName: "chevron.down")
-                                            .font(.system(size: 12, weight: .semibold))
-                                    }
-                                    .foregroundColor(.textPrimary)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color.gray.opacity(0.15))
-                                    .cornerRadius(20)
-                                }
-                                
-                                Spacer()
-                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
@@ -289,6 +266,26 @@ struct DashboardView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        showingDatePicker = true
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text(selectedDate.formatted(date: .abbreviated, time: .omitted))
+                                .font(.system(size: 14, weight: .semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundColor(.textPrimary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.cardBackground.opacity(0.8))
+                        .cornerRadius(16)
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     CompactStreakView(streak: appState.currentStreak)
                 }

@@ -3,6 +3,7 @@ import SwiftUI
 enum PetOnboardingStep {
     case welcome
     case petSelection
+    case videoIntroduction
     case petPreview
     case motivation
     case didYouKnow
@@ -26,8 +27,10 @@ struct OnboardingContainerView: View {
                 break // No back from welcome
             case .petSelection:
                 currentStep = .welcome
-            case .petPreview:
+            case .videoIntroduction:
                 currentStep = .petSelection
+            case .petPreview:
+                currentStep = .videoIntroduction
             case .motivation:
                 currentStep = .petPreview
             case .didYouKnow:
@@ -66,13 +69,24 @@ struct OnboardingContainerView: View {
                     PetSelectionView(
                         onContinue: {
                             withAnimation {
+                                currentStep = .videoIntroduction
+                            }
+                            HapticFeedback.light.trigger()
+                        },
+                        onBack: goBack
+                    )
+
+                case .videoIntroduction:
+                    VideoIntroductionView(
+                        onContinue: {
+                            withAnimation {
                                 currentStep = .petPreview
                             }
                             HapticFeedback.light.trigger()
                         },
                         onBack: goBack
                     )
-                    
+
                 case .petPreview:
                     PetPreviewView(
                         onContinue: {

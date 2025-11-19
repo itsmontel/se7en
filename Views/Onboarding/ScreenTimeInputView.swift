@@ -22,7 +22,7 @@ struct ScreenTimeInputView: View {
             
             VStack(spacing: 0) {
                 // Header with back button and progress bar
-                OnboardingHeader(currentStep: 6, totalSteps: 8, showBackButton: true, onBack: onBack)
+                OnboardingHeader(currentStep: 7, totalSteps: 11, showBackButton: true, onBack: onBack)
                 
                         // Pet illustration with animation
                         VStack(spacing: 32) {
@@ -56,7 +56,7 @@ struct ScreenTimeInputView: View {
                 VStack(spacing: 32) {
                     Text("\(Int(selectedHours)) hours")
                         .font(.system(size: 48, weight: .bold))
-                        .foregroundColor(.textPrimary)
+                        .foregroundColor(hoursColor)
                         .opacity(animateContent ? 1.0 : 0.0)
                     
                     // Slider matching BrainRot's style
@@ -124,7 +124,9 @@ struct ScreenTimeInputView: View {
     
     private var feedbackMessage: String {
         switch Int(selectedHours) {
-        case 0...1:
+        case 0:
+            return "That's absolutely amazing! You're living in the moment."
+        case 1:
             return "That's actually quite good! But even this adds up over time."
         case 2...3:
             return "Not bad, but this is still a significant portion of your day."
@@ -141,25 +143,30 @@ struct ScreenTimeInputView: View {
         }
     }
     
-    private var feedbackColor: Color {
+    private var hoursColor: Color {
         let hours = Int(selectedHours)
         
-        // Gradient from super green (0h) to super red (12+h)
+        // Smooth gradient from green (0h) -> yellow (4-6h) -> red (12+h)
         switch hours {
-        case 0: return Color(red: 0.0, green: 1.0, blue: 0.0) // Super green
-        case 1: return Color(red: 0.1, green: 0.95, blue: 0.1)
-        case 2: return Color(red: 0.2, green: 0.9, blue: 0.0)
-        case 3: return Color(red: 0.35, green: 0.85, blue: 0.0) // Start yellow-green
-        case 4: return Color(red: 0.5, green: 0.8, blue: 0.0)
-        case 5: return Color(red: 0.7, green: 0.7, blue: 0.0) // Yellow
-        case 6: return Color(red: 0.85, green: 0.6, blue: 0.0)
-        case 7: return Color(red: 1.0, green: 0.5, blue: 0.0) // Orange
-        case 8: return Color(red: 1.0, green: 0.4, blue: 0.0)
-        case 9: return Color(red: 1.0, green: 0.2, blue: 0.0) // Orange-red
-        case 10: return Color(red: 1.0, green: 0.1, blue: 0.0)
-        case 11: return Color(red: 1.0, green: 0.05, blue: 0.0)
+        case 0: return Color(red: 0.0, green: 0.9, blue: 0.2) // Bright green
+        case 1: return Color(red: 0.1, green: 0.85, blue: 0.15) // Green
+        case 2: return Color(red: 0.3, green: 0.8, blue: 0.1) // Yellow-green
+        case 3: return Color(red: 0.5, green: 0.75, blue: 0.05) // Yellow-green
+        case 4: return Color(red: 0.7, green: 0.7, blue: 0.0) // Yellow
+        case 5: return Color(red: 0.85, green: 0.65, blue: 0.0) // Yellow-orange
+        case 6: return Color(red: 0.95, green: 0.55, blue: 0.0) // Orange-yellow
+        case 7: return Color(red: 1.0, green: 0.45, blue: 0.0) // Orange
+        case 8: return Color(red: 1.0, green: 0.3, blue: 0.0) // Orange-red
+        case 9: return Color(red: 1.0, green: 0.2, blue: 0.0) // Red-orange
+        case 10: return Color(red: 1.0, green: 0.1, blue: 0.0) // Red
+        case 11: return Color(red: 1.0, green: 0.05, blue: 0.0) // Bright red
         default: return Color(red: 1.0, green: 0.0, blue: 0.0) // Super red
         }
+    }
+    
+    private var feedbackColor: Color {
+        // Use the same color as hours for consistency
+        return hoursColor
     }
     
     private func saveScreenTime() {

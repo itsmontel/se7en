@@ -41,7 +41,7 @@ struct SetGoalsView: View {
             
             VStack(spacing: 0) {
                 // Header with back button and progress bar
-                OnboardingHeader(currentStep: 8, totalSteps: 8, showBackButton: true, onBack: onBack)
+                OnboardingHeader(currentStep: 11, totalSteps: 11, showBackButton: true, onBack: onBack)
                 
                 Spacer()
                 
@@ -150,8 +150,6 @@ struct SetGoalsView: View {
                             
                             Text(realAppDiscovery.selectedApps.isEmpty ? "Select Apps from Device" : "Update App Selection")
                                 .font(.system(size: 16, weight: .semibold))
-                            
-                            Spacer()
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -188,7 +186,6 @@ struct SetGoalsView: View {
                     Text("Continue")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
-                        .textCase(.none)
                         .frame(maxWidth: .infinity)
                         .frame(height: 60)
                         .background(

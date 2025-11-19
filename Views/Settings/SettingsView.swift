@@ -17,174 +17,124 @@ struct SettingsView: View {
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 24) {
+                    VStack(spacing: 32) {
+                        // Hero Section
                         SettingsHeroCard(streak: appState.currentStreak, credits: appState.currentCredits)
-                            .padding(.top, 20)
+                            .padding(.top, 10)
                         
-                        SettingSection(title: "Notifications", icon: "bell.badge.fill") {
-                            SettingToggleRow(
-                                isOn: $remindersEnabled,
-                                title: "App Reminders",
-                                subtitle: "Heads up when you're close to limits",
-                                icon: "wave.3.right",
-                                onToggle: { isOn in
-                                    remindersEnabled = isOn
-                                    if isOn {
-                                        HapticFeedback.light.trigger()
-                                    } else {
-                                        HapticFeedback.warning.trigger()
-                                    }
-                                }
-                            )
-                            
-                            SettingToggleRow(
-                                isOn: $weeklySummaryEnabled,
-                                title: "Weekly Summary",
-                                subtitle: "Sunday delivery with progress insights",
-                                icon: "calendar.badge.clock",
-                                onToggle: { isOn in
-                                    weeklySummaryEnabled = isOn
-                                    HapticFeedback.light.trigger()
-                                }
-                            )
-                        }
-                        
-                        SettingSection(title: "Experience", icon: "sparkles") {
-                            SettingToggleRow(
-                                isOn: $hapticsEnabled,
-                                title: "Haptic Feedback",
-                                subtitle: "Tactile responses for interactions",
-                                icon: "hand.tap.fill",
-                                onToggle: { isOn in
-                                    hapticsEnabled = isOn
-                                    if isOn {
-                                        HapticFeedback.success.trigger()
-                                    } else {
-                                        HapticFeedback.warning.trigger()
-                                    }
-                                }
-                            )
-                            
-                            SettingToggleRow(
-                                isOn: $isDarkMode,
-                                title: "Dark Appearance",
-                                subtitle: "Automatically switch the palette",
-                                icon: "moon.stars.fill",
-                                onToggle: { isOn in
-                                    isDarkMode = isOn
-                                    HapticFeedback.light.trigger()
-                                }
-                            )
-                        }
-                        
-                        SettingSection(title: "Account", icon: "person.crop.circle") {
-                            SettingNavigationRow(
-                                title: "Manage Subscription",
-                                subtitle: "Top up credits or change plan",
-                                icon: "creditcard.fill"
-                            ) {
-                                SubscriptionView()
-                            }
-                            
-                            SettingButtonRow(
-                                title: "Restore Purchases",
-                                subtitle: "Re-activate previous credit packs",
-                                icon: "arrow.clockwise.circle.fill",
-                                action: {}
-                            )
-                        }
-                        
-                        SettingSection(title: "Pet", icon: "pawprint.fill") {
-                            if let pet = appState.userPet {
-                                SettingButtonRow(
-                                    title: "Change Pet",
-                                    subtitle: "Choose a different companion",
-                                    icon: "arrow.left.arrow.right.circle.fill",
-                                    action: {
+                        // Settings Groups
+                        VStack(spacing: 24) {
+                            // Account & Pet
+                            SettingsGroup(title: "My Companion") {
+                                if let pet = appState.userPet {
+                                    SettingRow(
+                                        icon: "arrow.triangle.2.circlepath",
+                                        color: .blue,
+                                        title: "Change Pet",
+                                        subtitle: "Switch your companion"
+                                    ) {
                                         showingPetSelection = true
                                         HapticFeedback.light.trigger()
                                     }
-                                )
-                                
-                                SettingButtonRow(
-                                    title: "Rename Pet",
-                                    subtitle: "Currently named '\(pet.name)'",
-                                    icon: "pencil.circle.fill",
-                                    action: {
+                                    
+                                    SettingRow(
+                                        icon: "pencil",
+                                        color: .purple,
+                                        title: "Rename Pet",
+                                        subtitle: "Current: \(pet.name)"
+                                    ) {
                                         newPetName = pet.name
                                         showingRenamePet = true
                                         HapticFeedback.light.trigger()
                                     }
+                                }
+                            }
+                            
+                            // Preferences
+                            SettingsGroup(title: "Preferences") {
+                                SettingToggle(
+                                    isOn: $remindersEnabled,
+                                    icon: "bell.fill",
+                                    color: .red,
+                                    title: "Notifications",
+                                    subtitle: "Get reminded about limits"
+                                )
+                                
+                                SettingToggle(
+                                    isOn: $hapticsEnabled,
+                                    icon: "hand.tap.fill",
+                                    color: .green,
+                                    title: "Haptics",
+                                    subtitle: "Vibrations on interaction"
+                                )
+                                
+                                SettingToggle(
+                                    isOn: $isDarkMode,
+                                    icon: "moon.stars.fill",
+                                    color: .indigo,
+                                    title: "Dark Mode",
+                                    subtitle: "Adjust appearance"
                                 )
                             }
-                        }
-                        
-                        SettingSection(title: "Support", icon: "lifepreserver") {
-                            SettingNavigationRow(
-                                title: "FAQ",
-                                subtitle: "Answers to the most common questions",
-                                icon: "questionmark.circle.fill",
-                                completion: {
-                                    HapticFeedback.light.trigger()
-                                }
-                            ) {
-                                FAQView()
-                            }
                             
-                            SettingNavigationRow(
-                                title: "Contact Support",
-                                subtitle: "Talk to a real human in under 24h",
-                                icon: "envelope.fill",
-                                completion: {
-                                    HapticFeedback.medium.trigger()
-                                }
-                            ) {
-                                SupportView()
-                            }
-                            
-                            SettingNavigationRow(
-                                title: "Privacy Policy",
-                                subtitle: "Understand how we treat your data",
-                                icon: "hand.raised.fill",
-                                completion: { HapticFeedback.light.trigger() }
-                            ) {
-                                PrivacyPolicyView()
-                            }
-                            
-                            SettingNavigationRow(
-                                title: "Terms of Service",
-                                subtitle: "The agreement that keeps SE7EN fair",
-                                icon: "doc.text.fill",
-                                completion: { HapticFeedback.light.trigger() }
-                            ) {
-                                TermsOfServiceView()
-                            }
-                        }
-                        
-                        SettingSection(title: "App Info", icon: "info.circle.fill") {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Version")
-                                        .font(.bodyLarge)
-                                    Text("Build 1.0.0")
-                                        .font(.caption)
-                                        .foregroundColor(.textPrimary.opacity(0.6))
-                                }
-                                
-                                Spacer()
-                                
-                                Capsule()
-                                    .fill(Color.primary.opacity(0.15))
-                                    .frame(width: 60, height: 28)
-                                    .overlay(
-                                        Text("Live")
-                                            .font(.captionBold)
-                                            .foregroundColor(.primary)
+                            // Support
+                            SettingsGroup(title: "Support") {
+                                NavigationLink(destination: FAQView()) {
+                                    SettingRowContent(
+                                        icon: "questionmark.circle.fill",
+                                        color: .orange,
+                                        title: "FAQ",
+                                        subtitle: "Common questions"
                                     )
+                                }
+                                
+                                NavigationLink(destination: SupportView()) {
+                                    SettingRowContent(
+                                        icon: "envelope.fill",
+                                        color: .blue,
+                                        title: "Contact Support",
+                                        subtitle: "We're here to help"
+                                    )
+                                }
+                                
+                                NavigationLink(destination: PrivacyPolicyView()) {
+                                    SettingRowContent(
+                                        icon: "hand.raised.fill",
+                                        color: .gray,
+                                        title: "Privacy Policy",
+                                        subtitle: nil
+                                    )
+                                }
+                                
+                                NavigationLink(destination: TermsOfServiceView()) {
+                                    SettingRowContent(
+                                        icon: "doc.text.fill",
+                                        color: .gray,
+                                        title: "Terms of Service",
+                                        subtitle: nil
+                                    )
+                                }
                             }
+                            
+                            // App Info
+                            VStack(spacing: 8) {
+                                Image("appIcon_preview") // Assuming asset exists, or system icon
+                                    .resizable()
+                                    .frame(width: 40, height: 40)
+                                    .cornerRadius(10)
+                                    .opacity(0.0) // Hidden placeholder if no icon
+                                
+                                Text("SE7EN")
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundColor(.textPrimary)
+                                
+                                Text("Version 1.0.0")
+                                    .font(.caption)
+                                    .foregroundColor(.textSecondary)
+                            }
+                            .padding(.top, 20)
+                            .padding(.bottom, 40)
                         }
-                        
-                        Spacer(minLength: 40)
                     }
                     .padding(.horizontal, 20)
                 }
@@ -203,267 +153,188 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Settings Components
+// MARK: - Modern Components
 
 struct SettingsHeroCard: View {
     let streak: Int
     let credits: Int
     
     var body: some View {
-        VStack(spacing: 20) {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("SE7EN Profile")
-                        .font(.captionBold)
-                        .foregroundColor(.white.opacity(0.8))
-                    Text("Keep the streak alive.")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                
-                Spacer()
-                
+        HStack(spacing: 20) {
+            // Streak
+            HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(0.1))
-                        .frame(width: 64, height: 64)
-                    Text("7")
-                        .font(.system(size: 32, weight: .black, design: .rounded))
-                        .foregroundColor(.white)
+                        .fill(Color.orange.opacity(0.2))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.orange)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(streak)")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.textPrimary)
+                    Text("Day Streak")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.textSecondary)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Streak")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                    Text("\(streak) days")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
+            Divider()
+                .frame(height: 40)
+                .background(Color.white.opacity(0.2))
+            
+            // Credits
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.blue.opacity(0.2))
+                        .frame(width: 48, height: 48)
+                    Text("7")
+                        .font(.system(size: 24, weight: .heavy, design: .rounded))
+                        .foregroundColor(.blue)
                 }
                 
-                Spacer()
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Credits")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                VStack(alignment: .leading, spacing: 2) {
                     Text("\(credits)/7")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                
-                Spacer()
-                
-                Button(action: {}) {
-                    Text("Upgrade Plan")
-                        .font(.captionBold)
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.white)
-                        .cornerRadius(20)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.textPrimary)
+                    Text("Credits Left")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.textSecondary)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(24)
-        .background(
-            LinearGradient(
-                colors: [Color.primary, Color.secondary],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(32)
-        .shadow(color: Color.primary.opacity(0.25), radius: 30, x: 0, y: 15)
+        .padding(20)
+        .background(Color.cardBackground)
+        .cornerRadius(24)
+        .shadow(color: .black.opacity(0.05), radius: 15, x: 0, y: 5)
     }
 }
 
-struct SettingSection<Content: View>: View {
+struct SettingsGroup<Content: View>: View {
     let title: String
-    let icon: String
     let content: Content
     
-    init(title: String, icon: String, @ViewBuilder content: () -> Content) {
+    init(title: String, @ViewBuilder content: () -> Content) {
         self.title = title
-        self.icon = icon
         self.content = content()
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .foregroundColor(.primary)
-                Text(title)
-                    .font(.captionBold)
-                    .foregroundColor(.textPrimary.opacity(0.7))
-            }
-            .padding(.horizontal, 4)
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title.uppercased())
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.textSecondary)
+                .padding(.leading, 8)
             
-            VStack(spacing: 16) {
+            VStack(spacing: 0) {
                 content
             }
-            .padding(20)
-            .cardStyle()
+            .background(Color.cardBackground)
+            .cornerRadius(20)
         }
     }
 }
 
-struct QuickToggleButton: View {
-    let title: String
-    let subtitle: String
+struct SettingRow: View {
     let icon: String
-    let isOn: Bool
-    let gradient: [Color]
+    let color: Color
+    let title: String
+    let subtitle: String?
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .bold))
-                Spacer()
-                Text(title)
-                    .font(.system(size: 18, weight: .semibold))
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.8))
-            }
-            .foregroundColor(.white)
-            .padding(18)
-            .frame(maxWidth: .infinity, minHeight: 140)
-            .background(
-                LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
-            )
-            .cornerRadius(24)
-            .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-            )
-            .shadow(color: gradient.last?.opacity(0.3) ?? .black.opacity(0.2), radius: 20, x: 0, y: 10)
+            SettingRowContent(icon: icon, color: color, title: title, subtitle: subtitle)
         }
-        .buttonStyle(PlainButtonStyle())
     }
 }
 
-struct SettingToggleRow: View {
-    @Binding var isOn: Bool
-    let title: String
-    let subtitle: String
+struct SettingRowContent: View {
     let icon: String
-    var onToggle: ((Bool) -> Void)? = nil
+    let color: Color
+    let title: String
+    let subtitle: String?
     
     var body: some View {
         HStack(spacing: 16) {
-            SettingIcon(icon: icon, tint: .primary)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(color.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(color)
+            }
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.bodyLarge)
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.textPrimary)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(.textPrimary.opacity(0.6))
+                
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
             }
             
             Spacer()
             
-            Toggle("", isOn: Binding(get: {
-                isOn
-            }, set: { newValue in
-                isOn = newValue
-                onToggle?(newValue)
-            }))
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.textSecondary.opacity(0.5))
+        }
+        .padding(16)
+        .background(Color.cardBackground) // Ensure tappable area
+    }
+}
+
+struct SettingToggle: View {
+    @Binding var isOn: Bool
+    let icon: String
+    let color: Color
+    let title: String
+    let subtitle: String?
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(color.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(color)
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.textPrimary)
+                
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+            }
+            
+            Spacer()
+            
+            Toggle("", isOn: $isOn)
                 .labelsHidden()
-                .tint(.primary)
+                .tint(.blue)
         }
-    }
-}
-
-struct SettingNavigationRow<Destination: View>: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let destination: Destination
-    var completion: (() -> Void)? = nil
-    
-    init(title: String, subtitle: String, icon: String, completion: (() -> Void)? = nil, @ViewBuilder destination: () -> Destination) {
-        self.title = title
-        self.subtitle = subtitle
-        self.icon = icon
-        self.destination = destination()
-        self.completion = completion
-    }
-    
-    var body: some View {
-        NavigationLink(
-            destination: destination
-                .onAppear {
-                    completion?()
-                }
-        ) {
-            HStack(spacing: 16) {
-                SettingIcon(icon: icon, tint: .primary)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.bodyLarge)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.textPrimary.opacity(0.6))
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.captionBold)
-                    .foregroundColor(.textPrimary.opacity(0.4))
-            }
-        }
-    }
-}
-
-struct SettingButtonRow: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                SettingIcon(icon: icon, tint: .secondary)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.bodyLarge)
-                        .foregroundColor(.textPrimary)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.textPrimary.opacity(0.6))
-                }
-                
-                Spacer()
-            }
-        }
-    }
-}
-
-struct SettingIcon: View {
-    let icon: String
-    let tint: Color
-    
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 14)
-                .fill(tint.opacity(0.12))
-                .frame(width: 44, height: 44)
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(tint)
-        }
+        .padding(16)
     }
 }
 

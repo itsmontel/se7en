@@ -14,7 +14,7 @@ struct DidYouKnowView: View {
             
             VStack(spacing: 0) {
                 // Header with back button and progress bar
-                OnboardingHeader(currentStep: 5, totalSteps: 8, showBackButton: true, onBack: onBack)
+                OnboardingHeader(currentStep: 6, totalSteps: 11, showBackButton: true, onBack: onBack)
                 
                 // Header with better spacing
                 VStack(spacing: 24) {

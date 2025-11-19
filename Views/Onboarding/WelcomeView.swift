@@ -127,7 +127,6 @@ struct WelcomeView: View {
                         Text("Get started")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.white)
-                            .textCase(.none)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                             .background(isNameValid ? Color.blue.opacity(0.8) : Color.blue.opacity(0.4))
