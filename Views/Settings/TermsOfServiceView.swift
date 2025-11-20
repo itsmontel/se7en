@@ -163,8 +163,13 @@ struct TermsOfServiceView: View {
             .padding()
         }
         .background(Color.appBackground)
-        .navigationTitle("terms of service")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Terms of Service")
+                    .font(.system(size: 34, weight: .bold))
+            }
+        }
     }
 }
 

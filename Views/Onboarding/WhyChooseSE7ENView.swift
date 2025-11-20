@@ -49,6 +49,7 @@ struct WhyChooseSE7ENView: View {
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
+                            .textCase(.none)
                             .opacity(animateTitle ? 1.0 : 0.0)
                         
                         Text("The only app that combines money with habits")
@@ -98,6 +99,7 @@ struct WhyChooseSE7ENView: View {
                     Text("Ready to take control?")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.textPrimary)
+                        .textCase(.none)
                         .opacity(animateButton ? 1.0 : 0.0)
                     
                     Button(action: {
@@ -108,6 +110,7 @@ struct WhyChooseSE7ENView: View {
                             Text("Let's do this")
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.white)
+                                .textCase(.none)
                             
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 16, weight: .bold))

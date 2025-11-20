@@ -139,8 +139,13 @@ struct SettingsView: View {
                     .padding(.horizontal, 20)
                 }
             }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Settings")
+                        .font(.system(size: 34, weight: .bold))
+                }
+            }
             .sheet(isPresented: $showingPetSelection) {
                 PetSelectionSheet(isPresented: $showingPetSelection)
                     .environmentObject(appState)
@@ -229,7 +234,7 @@ struct SettingsGroup<Content: View>: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title.uppercased())
+            Text(title)
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundColor(.textSecondary)

@@ -25,6 +25,11 @@ extension View {
             self
         }
     }
+    
+    /// Prevents automatic text uppercasing
+    func preventTextUppercasing() -> some View {
+        self.textCase(.none)
+    }
 }
 
 struct SpringAppearModifier: ViewModifier {

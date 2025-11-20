@@ -41,6 +41,7 @@ struct WelcomeView: View {
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
+                            .textCase(.none)
                             .opacity(textAnimation ? 1.0 : 0.0)
                         
                         Text("Your personal companion for digital wellness and healthier screen time habits")
@@ -61,6 +62,7 @@ struct WelcomeView: View {
                         Text("What's your name?")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.textPrimary)
+                            .textCase(.none)
                         
                         HStack {
                             Image(systemName: "person.circle.fill")
@@ -127,6 +129,7 @@ struct WelcomeView: View {
                         Text("Get started")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.white)
+                            .textCase(.none)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                             .background(isNameValid ? Color.blue.opacity(0.8) : Color.blue.opacity(0.4))

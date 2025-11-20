@@ -56,6 +56,7 @@ struct LifetimeCalculationView: View {
                             .font(.system(size: 24, weight: .medium))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
+                            .textCase(.none)
                             .opacity(showTitle ? 1.0 : 0.0)
                             .scaleEffect(showTitle ? 1.0 : 0.8)
                     }
@@ -113,6 +114,7 @@ struct LifetimeCalculationView: View {
                         Text("Next")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.white)
+                            .textCase(.none)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                             .background(Color.blue.opacity(0.8))

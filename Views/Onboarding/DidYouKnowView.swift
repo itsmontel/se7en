@@ -22,6 +22,7 @@ struct DidYouKnowView: View {
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundColor(.textPrimary)
                         .multilineTextAlignment(.center)
+                        .textCase(.none)
                         .opacity(animateText ? 1.0 : 0.0)
                 }
                 .padding(.top, 40)
@@ -82,6 +83,7 @@ struct DidYouKnowView: View {
                         Text("Continue")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.white)
+                            .textCase(.none)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                             .background(Color.blue.opacity(0.8))

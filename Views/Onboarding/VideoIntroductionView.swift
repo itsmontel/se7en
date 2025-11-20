@@ -94,6 +94,7 @@ struct VideoIntroductionView: View {
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
+                            .textCase(.none)
 
                         Text("Get to know \(appState.userPet?.name ?? "your pet") and see how your screen time habits will affect their well-being.")
                             .font(.system(size: 16, weight: .medium))
@@ -116,6 +117,7 @@ struct VideoIntroductionView: View {
                             Text("Continue")
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.white)
+                                .textCase(.none)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 60)
                                 .background(Color.blue.opacity(0.8))

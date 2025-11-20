@@ -21,6 +21,7 @@ struct SE7ENApp: App {
                 .environmentObject(appState)
                 .environment(\.managedObjectContext, persistentContainer.viewContext)
                 .preferredColorScheme(isDarkMode ? .dark : .light)
+                .environment(\.textCase, .none)
         }
     }
 }

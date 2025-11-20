@@ -129,8 +129,13 @@ struct SupportView: View {
             .padding()
         }
         .background(Color.appBackground)
-        .navigationTitle("support")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Support")
+                    .font(.system(size: 34, weight: .bold))
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             // Fixed Send Button
             VStack(spacing: 0) {

@@ -39,6 +39,7 @@ struct ScreenTimeInputView: View {
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
+                            .textCase(.none)
                             .opacity(animateContent ? 1.0 : 0.0)
                         
                         Text("You can tell the truth")
@@ -101,6 +102,7 @@ struct ScreenTimeInputView: View {
                     Text("Continue")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
+                        .textCase(.none)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                         .background(Color.blue.opacity(0.8))

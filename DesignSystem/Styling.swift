@@ -44,6 +44,7 @@ struct PrimaryButtonStyle: ButtonStyle {
         configuration.label
             .font(.h4)
             .foregroundColor(.white)
+            .textCase(.none)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
             .background(isEnabled ? Color.primary : Color.gray)
@@ -64,6 +65,7 @@ struct SecondaryButtonStyle: ButtonStyle {
         configuration.label
             .font(.h4)
             .foregroundColor(.primary)
+            .textCase(.none)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
             .background(Color.primary.opacity(0.1))

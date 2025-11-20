@@ -60,6 +60,7 @@ struct SetGoalsView: View {
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundColor(.textPrimary)
                         .multilineTextAlignment(.center)
+                        .textCase(.none)
                         .opacity(titleAnimation ? 1.0 : 0.0)
                     
                     Text("Choose which apps you want to limit or block")
@@ -150,6 +151,7 @@ struct SetGoalsView: View {
                             
                             Text(realAppDiscovery.selectedApps.isEmpty ? "Select Apps from Device" : "Update App Selection")
                                 .font(.system(size: 16, weight: .semibold))
+                                .textCase(.none)
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -186,6 +188,7 @@ struct SetGoalsView: View {
                     Text("Continue")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
+                        .textCase(.none)
                         .frame(maxWidth: .infinity)
                         .frame(height: 60)
                         .background(

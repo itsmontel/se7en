@@ -41,11 +41,13 @@ struct MotivationView: View {
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
+                            .textCase(.none)
                             .opacity(animateTitle ? 1.0 : 0.0)
                         
                         Text("What is that reason?")
                             .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.gray)
+                            .textCase(.none)
                             .opacity(animateTitle ? 1.0 : 0.0)
                     }
                 }
@@ -77,9 +79,10 @@ struct MotivationView: View {
                     HapticFeedback.light.trigger()
                     onContinue()
                 }) {
-                    Text("Continue")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
+                        Text("Continue")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                            .textCase(.none)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                         .background(selectedMotivations.isEmpty ? 

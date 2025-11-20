@@ -130,8 +130,13 @@ struct PrivacyPolicyView: View {
             .padding()
         }
         .background(Color.appBackground)
-        .navigationTitle("privacy policy")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Privacy Policy")
+                    .font(.system(size: 34, weight: .bold))
+            }
+        }
     }
 }
 

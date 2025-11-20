@@ -11,6 +11,7 @@ struct ContentView: View {
                 OnboardingContainerView()
             }
         }
+        .environment(\.textCase, .none)
     }
 }
 
@@ -65,6 +66,7 @@ struct MainTabView: View {
                 .tag(4)
         }
         .tint(.primary)
+        .environment(\.textCase, .none)
     }
 }
 

@@ -48,6 +48,7 @@ struct PetSelectionView: View {
                                 .font(.system(size: 32, weight: .bold, design: .rounded))
                                 .foregroundColor(.textPrimary)
                                 .multilineTextAlignment(.center)
+                                .textCase(.none)
                             
                             VStack(spacing: 8) {
                                 Text("Give your new companion a")
@@ -103,6 +104,7 @@ struct PetSelectionView: View {
                         Text("Continue")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.white)
+                            .textCase(.none)
                             .frame(maxWidth: .infinity)
                             .frame(height: 60)
                             .background(petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 
@@ -142,6 +144,7 @@ struct PetSelectionView: View {
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                 .foregroundColor(.textPrimary)
                                 .multilineTextAlignment(.center)
+                                .textCase(.none)
                                 .opacity(animateTitle ? 1.0 : 0.0)
                             
                             Text("Select one of five adorable pets to\naccompany you on your digital wellness\njourney! Your pet's health will reflect\nyour daily screen time habits.")
@@ -189,6 +192,7 @@ struct PetSelectionView: View {
                         Text("Continue")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(.white)
+                            .textCase(.none)
                             .frame(maxWidth: .infinity)
                             .frame(height: 60)
                             .background(Color.blue.opacity(0.8))
