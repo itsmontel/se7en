@@ -2,6 +2,8 @@ import SwiftUI
 
 struct AppUsageCard: View {
     let app: MonitoredApp
+    let creditsRemaining: Int
+    let onUnblock: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -66,19 +68,46 @@ struct AppUsageCard: View {
             }
             .frame(height: 6)
             
-            // Remaining time text
-            if !app.isOverLimit {
-                Text("\(formatMinutes(app.remainingMinutes)) remaining")
-                    .font(.caption)
-                    .foregroundColor(.textPrimary.opacity(0.6))
-            } else {
-                Text("Limit exceeded by \(formatMinutes(app.usedToday - app.dailyLimit))")
-                    .font(.caption)
-                    .foregroundColor(.error)
+            // Time Remaining / Status
+            HStack {
+                if app.isOverLimit {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Over by \(formatMinutes(app.usedToday - app.dailyLimit))")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.error)
+                        
+                        Text("🚫 App is blocked")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.error)
+                    }
+                } else {
+                    Text("\(formatMinutes(app.remainingMinutes)) remaining")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.success)
+                }
+                Spacer()
+                
+                // Unblock button for over-limit apps
+                if app.isOverLimit && creditsRemaining > 0 {
+                    Button(action: onUnblock) {
+                        HStack(spacing: 4) {
+                            Text("Unblock")
+                            Text("1💳")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.orange)
+                        .cornerRadius(8)
+                    }
+                }
             }
         }
         .padding(16)
-        .cardStyle()
+        .background(Color.cardBackground)
+        .cornerRadius(12)
     }
     
     private func formatMinutes(_ minutes: Int) -> String {

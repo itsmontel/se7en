@@ -11,6 +11,7 @@ struct LifetimeCalculationView: View {
     @State private var showButton = false
     @State private var backgroundIntensity: Double = 0.0
     @State private var animatedYears: Double = 0.0
+    @State private var animationTasks: [Task<Void, Never>] = []
     
     private var hoursPerDay: Int {
         appState.averageScreenTimeHours
@@ -129,51 +130,89 @@ struct LifetimeCalculationView: View {
             }
         }
         .onAppear {
-            // Dramatic sequence of animations
-            withAnimation(.easeOut(duration: 0.8).delay(0.3)) {
-                showTitle = true
-                backgroundIntensity = 0.3
+            startAnimations()
+        }
+        .onDisappear {
+            // Cancel all pending animations when view disappears
+            for task in animationTasks {
+                task.cancel()
             }
+            animationTasks.removeAll()
+        }
+    }
+    
+    private func startAnimations() {
+        // Dramatic sequence of animations
+        withAnimation(.easeOut(duration: 0.8).delay(0.3)) {
+            showTitle = true
+            backgroundIntensity = 0.3
+        }
+        
+        // Show calculation container
+        withAnimation(.spring(response: 0.8, dampingFraction: 0.6).delay(1.2)) {
+            showCalculation = true
+            backgroundIntensity = 0.6
+            HapticFeedback.heavy.trigger()
+        }
+        
+        // Simplified counting animation for better performance
+        let countingTask = Task { @MainActor in
+            // Wait for initial delay
+            try? await Task.sleep(nanoseconds: 1_300_000_000) // 1.3 seconds
             
-            // Show calculation container
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.6).delay(1.2)) {
-                showCalculation = true
-                backgroundIntensity = 0.6
-                HapticFeedback.heavy.trigger()
-            }
+            // Check if cancelled
+            guard !Task.isCancelled else { return }
             
-            // Animate number counting up dramatically
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
-                let targetYears = yearsOfLife
-                let duration: Double = 1.5
-                let steps = 60
-                let increment = targetYears / Double(steps)
+            let targetYears = yearsOfLife
+            let duration: Double = 0.8 // Shorter duration for better performance
+            let steps = 20 // Fewer steps to reduce UI updates
+            let increment = targetYears / Double(steps)
+            
+            // Animate counting with fewer updates
+            for i in 0...steps {
+                // Check if cancelled before each step
+                guard !Task.isCancelled else { return }
                 
-                for i in 0...steps {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + (duration / Double(steps)) * Double(i)) {
-                        animatedYears = increment * Double(i)
-                        
-                        // Haptic feedback at key moments
-                        if i == steps / 2 {
-                            HapticFeedback.medium.trigger()
-                        }
-                        if i == steps {
-                            HapticFeedback.heavy.trigger()
-                        }
-                    }
+                try? await Task.sleep(nanoseconds: UInt64((duration / Double(steps)) * 1_000_000_000))
+                
+                // Check again after sleep
+                guard !Task.isCancelled else { return }
+                
+                animatedYears = increment * Double(i)
+                
+                // Reduced haptic feedback for better performance
+                if i == steps {
+                    HapticFeedback.heavy.trigger()
                 }
             }
+        }
+        animationTasks.append(countingTask)
+        
+        // Show pet with delay
+        let petTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_200_000_000) // 3.2 seconds
             
-            withAnimation(.spring(response: 1.0, dampingFraction: 0.4).delay(3.2)) {
+            guard !Task.isCancelled else { return }
+            
+            withAnimation(.spring(response: 1.0, dampingFraction: 0.4)) {
                 showPet = true
                 backgroundIntensity = 0.9
                 HapticFeedback.heavy.trigger()
             }
+        }
+        animationTasks.append(petTask)
+        
+        // Show button with delay
+        let buttonTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 4_200_000_000) // 4.2 seconds
             
-            withAnimation(.easeOut(duration: 0.6).delay(4.2)) {
+            guard !Task.isCancelled else { return }
+            
+            withAnimation(.easeOut(duration: 0.6)) {
                 showButton = true
             }
         }
+        animationTasks.append(buttonTask)
     }
 }
 

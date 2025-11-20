@@ -57,7 +57,7 @@ struct CreditRingView: View {
                     .font(.h4)
                     .foregroundColor(.textPrimary.opacity(0.7))
                 
-                Text("Remaining This Week")
+                Text("Resets Daily")
                     .font(.caption)
                     .foregroundColor(.textPrimary.opacity(0.5))
             }

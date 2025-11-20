@@ -42,6 +42,7 @@ struct VideoIntroductionView: View {
                 VStack(spacing: 24) {
                     if let player = player {
                         VideoPlayerView(player: player)
+                            .frame(maxWidth: .infinity)
                             .frame(height: 300)
                             .cornerRadius(24)
                             .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
@@ -111,7 +112,19 @@ struct VideoIntroductionView: View {
                 VStack(spacing: 16) {
                     if videoState.isVideoFinished || videoState.videoError != nil {
                         Button(action: {
+                            // Clean up video resources before navigation to prevent conflicts
+                            player?.pause()
+                            if let observer = timeObserver, let currentPlayer = player {
+                                currentPlayer.removeTimeObserver(observer)
+                                timeObserver = nil
+                            }
+                            observers.forEach { NotificationCenter.default.removeObserver($0) }
+                            observers.removeAll()
+                            
+                            // Trigger haptic feedback
                             HapticFeedback.light.trigger()
+                            
+                            // Navigate - button actions are already on main thread
                             onContinue()
                         }) {
                             Text("Continue")
@@ -124,7 +137,7 @@ struct VideoIntroductionView: View {
                                 .cornerRadius(20)
                         }
                         .scaleEffect(videoState.animateContinue ? 1.0 : 0.95)
-                        .opacity(videoState.animateContinue ? 1.0 : 0.0)
+                        .opacity(1.0) // Always visible when condition is met
                         .padding(.horizontal, 24)
                     } else if videoState.showSkipButton {
                         Button(action: {
@@ -156,16 +169,27 @@ struct VideoIntroductionView: View {
             setupVideo()
         }
         .onDisappear {
-            player?.pause()
-            // Remove time observer
-            if let observer = timeObserver, let currentPlayer = player {
-                currentPlayer.removeTimeObserver(observer)
-                timeObserver = nil
-            }
-            // Remove notification observers
-            observers.forEach { NotificationCenter.default.removeObserver($0) }
-            observers.removeAll()
+            cleanupVideo()
         }
+    }
+    
+    private func cleanupVideo() {
+        // Pause and clean up player resources
+        player?.pause()
+        player?.replaceCurrentItem(with: nil) // Release video memory
+        
+        // Remove time observer
+        if let observer = timeObserver, let currentPlayer = player {
+            currentPlayer.removeTimeObserver(observer)
+            timeObserver = nil
+        }
+        
+        // Remove notification observers
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        observers.removeAll()
+        
+        // Clear player reference
+        player = nil
     }
 
     private func setupVideo() {
@@ -195,13 +219,10 @@ struct VideoIntroductionView: View {
             
             videoState.videoError = "Video file '\(videoName).mp4' not found. Please add the video file to your Xcode project."
             
-            // Show continue button after short delay
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-                withAnimation(.easeOut(duration: 0.5)) {
-                    videoState.isVideoFinished = true
-                    videoState.animateContinue = true
-                }
+            // Show continue button immediately
+            DispatchQueue.main.async {
+                videoState.isVideoFinished = true
+                videoState.animateContinue = true
             }
             return
         }
@@ -230,11 +251,10 @@ struct VideoIntroductionView: View {
                 // Pause when we're very close to the end to keep the last frame
                 if remainingSeconds <= 0.3 && remainingSeconds > 0 && !videoState.isVideoFinished {
                     newPlayer.pause()
-                    Task { @MainActor in
-                        withAnimation(.easeOut(duration: 0.5)) {
-                            videoState.isVideoFinished = true
-                            videoState.animateContinue = true
-                        }
+                    // Set immediately on main thread to ensure button appears
+                    DispatchQueue.main.async {
+                        videoState.isVideoFinished = true
+                        videoState.animateContinue = true
                     }
                 }
             }
@@ -248,11 +268,10 @@ struct VideoIntroductionView: View {
         ) { [weak videoState] _ in
             guard let videoState = videoState else { return }
             if !videoState.isVideoFinished {
-                Task { @MainActor in
-                    withAnimation(.easeOut(duration: 0.5)) {
-                        videoState.isVideoFinished = true
-                        videoState.animateContinue = true
-                    }
+                // Set immediately on main thread to ensure button appears
+                DispatchQueue.main.async {
+                    videoState.isVideoFinished = true
+                    videoState.animateContinue = true
                 }
             }
         }
@@ -267,13 +286,11 @@ struct VideoIntroductionView: View {
             guard let videoState = videoState else { return }
             if let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error {
                 print("❌ Video playback error: \(error.localizedDescription)")
-                Task { @MainActor in
+                DispatchQueue.main.async {
                     videoState.videoError = "Video playback failed: \(error.localizedDescription)"
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-                    withAnimation(.easeOut(duration: 0.5)) {
-                        videoState.isVideoFinished = true
-                        videoState.animateContinue = true
-                    }
+                    // Show continue button immediately after error
+                    videoState.isVideoFinished = true
+                    videoState.animateContinue = true
                 }
             }
         }
@@ -310,15 +327,9 @@ struct VideoPlayerView: UIViewControllerRepresentable {
         let controller = AVPlayerViewController()
         controller.player = player
         controller.showsPlaybackControls = false // Hide controls for onboarding flow
-        controller.videoGravity = .resizeAspectFill
+        controller.videoGravity = .resizeAspectFill // Fill entire frame width
         controller.allowsPictureInPicturePlayback = false
-        
-        // Ensure video plays
-        DispatchQueue.main.async {
-            if player.rate == 0 {
-                player.play()
-            }
-        }
+        controller.updatesNowPlayingInfoCenter = false // Reduce overhead
         
         return controller
     }

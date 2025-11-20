@@ -21,7 +21,49 @@ class NotificationService: ObservableObject {
         }
     }
     
-    // MARK: - Credit Loss Notifications
+    // MARK: - App Blocking Notifications
+    
+    func sendAppBlockedNotification(appName: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "🚫 App Blocked"
+        content.body = "\(appName) has been blocked for exceeding your daily limit. Wait until tomorrow or spend 1 credit to unblock now."
+        content.sound = .default
+        content.categoryIdentifier = "APP_BLOCKED"
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(identifier: "app_blocked_\(appName)_\(Date().timeIntervalSince1970)", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule app blocked notification: \(error)")
+            }
+        }
+    }
+    
+    func sendCreditUsedForUnblockNotification(appName: String, creditsRemaining: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = "💳 Credit Used"
+        
+        if creditsRemaining > 0 {
+            content.body = "You spent 1 credit to unblock \(appName). \(creditsRemaining) credits remaining this week."
+        } else {
+            content.body = "You spent your last credit to unblock \(appName). You'll be charged $7 at the end of the week."
+        }
+        
+        content.sound = .default
+        content.categoryIdentifier = "CREDIT_USED"
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(identifier: "credit_used_\(Date().timeIntervalSince1970)", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule credit used notification: \(error)")
+            }
+        }
+    }
+    
+    // MARK: - Credit Loss Notifications (Legacy)
     
     func sendCreditLostNotification(appName: String, creditsRemaining: Int) {
         let content = UNMutableNotificationContent()
@@ -237,6 +279,20 @@ class NotificationService: ObservableObject {
             options: []
         )
         
+        let appBlockedCategory = UNNotificationCategory(
+            identifier: "APP_BLOCKED",
+            actions: [],
+            intentIdentifiers: [],
+            options: []
+        )
+        
+        let creditUsedCategory = UNNotificationCategory(
+            identifier: "CREDIT_USED",
+            actions: [],
+            intentIdentifiers: [],
+            options: []
+        )
+        
         UNUserNotificationCenter.current().setNotificationCategories([
             creditLossCategory,
             warningCategory,
@@ -244,7 +300,9 @@ class NotificationService: ObservableObject {
             weeklySummaryCategory,
             dailyReminderCategory,
             streakMilestoneCategory,
-            petHealthCategory
+            petHealthCategory,
+            appBlockedCategory,
+            creditUsedCategory
         ])
     }
     

@@ -11,13 +11,15 @@ struct SettingsView: View {
     @State private var newPetName = ""
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color.appBackground
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 32) {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 32) {
                         // Hero Section
                         SettingsHeroCard(streak: appState.currentStreak, credits: appState.currentCredits)
                             .padding(.top, 10)
@@ -137,7 +139,10 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.horizontal, 20)
+                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
+                    Spacer()
                 }
+            }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -366,9 +371,9 @@ struct PetSelectionSheet: View {
                             ForEach(PetType.allCases, id: \.self) { petType in
                                 Button(action: {
                                     if let currentPet = appState.userPet {
-                                        appState.userPet = Pet(type: petType, name: currentPet.name, healthState: currentPet.healthState)
+                                        appState.setUserPet(Pet(type: petType, name: currentPet.name, healthState: currentPet.healthState))
                                     } else {
-                                        appState.userPet = Pet(type: petType, name: petType.rawValue, healthState: .fullHealth)
+                                        appState.setUserPet(Pet(type: petType, name: petType.rawValue, healthState: .fullHealth))
                                     }
                                     HapticFeedback.medium.trigger()
                                     isPresented = false
@@ -483,7 +488,7 @@ struct RenamePetSheet: View {
                             if !petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                                var updatedPet = appState.userPet {
                                 updatedPet.name = petName.trimmingCharacters(in: .whitespacesAndNewlines)
-                                appState.userPet = updatedPet
+                                appState.setUserPet(updatedPet)
                                 HapticFeedback.success.trigger()
                             }
                             isPresented = false

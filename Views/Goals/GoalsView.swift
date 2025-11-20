@@ -82,15 +82,17 @@ struct GoalsView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color.appBackground
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 24) {
-                        // Header with week navigation
-                        VStack(spacing: 16) {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 24) {
+                            // Header with week navigation
+                            VStack(spacing: 16) {
                             HStack {
                                 Text("Stats")
                                     .font(.system(size: 34, weight: .bold, design: .rounded))
@@ -178,6 +180,9 @@ struct GoalsView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 32)
+                        }
+                        .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
+                        Spacer()
                     }
                 }
             }

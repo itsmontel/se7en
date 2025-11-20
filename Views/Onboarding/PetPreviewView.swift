@@ -92,7 +92,11 @@ struct PetPreviewView: View {
                         .tint(currentHealthState.color)
                         .padding(.horizontal, 24)
                         .onChange(of: selectedHealthIndex) { _ in
-                            HapticFeedback.light.trigger()
+                            // Reduce haptic feedback frequency for better performance
+                            Task {
+                                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second debounce
+                                HapticFeedback.light.trigger()
+                            }
                         }
                     
                     // Health Indicators
@@ -125,7 +129,7 @@ struct PetPreviewView: View {
                 .padding(.bottom, 48)
             }
         }
-        .animation(.spring(response: 0.3), value: selectedHealthIndex)
+        .animation(.easeOut(duration: 0.2), value: selectedHealthIndex) // Simpler animation for better performance
     }
 }
 

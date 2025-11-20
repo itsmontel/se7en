@@ -225,7 +225,7 @@ struct PetSelectionView: View {
     
     private func savePet() {
         let finalName = petName.trimmingCharacters(in: .whitespacesAndNewlines)
-        appState.userPet = Pet(type: selectedPetType, name: finalName, healthState: .fullHealth)
+        appState.setUserPet(Pet(type: selectedPetType, name: finalName, healthState: .fullHealth))
     }
     
     private func petSystemIcon(for petType: PetType) -> String {

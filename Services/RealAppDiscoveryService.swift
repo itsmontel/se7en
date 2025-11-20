@@ -89,7 +89,7 @@ enum AppCategory: String, CaseIterable, Identifiable {
 // Real app data structure using FamilyControls tokens
 struct RealInstalledApp: Identifiable {
     let id = UUID()
-    let token: ApplicationToken
+    let token: AnyHashable  // Token from FamilyActivitySelection (opaque type)
     let displayName: String
     let bundleID: String
     let category: AppCategory
@@ -161,7 +161,7 @@ struct RealInstalledApp: Identifiable {
 class RealAppDiscoveryService: ObservableObject {
     static let shared = RealAppDiscoveryService()
     
-    @Published var selectedApps: Set<ApplicationToken> = []
+    @Published var selectedApps: Set<AnyHashable> = []
     @Published var categorizedApps: [AppCategory: [RealInstalledApp]] = [:]
     @Published var isLoading = false
     
@@ -218,12 +218,12 @@ class RealAppDiscoveryService: ObservableObject {
         return AppCategory.allCases.filter { !getApps(for: $0).isEmpty }
     }
     
-    private func extractBundleID(from token: ApplicationToken) -> String {
+    private func extractBundleID(from token: AnyHashable) -> String {
         // The token contains the bundle ID in its description
-        // This is a workaround since ApplicationToken doesn't expose bundleID directly
+        // This is a workaround since tokens don't expose bundleID directly
         let description = String(describing: token)
         // Extract bundle ID from the token description if possible
-        // Format is typically: ApplicationToken(bundleIdentifier: "com.example.app")
+        // Format is typically: Token(bundleIdentifier: "com.example.app")
         if let range = description.range(of: "bundleIdentifier: \"") {
             let startIndex = range.upperBound
             if let endRange = description[startIndex...].range(of: "\"") {
@@ -233,7 +233,7 @@ class RealAppDiscoveryService: ObservableObject {
         return "unknown.app"
     }
     
-    private func extractDisplayName(from token: ApplicationToken) -> String? {
+    private func extractDisplayName(from token: AnyHashable) -> String? {
         // Try to get the display name from the token
         // This is a simplified version - in production you'd want more robust extraction
         let bundleID = extractBundleID(from: token)

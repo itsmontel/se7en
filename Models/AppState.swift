@@ -2,6 +2,14 @@ import Foundation
 import SwiftUI
 import CoreData
 import Combine
+import FamilyControls
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let screenTimeDataUpdated = Notification.Name("screenTimeDataUpdated")
+    static let appBlocked = Notification.Name("appBlocked")
+}
 
 class AppState: ObservableObject {
     @Published var isOnboarding = true
@@ -36,7 +44,10 @@ class AppState: ObservableObject {
     
     init() {
         setupObservers()
+        // Perform daily reset check on app launch
+        coreDataManager.performDailyResetIfNeeded()
         loadInitialData()
+        loadUserPreferences()
         checkOnboardingStatus()
     }
     
@@ -46,9 +57,16 @@ class AppState: ObservableObject {
             .assign(to: \.isScreenTimeAuthorized, on: self)
             .store(in: &cancellables)
         
-        // Setup periodic data refresh
-        Timer.publish(every: 60, on: .main, in: .common)
+        // Setup periodic data refresh - less frequent to improve performance
+        Timer.publish(every: 300, on: .main, in: .common) // Every 5 minutes instead of 1
             .autoconnect()
+            .sink { [weak self] _ in
+                self?.refreshData()
+            }
+            .store(in: &cancellables)
+        
+        // Listen for Screen Time data updates (removed duplicate)
+        NotificationCenter.default.publisher(for: .screenTimeDataUpdated)
             .sink { [weak self] _ in
                 self?.refreshData()
             }
@@ -61,13 +79,47 @@ class AppState: ObservableObject {
         loadCurrentWeekData()
         loadAppGoals()
         loadUnlockedAchievements()
+        loadDailyHistory()
         checkAchievements()
     }
     
     private func checkOnboardingStatus() {
         // Check if user has completed onboarding by seeing if they have any app goals
+        // But also respect the saved onboarding status
         let goals = coreDataManager.getActiveAppGoals()
-        isOnboarding = goals.isEmpty
+        let savedPreferences = coreDataManager.loadUserPreferences()
+        
+        // If user has completed onboarding before, don't reset it
+        if !savedPreferences.isOnboarding && !goals.isEmpty {
+            isOnboarding = false
+        } else {
+            isOnboarding = goals.isEmpty
+        }
+    }
+    
+    // MARK: - User Preferences Persistence
+    
+    private func loadUserPreferences() {
+        let preferences = coreDataManager.loadUserPreferences()
+        
+        userName = preferences.userName ?? ""
+        userPet = preferences.pet
+        isOnboarding = preferences.isOnboarding
+        averageScreenTimeHours = preferences.averageScreenTimeHours
+        
+        // If pet exists, update its health based on current credits
+        if userPet != nil {
+            updatePetHealth()
+        }
+    }
+    
+    func saveUserPreferences() {
+        coreDataManager.saveUserPreferences(
+            userName: userName.isEmpty ? nil : userName,
+            pet: userPet,
+            isOnboarding: isOnboarding,
+            averageScreenTimeHours: averageScreenTimeHours
+        )
     }
     
     // MARK: - Data Loading Methods
@@ -80,10 +132,18 @@ class AppState: ObservableObject {
     }
     
     private func loadCurrentWeekData() {
+        // Perform daily reset check first
+        coreDataManager.performDailyResetIfNeeded()
+        
         let weeklyPlan = coreDataManager.getOrCreateCurrentWeeklyPlan()
         credits = Int(weeklyPlan.creditsRemaining)
         currentCredits = credits // Keep in sync
         updatePetHealth() // Update pet health based on credits
+        
+        // Re-setup monitoring (individual apps will be blocked if limits exceeded)
+        if isScreenTimeAuthorized && !isOnboarding {
+            screenTimeService.checkAndUpdateAppBlocking()
+        }
         
         // Calculate week progress (0.0 to 1.0)
         let startOfWeek = weeklyPlan.startDate ?? Date()
@@ -155,14 +215,13 @@ class AppState: ObservableObject {
     }
     
     private func getCurrentUsage(for goal: AppGoal) -> Int {
-        // Get today's usage record for this app goal
-        let todaysRecords = coreDataManager.getTodaysUsageRecords()
-        if let record = todaysRecords.first(where: { $0.appGoal?.id == goal.id }) {
-            return Int(record.actualUsageMinutes)
+        // Get today's usage from Screen Time or Core Data
+        if let usageRecord = screenTimeService.getAppUsageToday(for: goal.appBundleID ?? "") {
+            return Int(usageRecord.actualUsageMinutes)
         }
         
-        // If no record exists, try to get live usage from Screen Time API
-        // For now, return 0 as placeholder
+        // If no record exists, try to get from Screen Time service asynchronously
+        // For synchronous context, return 0 and let the async refresh handle it
         return 0
     }
     
@@ -199,6 +258,15 @@ class AppState: ObservableObject {
     private func loadUnlockedAchievements() {
         let records = coreDataManager.getUnlockedAchievements()
         unlockedAchievements = records.map { $0.achievementID ?? "" }
+    }
+    
+    private func loadDailyHistory() {
+        // Load daily history from current weekly plan
+        if let weeklyPlan = coreDataManager.getCurrentWeeklyPlan() {
+            dailyHistory = coreDataManager.getDailyHistory(for: weeklyPlan)
+        } else {
+            dailyHistory = []
+        }
     }
     
     func loadAchievements() {
@@ -267,6 +335,33 @@ class AppState: ObservableObject {
         checkAchievements()
     }
     
+    // MARK: - Screen Time Integration
+    
+    func requestScreenTimeAuthorization() async throws {
+        try await screenTimeService.requestAuthorization()
+        
+        // After authorization, set up monitoring for existing goals
+        if screenTimeService.isAuthorized {
+            let goals = coreDataManager.getActiveAppGoals()
+            screenTimeService.setupMonitoring(for: goals)
+        }
+    }
+    
+    func addAppGoalFromFamilySelection(_ selection: FamilyActivitySelection, appName: String, dailyLimitMinutes: Int) {
+        print("🔍 Adding app goal from Family Activity selection: \(appName)")
+        
+        // Use Screen Time service to handle the selection
+        screenTimeService.addAppGoalFromSelection(selection, appName: appName, dailyLimitMinutes: dailyLimitMinutes)
+        
+        // Refresh local data
+        loadAppGoals()
+        
+        // Update onboarding status
+        checkOnboardingStatus()
+        
+        checkAchievements()
+    }
+    
     func updateAppGoal(_ goalId: UUID, dailyLimitMinutes: Int) {
         let goals = coreDataManager.getActiveAppGoals()
         if let goal = goals.first(where: { $0.id == goalId }) {
@@ -302,12 +397,25 @@ class AppState: ObservableObject {
     func deductCredit(for appName: String, reason: String) {
         _ = coreDataManager.deductCredit(reason: reason)
         loadCurrentWeekData()
+        loadDailyHistory() // Reload history after credit change
+        
+        // Re-setup monitoring (only the app that exceeded limit is blocked)
+        if isScreenTimeAuthorized {
+            screenTimeService.checkAndUpdateAppBlocking()
+        }
+        
         checkAchievements()
     }
     
     func addCredits(amount: Int, reason: String) {
         _ = coreDataManager.addCredits(amount: amount, reason: reason)
         loadCurrentWeekData()
+        loadDailyHistory() // Reload history after credit change
+        
+        // Re-setup monitoring (individual apps remain blocked if they exceeded limits)
+        if isScreenTimeAuthorized {
+            screenTimeService.checkAndUpdateAppBlocking()
+        }
     }
     
     // MARK: - Streak Management
@@ -339,46 +447,71 @@ class AppState: ObservableObject {
     
     func completeOnboarding() {
         isOnboarding = false
+        saveUserPreferences() // Persist onboarding completion
     }
     
     // MARK: - Week Management
     
     func resetWeek() {
+        // Reset failure count for new week
+        coreDataManager.resetWeeklyFailureCount()
+        
         Task {
             screenTimeService.performWeeklyReset()
         }
         loadCurrentWeekData()
         loadAppGoals()
+        loadDailyHistory() // Reload history after week reset
         updateStreak()
         checkAchievements()
     }
     
-    // MARK: - Screen Time Authorization
+    // MARK: - Progressive Penalty System
     
-    func requestScreenTimeAuthorization() async {
-        do {
-            try await screenTimeService.requestAuthorization()
-            
-            if screenTimeService.isAuthorized {
-                // Setup monitoring for existing goals
-                let goals = coreDataManager.getActiveAppGoals()
-                Task {
-                    screenTimeService.setupMonitoring(for: goals)
-                }
-            }
-        } catch {
-            print("Failed to authorize Screen Time: \(error)")
-        }
+    func getCurrentFailureCount() -> Int {
+        return coreDataManager.getCurrentFailureCount()
     }
+    
+    func getNextFailurePenalty() -> Int {
+        // Returns how many credits will be deducted on the next failure
+        return coreDataManager.getNextFailurePenalty()
+    }
+    
+    // MARK: - Screen Time Authorization
+    // (Authorization method moved to Screen Time Integration section above)
     
     // MARK: - Data Refresh
     
     func refreshData() {
+        // Skip refresh during onboarding to prevent performance issues
+        guard !isOnboarding else { return }
+        
+        // Perform refresh operations more efficiently
         loadUserProfile()
         loadCurrentWeekData()
         loadAppGoals()
         loadUnlockedAchievements()
+        loadDailyHistory()
         checkAchievements()
+        
+        // Refresh Screen Time usage data if authorized - move to background
+        if isScreenTimeAuthorized {
+            Task {
+                await screenTimeService.refreshAllAppUsage()
+                
+                // Reload app goals after usage refresh on main thread
+                await MainActor.run {
+                    self.loadAppGoals()
+                }
+            }
+        }
+    }
+    
+    func syncDataFromBackground() {
+        // Called when app returns from background
+        // Reload all data to ensure it's up to date
+        loadUserPreferences()
+        refreshData()
     }
     
     // MARK: - Subscription Management
@@ -389,6 +522,7 @@ class AppState: ObservableObject {
         userProfile.updatedAt = Date()
         coreDataManager.save()
         hasActiveSubscription = isActive
+        saveUserPreferences() // Also save preferences
     }
     
     // MARK: - Pet Health Management
@@ -415,6 +549,7 @@ class AppState: ObservableObject {
         if pet.healthState != newHealthState {
             pet.healthState = newHealthState
             userPet = pet
+            saveUserPreferences() // Persist pet health state
             
             // Send notification about pet health change
             if newHealthState == .sick {
@@ -424,5 +559,15 @@ class AppState: ObservableObject {
                 )
             }
         }
+    }
+    
+    func setUserPet(_ pet: Pet) {
+        userPet = pet
+        saveUserPreferences()
+    }
+    
+    func setUserName(_ name: String) {
+        userName = name
+        saveUserPreferences()
     }
 }

@@ -21,7 +21,8 @@ struct OnboardingContainerView: View {
     @State private var appLimits: [String: Int] = [:]
     
     private func goBack() {
-        withAnimation {
+        // Use simpler animation for better performance
+        withAnimation(.easeOut(duration: 0.2)) {
             switch currentStep {
             case .welcome:
                 break // No back from welcome
@@ -59,7 +60,7 @@ struct OnboardingContainerView: View {
                 switch currentStep {
                 case .welcome:
                     WelcomeView(onContinue: {
-                        withAnimation {
+                        withAnimation(.easeOut(duration: 0.2)) {
                             currentStep = .petSelection
                         }
                         HapticFeedback.light.trigger()
@@ -68,7 +69,7 @@ struct OnboardingContainerView: View {
                 case .petSelection:
                     PetSelectionView(
                         onContinue: {
-                            withAnimation {
+                            withAnimation(.easeOut(duration: 0.2)) {
                                 currentStep = .videoIntroduction
                             }
                             HapticFeedback.light.trigger()
@@ -79,7 +80,7 @@ struct OnboardingContainerView: View {
                 case .videoIntroduction:
                     VideoIntroductionView(
                         onContinue: {
-                            withAnimation {
+                            withAnimation(.easeOut(duration: 0.2)) {
                                 currentStep = .petPreview
                             }
                             HapticFeedback.light.trigger()
@@ -90,7 +91,7 @@ struct OnboardingContainerView: View {
                 case .petPreview:
                     PetPreviewView(
                         onContinue: {
-                            withAnimation {
+                            withAnimation(.easeOut(duration: 0.2)) {
                                 currentStep = .motivation
                             }
                             HapticFeedback.light.trigger()
@@ -189,8 +190,8 @@ struct OnboardingContainerView: View {
             }
         }
         
-        // Complete onboarding
-        appState.isOnboarding = false
+        // Complete onboarding and persist
+        appState.completeOnboarding()
         HapticFeedback.success.trigger()
     }
 }

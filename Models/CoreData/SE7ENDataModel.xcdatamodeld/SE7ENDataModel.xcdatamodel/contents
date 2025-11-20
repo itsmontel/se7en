@@ -33,19 +33,29 @@
         <relationship name="weeklyPlan" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WeeklyPlan" inverseName="transactions" inverseEntity="WeeklyPlan"/>
     </entity>
     <entity name="UserProfile" representedClassName="UserProfile" syncable="YES" codeGenerationType="class">
+        <attribute name="averageScreenTimeHours" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="currentStreak" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="hasActiveSubscription" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isOnboarding" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
         <attribute name="longestStreak" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="petHealthState" optional="YES" attributeType="String"/>
+        <attribute name="petName" optional="YES" attributeType="String"/>
+        <attribute name="petType" optional="YES" attributeType="String"/>
         <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="userName" optional="YES" attributeType="String"/>
         <relationship name="weeklyPlans" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="WeeklyPlan" inverseName="userProfile" inverseEntity="WeeklyPlan"/>
     </entity>
     <entity name="WeeklyPlan" representedClassName="WeeklyPlan" syncable="YES" codeGenerationType="class">
+        <attribute name="accountabilityFeePaidDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="creditsRemaining" optional="NO" attributeType="Integer 32" defaultValueString="7" usesScalarValueType="YES"/>
         <attribute name="endDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="failureCount" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="isCompleted" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="lastDailyResetDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="lastFailureDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="paymentAmount" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="startDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="transactions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CreditTransaction" inverseName="weeklyPlan" inverseEntity="CreditTransaction"/>

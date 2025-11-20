@@ -9,6 +9,11 @@ struct DashboardView: View {
     @State private var showingAddAppSheet = false
     @State private var selectedDate = Date()
     @State private var showingDatePicker = false
+    @State private var showingUnblockConfirmation = false
+    @State private var appToUnblock: MonitoredApp?
+    @State private var showingBlockedAppModal = false
+    @State private var blockedAppName: String = ""
+    @State private var blockedAppBundleID: String? = nil
     
     private var healthScore: Int {
         // Calculate health based on actual app usage
@@ -40,15 +45,17 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color.appBackground
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 0) {
-                        // Header with greeting
-                        VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 0) {
+                            // Header with greeting
+                            VStack(alignment: .leading, spacing: 12) {
                             // Time-based greeting
                             Text(timeBasedGreeting(userName: appState.userName))
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
@@ -154,71 +161,45 @@ struct DashboardView: View {
                             
                             VStack(spacing: 12) {
                                 ForEach(appState.monitoredApps, id: \.id) { app in
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        HStack(spacing: 12) {
-                                            // App Icon
-                                            ZStack {
-                                                Circle()
-                                                    .fill(app.color.opacity(0.15))
-                                                    .frame(width: 48, height: 48)
-                                                
-                                                Image(systemName: app.icon)
-                                                    .font(.system(size: 22))
-                                                    .foregroundColor(app.color)
-                                            }
-                                            
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(app.name)
-                                                    .font(.system(size: 16, weight: .semibold))
-                                                    .foregroundColor(.textPrimary)
-                                                
-                                                HStack(spacing: 4) {
-                                                    Text(formatMinutes(app.usedToday))
-                                                        .font(.system(size: 14, weight: .semibold))
-                                                        .foregroundColor(app.statusColor)
-                                                    
-                                                    Text("/ \(formatMinutes(app.dailyLimit))")
-                                                        .font(.system(size: 14, weight: .medium))
-                                                        .foregroundColor(.textSecondary)
-                                                }
-                                            }
-                                            
-                                            Spacer()
-                                        }
-                                        
-                                        // Progress Bar
-                                        GeometryReader { geometry in
-                                            ZStack(alignment: .leading) {
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .fill(Color.gray.opacity(0.15))
-                                                    .frame(height: 6)
-                                                
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .fill(app.statusColor)
-                                                    .frame(width: geometry.size.width * min(app.percentageUsed, 1.0), height: 6)
-                                            }
-                                        }
-                                        .frame(height: 6)
-                                        
-                                        // Time Remaining
-                                        HStack {
-                                            if app.isOverLimit {
-                                                Text("Over by \(formatMinutes(app.usedToday - app.dailyLimit))")
-                                                    .font(.system(size: 13, weight: .medium))
-                                                    .foregroundColor(.error)
-                                            } else {
-                                                Text("\(formatMinutes(app.remainingMinutes)) remaining")
-                                                    .font(.system(size: 13, weight: .medium))
-                                                    .foregroundColor(.success)
-                                            }
-                                            Spacer()
-                                        }
-                                    }
-                                    .padding(16)
-                                    .background(Color.cardBackground)
-                                    .cornerRadius(12)
+                                    AppUsageCard(
+                                        app: app,
+                                        creditsRemaining: appState.currentCredits,
+                                        onUnblock: { handleUnblockApp(app) }
+                                    )
                                     .padding(.horizontal, 20)
                                 }
+                                
+                                // Test Blocked App Modal Button (for testing/design purposes)
+                                Button(action: {
+                                    // Show test blocked app modal - use first monitored app or default to Instagram
+                                    if let firstApp = appState.monitoredApps.first {
+                                        // Try to get bundle ID from Core Data
+                                        let goals = CoreDataManager.shared.getActiveAppGoals()
+                                        let matchingGoal = goals.first { $0.appName == firstApp.name }
+                                        let bundleID = matchingGoal?.appBundleID ?? "com.\(firstApp.name.lowercased().replacingOccurrences(of: " ", with: ""))"
+                                        showBlockedAppModal(appName: firstApp.name, bundleID: bundleID)
+                                    } else {
+                                        // Default test with Instagram
+                                        showBlockedAppModal(appName: "Instagram", bundleID: "com.instagram.instagram")
+                                    }
+                                }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "eye.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundColor(.orange)
+                                        
+                                        Text("Test Blocked App Modal")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.orange)
+                                        
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 16)
+                                    .background(Color.orange.opacity(0.1))
+                                    .cornerRadius(12)
+                                }
+                                .padding(.horizontal, 20)
                                 
                                 // Add App Button
                                 Button(action: {
@@ -244,6 +225,9 @@ struct DashboardView: View {
                             }
                         }
                         .padding(.bottom, 40)
+                        }
+                        .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
+                        Spacer()
                     }
                 }
                 
@@ -261,6 +245,33 @@ struct DashboardView: View {
                         message: "Great job staying on track!",
                         isPresented: $showingSuccessToast
                     )
+                }
+                
+                if showingBlockedAppModal {
+                    BlockedAppModal(
+                        isPresented: $showingBlockedAppModal,
+                        appName: blockedAppName,
+                        bundleID: blockedAppBundleID
+                    )
+                    .environmentObject(appState)
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .alert("Unblock App", isPresented: $showingUnblockConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Spend 1 Credit") {
+                    handleConfirmUnblock()
+                }
+            } message: {
+                if let app = appToUnblock {
+                    Text("Spend 1 credit to unblock \(app.name) now? You have \(appState.currentCredits) credits remaining.")
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .appBlocked)) { notification in
+                if let userInfo = notification.userInfo,
+                   let appName = userInfo["appName"] as? String,
+                   let bundleID = userInfo["bundleID"] as? String {
+                    showBlockedAppModal(appName: appName, bundleID: bundleID)
                 }
             }
             .navigationTitle("")
@@ -287,7 +298,22 @@ struct DashboardView: View {
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    CompactStreakView(streak: appState.currentStreak)
+                    HStack(spacing: 12) {
+                        // Test button to show blocked app modal
+                        Button(action: {
+                            // Show test blocked app modal
+                            showBlockedAppModal(appName: "Instagram", bundleID: "com.instagram.instagram")
+                        }) {
+                            Image(systemName: "eye.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.blue)
+                                .padding(8)
+                                .background(Color.blue.opacity(0.1))
+                                .clipShape(Circle())
+                        }
+                        
+                        CompactStreakView(streak: appState.currentStreak)
+                    }
                 }
             }
             .sheet(isPresented: $showingAddAppSheet) {
@@ -322,7 +348,7 @@ struct DashboardView: View {
     }
     
     // Helper function to format minutes
-    private func formatMinutes(_ minutes: Int) -> String {
+    func formatMinutes(_ minutes: Int) -> String {
         let hours = minutes / 60
         let mins = minutes % 60
         
@@ -359,6 +385,51 @@ struct DashboardView: View {
         appState.deductCredit(for: "Demo App", reason: "Simulation")
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             showingCreditLossAlert = true
+        }
+    }
+    
+    // MARK: - App Blocking/Unblocking Methods
+    
+    private func handleUnblockApp(_ app: MonitoredApp) {
+        appToUnblock = app
+        showingUnblockConfirmation = true
+    }
+    
+    private func handleConfirmUnblock() {
+        guard let app = appToUnblock else { return }
+        
+        // Get bundleID from Core Data using app name
+        let coreDataManager = CoreDataManager.shared
+        let goals = coreDataManager.getActiveAppGoals()
+        guard let goal = goals.first(where: { $0.appName == app.name }),
+              let bundleID = goal.appBundleID else {
+            print("❌ Could not find bundle ID for app: \(app.name)")
+            appToUnblock = nil
+            showingUnblockConfirmation = false
+            return
+        }
+        
+        // Use ScreenTimeService to unblock with credit
+        let success = ScreenTimeService.shared.unblockAppWithCredit(bundleID)
+        
+        if success {
+            // Refresh app state
+            appState.refreshData()
+            HapticFeedback.success.trigger()
+        } else {
+            HapticFeedback.error.trigger()
+        }
+        
+        // Reset state
+        appToUnblock = nil
+        showingUnblockConfirmation = false
+    }
+    
+    private func showBlockedAppModal(appName: String, bundleID: String) {
+        blockedAppName = appName
+        blockedAppBundleID = bundleID
+        withAnimation {
+            showingBlockedAppModal = true
         }
     }
 }
@@ -968,6 +1039,7 @@ struct DateHistoryPicker: View {
         
         return (score, color, status)
     }
+    
 }
 
 

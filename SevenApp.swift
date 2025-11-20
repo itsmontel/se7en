@@ -12,6 +12,9 @@ struct SE7ENApp: App {
         // Setup notification categories
         NotificationService.shared.setupNotificationCategories()
         
+        // Perform Core Data migration if needed
+        CoreDataManager.shared.performMigrationIfNeeded()
+        
         // Don't request permissions on app launch - wait for onboarding
     }
     
@@ -22,6 +25,10 @@ struct SE7ENApp: App {
                 .environment(\.managedObjectContext, persistentContainer.viewContext)
                 .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environment(\.textCase, .none)
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                    // Sync data when app returns from background
+                    appState.syncDataFromBackground()
+                }
         }
     }
 }

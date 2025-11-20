@@ -24,12 +24,15 @@ struct AchievementsView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color.appBackground
                     .ignoresSafeArea()
                 
-                VStack(spacing: 0) {
+                ScrollView {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 0) {
                     // Progress Header
                     VStack(spacing: 16) {
                         HStack {
@@ -139,7 +142,11 @@ struct AchievementsView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 32)
                     }
+                    }
+                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
+                    Spacer()
                 }
+            }
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)

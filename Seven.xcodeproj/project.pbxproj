@@ -33,6 +33,8 @@
 		1024 /* CreditLossAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2024 /* CreditLossAlert.swift */; };
 		1025 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2025 /* LoadingView.swift */; };
 		1026 /* SuccessToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2026 /* SuccessToast.swift */; };
+		1084 /* BlockedAppModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3032 /* BlockedAppModal.swift */; };
+		1085 /* DeviceActivityExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3033 /* DeviceActivityExtensions.swift */; };
 		1027 /* AnimatedNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2027 /* AnimatedNumber.swift */; };
 		1028 /* Se7enWordmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2028 /* Se7enWordmark.swift */; };
 		1029 /* StreakView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029 /* StreakView.swift */; };
@@ -45,6 +47,7 @@
 		1036 /* ScreenTimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2036 /* ScreenTimeService.swift */; };
 		1037 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2037 /* NotificationService.swift */; };
 		1038 /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2038 /* DeviceActivityMonitorExtension.swift */; };
+		1044 /* FamilyActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2063 /* FamilyActivityService.swift */; };
 		1039 /* StoreKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2039 /* StoreKitService.swift */; };
 		1040 /* SE7ENDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 2040 /* SE7ENDataModel.xcdatamodeld */; };
 		1041 /* AppDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2044 /* AppDiscoveryService.swift */; };
@@ -98,6 +101,8 @@
 		2024 /* CreditLossAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/CreditLossAlert.swift; sourceTree = "<group>"; };
 		2025 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/LoadingView.swift; sourceTree = "<group>"; };
 		2026 /* SuccessToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/SuccessToast.swift; sourceTree = "<group>"; };
+		3032 /* BlockedAppModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Components/BlockedAppModal.swift"; sourceTree = "<group>"; };
+		3033 /* DeviceActivityExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extensions/DeviceActivityExtensions.swift"; sourceTree = "<group>"; };
 		2027 /* AnimatedNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AnimatedNumber.swift; sourceTree = "<group>"; };
 		2028 /* Se7enWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/Se7enWordmark.swift; sourceTree = "<group>"; };
 		2029 /* StreakView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakView.swift; sourceTree = "<group>"; };
@@ -110,6 +115,7 @@
 		2036 /* ScreenTimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ScreenTimeService.swift; sourceTree = "<group>"; };
 		2037 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/NotificationService.swift; sourceTree = "<group>"; };
 		2038 /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
+		2063 /* FamilyActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/FamilyActivityService.swift; sourceTree = "<group>"; };
 		2039 /* StoreKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/StoreKitService.swift; sourceTree = "<group>"; };
 		2041 /* SE7ENDataModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = SE7ENDataModel.xcdatamodel; sourceTree = "<group>"; };
 		2042 /* Seven.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Seven.entitlements; sourceTree = "<group>"; };
@@ -206,6 +212,7 @@
 				2024 /* CreditLossAlert.swift */,
 				2025 /* LoadingView.swift */,
 				2026 /* SuccessToast.swift */,
+				3032 /* BlockedAppModal.swift */,
 				2027 /* AnimatedNumber.swift */,
 				2028 /* Se7enWordmark.swift */,
 				2029 /* StreakView.swift */,
@@ -225,6 +232,7 @@
 			isa = PBXGroup;
 			children = (
 				2008 /* View+Extensions.swift */,
+				3033 /* DeviceActivityExtensions.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -234,6 +242,7 @@
 				2036 /* ScreenTimeService.swift */,
 				2037 /* NotificationService.swift */,
 				2038 /* DeviceActivityMonitorExtension.swift */,
+				2063 /* FamilyActivityService.swift */,
 				2039 /* StoreKitService.swift */,
 				2044 /* AppDiscoveryService.swift */,
 				2060 /* RealAppDiscoveryService.swift */,
@@ -442,6 +451,8 @@
 				1024 /* CreditLossAlert.swift in Sources */,
 				1025 /* LoadingView.swift in Sources */,
 				1026 /* SuccessToast.swift in Sources */,
+				1084 /* BlockedAppModal.swift in Sources */,
+				1085 /* DeviceActivityExtensions.swift in Sources */,
 				1027 /* AnimatedNumber.swift in Sources */,
 				1028 /* Se7enWordmark.swift in Sources */,
 				1029 /* StreakView.swift in Sources */,
@@ -454,6 +465,7 @@
 				1036 /* ScreenTimeService.swift in Sources */,
 				1037 /* NotificationService.swift in Sources */,
 				1038 /* DeviceActivityMonitorExtension.swift in Sources */,
+				1044 /* FamilyActivityService.swift in Sources */,
 				1039 /* StoreKitService.swift in Sources */,
 				1040 /* SE7ENDataModel.xcdatamodeld in Sources */,
 				1041 /* AppDiscoveryService.swift in Sources */,

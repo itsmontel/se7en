@@ -115,7 +115,7 @@ struct WelcomeView: View {
                 VStack(spacing: 16) {
                     Button(action: {
                         if isNameValid {
-                            appState.userName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            appState.setUserName(userName.trimmingCharacters(in: .whitespacesAndNewlines))
                             showNameError = false
                             HapticFeedback.light.trigger()
                             withAnimation(.easeInOut(duration: 0.2)) {

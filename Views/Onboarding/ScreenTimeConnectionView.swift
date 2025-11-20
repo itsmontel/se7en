@@ -4,10 +4,12 @@ import FamilyControls
 struct ScreenTimeConnectionView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var screenTimeService = ScreenTimeService.shared
+    @StateObject private var familyActivityService = FamilyActivityService.shared
     let onContinue: () -> Void
     let onBack: (() -> Void)?
     
     @State private var isRequesting = false
+    @State private var showFamilyPicker = false
     
     private var petImageName: String {
         if let pet = appState.userPet {
@@ -90,7 +92,7 @@ struct ScreenTimeConnectionView: View {
                         }
                     } else {
                         // Request authorization
-                        Button(action: requestAuthorization) {
+                        Button(action: requestScreenTimePermissionAndShowPicker) {
                             if isRequesting {
                                 ProgressView()
                                     .tint(.white)
@@ -110,10 +112,36 @@ struct ScreenTimeConnectionView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 48)
             }
+            .sheet(isPresented: $showFamilyPicker) {
+                NavigationView {
+                    FamilyActivityPickerView(
+                        selection: $familyActivityService.selection,
+                        isPresented: $showFamilyPicker
+                    )
+                    .navigationTitle("Select Apps to Monitor")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Skip") {
+                                showFamilyPicker = false
+                                onContinue() // Continue even if skipped
+                            }
+                        }
+                        
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showFamilyPicker = false
+                                onContinue() // Continue to next step
+                            }
+                            .fontWeight(.semibold)
+                        }
+                    }
+                }
+            }
         }
     }
     
-    private func requestAuthorization() {
+    private func requestScreenTimePermissionAndShowPicker() {
         isRequesting = true
         
         Task {
@@ -128,16 +156,17 @@ struct ScreenTimeConnectionView: View {
                     isRequesting = false
                     if screenTimeService.isAuthorized {
                         HapticFeedback.success.trigger()
-                        // Auto-continue after successful authorization
+                        
+                        // Show family picker after successful authorization
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            onContinue()
+                            showFamilyPicker = true
                         }
                     }
                 }
             } catch {
                 await MainActor.run {
                     isRequesting = false
-                    print("Failed to request authorization: \(error)")
+                    print("❌ Failed to request authorization: \(error)")
                     // Optionally show an error message to the user
                 }
             }
@@ -145,23 +174,4 @@ struct ScreenTimeConnectionView: View {
     }
 }
 
-struct PermissionInfoRow: View {
-    let icon: String
-    let text: String
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundColor(.textPrimary)
-                .frame(width: 30)
-            
-            Text(text)
-                .font(.bodyLarge)
-                .foregroundColor(.textPrimary)
-            
-            Spacer()
-        }
-    }
-}
 

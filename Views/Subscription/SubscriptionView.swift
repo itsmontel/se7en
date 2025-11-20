@@ -36,13 +36,15 @@ struct SubscriptionView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color.appBackground
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 24) {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 24) {
                         // Hero Section - Large Credit Display
                         VStack(spacing: 20) {
                             // Large circular progress ring
@@ -324,7 +326,10 @@ struct SubscriptionView: View {
                         
                         Spacer(minLength: 50)
                     }
+                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
+                    Spacer()
                 }
+            }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

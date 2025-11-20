@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct WhyChooseSE7ENView: View {
     @EnvironmentObject var appState: AppState
@@ -11,10 +12,12 @@ struct WhyChooseSE7ENView: View {
     @State private var animatePet = false
     
     private var petImageName: String {
-        if let pet = appState.userPet {
-            return "\(pet.type.folderName.lowercased())fullhealth"
+        // Safely get pet image name with fallback
+        guard let pet = appState.userPet else {
+            return "dogfullhealth"
         }
-        return "dogfullhealth"
+        let petType = pet.type.folderName.lowercased()
+        return "\(petType)fullhealth"
     }
     
     var body: some View {
@@ -36,10 +39,17 @@ struct WhyChooseSE7ENView: View {
                             .frame(width: 140, height: 140)
                             .blur(radius: 20)
                         
-                        Image(petImageName)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 100, height: 100)
+                        if let image = UIImage(named: petImageName) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 100, height: 100)
+                        } else {
+                            // Fallback to system image if pet image not found
+                            Image(systemName: "pawprint.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(.blue)
+                        }
                     }
                     .scaleEffect(animatePet ? 1.0 : 0.8)
                     .opacity(animatePet ? 1.0 : 0.0)
@@ -104,7 +114,10 @@ struct WhyChooseSE7ENView: View {
                     
                     Button(action: {
                         HapticFeedback.medium.trigger()
-                        onContinue()
+                        // Prevent multiple taps
+                        DispatchQueue.main.async {
+                            onContinue()
+                        }
                     }) {
                         HStack {
                             Text("Let's do this")
@@ -136,6 +149,7 @@ struct WhyChooseSE7ENView: View {
             }
         }
         .onAppear {
+            // Animate elements with delays
             withAnimation(.spring(response: 0.8, dampingFraction: 0.6).delay(0.1)) {
                 animatePet = true
             }
