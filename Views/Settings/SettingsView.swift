@@ -118,6 +118,43 @@ struct SettingsView: View {
                                 }
                             }
                             
+                            // Follow Us Section
+                            VStack(spacing: 16) {
+                                Text("Follow us")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundColor(.textPrimary)
+                                
+                                HStack(spacing: 32) {
+                                    // Instagram - Official logo
+                                    Button(action: {
+                                        if let url = URL(string: "https://www.instagram.com/se7enapp") {
+                                            UIApplication.shared.open(url)
+                                        }
+                                        HapticFeedback.light.trigger()
+                                    }) {
+                                        Image("instagramlogo")
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 50, height: 50)
+                                    }
+                                    
+                                    // TikTok - Official logo
+                                    Button(action: {
+                                        if let url = URL(string: "https://www.tiktok.com/@se7enapp") {
+                                            UIApplication.shared.open(url)
+                                        }
+                                        HapticFeedback.light.trigger()
+                                    }) {
+                                        Image("tiktoklogo")
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 50, height: 50)
+                                    }
+                                }
+                            }
+                            .padding(.top, 24)
+                            .padding(.bottom, 16)
+                            
                             // App Info
                             VStack(spacing: 8) {
                                 Image("appIcon_preview") // Assuming asset exists, or system icon
@@ -134,7 +171,7 @@ struct SettingsView: View {
                                     .font(.caption)
                                     .foregroundColor(.textSecondary)
                             }
-                            .padding(.top, 20)
+                            .padding(.top, 8)
                             .padding(.bottom, 40)
                         }
                     }

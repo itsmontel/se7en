@@ -68,7 +68,11 @@ struct CreditPackage: Identifiable {
     let price: Double
     
     var priceString: String {
-        String(format: "$%.2f", price)
+        // Use localized currency formatting
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.2f", price)
     }
     
     var perCreditPrice: Double {
@@ -77,7 +81,11 @@ struct CreditPackage: Identifiable {
     
     static let packages: [CreditPackage] = [
         CreditPackage(credits: 1, price: 0.99),
+        CreditPackage(credits: 2, price: 1.99),
+        CreditPackage(credits: 3, price: 2.99),
         CreditPackage(credits: 4, price: 3.99),
+        CreditPackage(credits: 5, price: 4.99),
+        CreditPackage(credits: 6, price: 5.99),
         CreditPackage(credits: 7, price: 6.99)
     ]
 }

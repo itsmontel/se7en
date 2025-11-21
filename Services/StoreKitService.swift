@@ -5,17 +5,18 @@ import Combine
 class StoreKitService: ObservableObject {
     nonisolated static let shared = StoreKitService()
     
-    // Product IDs for the app
+    // Product IDs for the app (credits only - app is free)
     private enum ProductIDs {
-        static let weeklySubscription = "se7en_weekly_subscription"
         static let oneCredit = "se7en_one_credit"
+        static let twoCredits = "se7en_two_credits"
         static let threeCredits = "se7en_three_credits"
+        static let fourCredits = "se7en_four_credits"
+        static let fiveCredits = "se7en_five_credits"
+        static let sixCredits = "se7en_six_credits"
         static let sevenCredits = "se7en_seven_credits"
     }
     
-    @Published var subscriptionProduct: Product?
     @Published var creditProducts: [Product] = []
-    @Published var isSubscribed = false
     @Published var purchaseState: PurchaseState = .idle
     
     private var updateListenerTask: Task<Void, Error>?
@@ -42,68 +43,32 @@ class StoreKitService: ObservableObject {
     func loadProducts() async {
         do {
             let products = try await Product.products(for: [
-                ProductIDs.weeklySubscription,
                 ProductIDs.oneCredit,
+                ProductIDs.twoCredits,
                 ProductIDs.threeCredits,
+                ProductIDs.fourCredits,
+                ProductIDs.fiveCredits,
+                ProductIDs.sixCredits,
                 ProductIDs.sevenCredits
             ])
             
-            for product in products {
-                switch product.id {
-                case ProductIDs.weeklySubscription:
-                    subscriptionProduct = product
-                case ProductIDs.oneCredit, ProductIDs.threeCredits, ProductIDs.sevenCredits:
-                    creditProducts.append(product)
-                default:
-                    break
-                }
-            }
+            creditProducts = products
             
             // Sort credit products by price
             creditProducts.sort { $0.price < $1.price }
             
-            print("Loaded \(products.count) products")
+            print("Loaded \(products.count) credit products")
         } catch {
             print("Failed to load products: \(error)")
         }
     }
     
-    // MARK: - Subscription Management
-    
-    func purchaseSubscription() async -> Bool {
-        guard let product = subscriptionProduct else {
-            print("Subscription product not available")
-            return false
-        }
-        
-        return await purchase(product)
-    }
-    
-    func checkSubscriptionStatus() async {
-        // Check for active subscription entitlements
-        for await result in Transaction.currentEntitlements {
-            do {
-                let transaction = try checkVerified(result)
-                
-                if transaction.productID == ProductIDs.weeklySubscription &&
-                   transaction.revocationDate == nil {
-                    isSubscribed = true
-                    appState.updateSubscriptionStatus(true)
-                    return
-                }
-            } catch {
-                print("Failed to verify transaction: \(error)")
-            }
-        }
-        
-        isSubscribed = false
-        appState.updateSubscriptionStatus(false)
-    }
+    // MARK: - Purchase Restoration
     
     func restorePurchases() async {
         do {
             try await AppStore.sync()
-            await checkSubscriptionStatus()
+            print("Purchases restored")
         } catch {
             print("Failed to restore purchases: \(error)")
         }
@@ -117,28 +82,8 @@ class StoreKitService: ObservableObject {
             return false
         }
         
-        let success = await purchase(product)
-        
-        if success {
-            // Add credits based on product
-            let creditsToAdd: Int
-            switch productID {
-            case ProductIDs.oneCredit:
-                creditsToAdd = 1
-            case ProductIDs.threeCredits:
-                creditsToAdd = 3
-            case ProductIDs.sevenCredits:
-                creditsToAdd = 7
-            default:
-                creditsToAdd = 0
-            }
-            
-            if creditsToAdd > 0 {
-                appState.addCredits(amount: creditsToAdd, reason: "Purchased \(creditsToAdd) credit(s)")
-            }
-        }
-        
-        return success
+        // Purchase will handle credit addition via processTransactionSync
+        return await purchase(product)
     }
     
     // MARK: - Purchase Flow
@@ -195,15 +140,23 @@ class StoreKitService: ObservableObject {
         print("Processing transaction: \(transaction.productID)")
         
         switch transaction.productID {
-        case ProductIDs.weeklySubscription:
-            isSubscribed = true
-            appState.updateSubscriptionStatus(true)
-            
         case ProductIDs.oneCredit:
             appState.addCredits(amount: 1, reason: "Purchased 1 credit")
             
+        case ProductIDs.twoCredits:
+            appState.addCredits(amount: 2, reason: "Purchased 2 credits")
+            
         case ProductIDs.threeCredits:
             appState.addCredits(amount: 3, reason: "Purchased 3 credits")
+            
+        case ProductIDs.fourCredits:
+            appState.addCredits(amount: 4, reason: "Purchased 4 credits")
+            
+        case ProductIDs.fiveCredits:
+            appState.addCredits(amount: 5, reason: "Purchased 5 credits")
+            
+        case ProductIDs.sixCredits:
+            appState.addCredits(amount: 6, reason: "Purchased 6 credits")
             
         case ProductIDs.sevenCredits:
             appState.addCredits(amount: 7, reason: "Purchased 7 credits")
@@ -248,71 +201,26 @@ class StoreKitService: ObservableObject {
     // MARK: - Product Helpers
     
     func getCreditProduct(for credits: Int) -> Product? {
+        guard credits >= 1 && credits <= 7 else { return nil }
+        
+        let productID: String
         switch credits {
-        case 1:
-            return creditProducts.first { $0.id == ProductIDs.oneCredit }
-        case 3:
-            return creditProducts.first { $0.id == ProductIDs.threeCredits }
-        case 7:
-            return creditProducts.first { $0.id == ProductIDs.sevenCredits }
-        default:
-            return nil
+        case 1: productID = ProductIDs.oneCredit
+        case 2: productID = ProductIDs.twoCredits
+        case 3: productID = ProductIDs.threeCredits
+        case 4: productID = ProductIDs.fourCredits
+        case 5: productID = ProductIDs.fiveCredits
+        case 6: productID = ProductIDs.sixCredits
+        case 7: productID = ProductIDs.sevenCredits
+        default: return nil
         }
+        
+        return creditProducts.first { $0.id == productID }
     }
     
     func formatPrice(for product: Product) -> String {
         return product.displayPrice
     }
     
-    // MARK: - Subscription Info
-    
-    func getSubscriptionInfo() -> (price: String, period: String)? {
-        guard let product = subscriptionProduct else { return nil }
-        
-        let price = product.displayPrice
-        let period = localizedPeriod(for: product.subscription?.subscriptionPeriod) ?? "week"
-        
-        return (price: price, period: period)
-    }
-    
-    private func localizedPeriod(for period: Product.SubscriptionPeriod?) -> String? {
-        guard let period = period else { return nil }
-        
-        switch period.unit {
-        case .day:
-            return period.value == 1 ? "day" : "\(period.value) days"
-        case .week:
-            return period.value == 1 ? "week" : "\(period.value) weeks"
-        case .month:
-            return period.value == 1 ? "month" : "\(period.value) months"
-        case .year:
-            return period.value == 1 ? "year" : "\(period.value) years"
-        @unknown default:
-            return "period"
-        }
-    }
-    
-    // MARK: - Weekly Payment Processing
-    
-    func processWeeklyPayment(creditsLost: Int) async {
-        guard creditsLost > 0 && creditsLost <= 7 else { return }
-        
-        // If user has active subscription, no payment needed
-        if isSubscribed {
-            print("User has active subscription, no payment required")
-            return
-        }
-        
-        // Calculate payment amount ($1 per lost credit)
-        let paymentAmount = Double(creditsLost)
-        
-        // In a real app, you would process the payment here
-        // For now, just log the payment
-        print("Processing weekly payment: $\(paymentAmount) for \(creditsLost) lost credits")
-        
-        // Update the weekly plan with payment amount
-        let weeklyPlan = coreDataManager.getCurrentWeeklyPlan()
-        weeklyPlan?.paymentAmount = paymentAmount
-        coreDataManager.save()
-    }
+    // MARK: - Payment Processing (Removed - app is free, users only pay for credits)
 }

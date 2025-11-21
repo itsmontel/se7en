@@ -1,12 +1,11 @@
 import SwiftUI
 
 struct PaywallView: View {
-    let onSubscribe: () -> Void
+    let onComplete: () -> Void
     @State private var titleAnimation = false
-    @State private var priceAnimation = false
+    @State private var creditsAnimation = false
     @State private var featuresAnimation = false
     @State private var buttonAnimation = false
-    @State private var pulseAnimation = false
     
     var body: some View {
         ZStack {
@@ -14,23 +13,23 @@ struct PaywallView: View {
             
             VStack(spacing: 0) {
                 // Progress bar at top
-                OnboardingProgressBar(currentStep: 7, totalSteps: 8)
+                OnboardingProgressBar(currentStep: 7, totalSteps: 7)
                     .padding(.top, 60)
                     .padding(.horizontal, 24)
                 
                 Spacer()
                 
-                // Premium Header Section
+                // Free App Header Section
                 VStack(spacing: 20) {
                     // Badge
-                    Text("Premium")
+                    Text("Free Forever")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)
                         .background(
                             LinearGradient(
-                                colors: [Color.primary, Color.secondary],
+                                colors: [Color.sevenEmerald, Color.sevenSkyBlue],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
@@ -40,7 +39,7 @@ struct PaywallView: View {
                         .opacity(titleAnimation ? 1.0 : 0.0)
                     
                     VStack(spacing: 16) {
-                        Text("Start with 7 credits today")
+                        Text("Start with 7 credits")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundStyle(
                                 LinearGradient(
@@ -57,7 +56,7 @@ struct PaywallView: View {
                             .scaleEffect(titleAnimation ? 1.0 : 0.8)
                             .opacity(titleAnimation ? 1.0 : 0.0)
                         
-                        Text("One week of accountability")
+                        Text("SE7EN is completely free")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.textPrimary.opacity(0.7))
                             .scaleEffect(titleAnimation ? 1.0 : 0.8)
@@ -65,62 +64,56 @@ struct PaywallView: View {
                     }
                 }
                 
-                // Premium Pricing Card
+                // Credits Display Card
                 VStack(spacing: 32) {
-                    // Main pricing display
+                    // Main credits display
                     VStack(spacing: 16) {
-                        // Price with enhanced styling
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("$")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundColor(.textPrimary)
-                            
-                            Text("7")
-                                .font(.system(size: 72, weight: .bold, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color.primary, Color.secondary],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
+                        // Large "7" display
+                        Text("7")
+                            .font(.system(size: 96, weight: .bold, design: .rounded))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color.sevenIndigo, Color.sevenSkyBlue],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
                                 )
-                        }
-                        .scaleEffect(priceAnimation ? 1.0 : 0.6)
-                        .opacity(priceAnimation ? 1.0 : 0.0)
+                            )
+                            .scaleEffect(creditsAnimation ? 1.0 : 0.6)
+                            .opacity(creditsAnimation ? 1.0 : 0.0)
                         
-                        Text("per week")
+                        Text("credits to start")
                             .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.textPrimary.opacity(0.7))
-                            .scaleEffect(priceAnimation ? 1.0 : 0.6)
-                            .opacity(priceAnimation ? 1.0 : 0.0)
+                            .scaleEffect(creditsAnimation ? 1.0 : 0.6)
+                            .opacity(creditsAnimation ? 1.0 : 0.0)
                         
                         // Divider with gradient
                         Rectangle()
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.clear, Color.primary.opacity(0.3), Color.clear],
+                                    colors: [Color.clear, Color.sevenIndigo.opacity(0.3), Color.clear],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
                             .frame(height: 1)
                             .padding(.horizontal, 40)
-                            .scaleEffect(priceAnimation ? 1.0 : 0.0)
-                            .opacity(priceAnimation ? 1.0 : 0.0)
+                            .scaleEffect(creditsAnimation ? 1.0 : 0.0)
+                            .opacity(creditsAnimation ? 1.0 : 0.0)
                         
                         // Enhanced Feature List
                         VStack(spacing: 16) {
                             PremiumFeatureBullet(
-                                text: "Start with 7 credits",
+                                text: "App is completely free",
                                 isAnimated: featuresAnimation
                             )
                             PremiumFeatureBullet(
-                                text: "Keep 7 = next week free",
+                                text: "Keep all 7 credits = stay free",
                                 isAnimated: featuresAnimation,
                                 delay: 0.1
                             )
                             PremiumFeatureBullet(
-                                text: "Lose credits = pay only the difference",
+                                text: "Only pay if you lose credits",
                                 isAnimated: featuresAnimation,
                                 delay: 0.2
                             )
@@ -131,12 +124,12 @@ struct PaywallView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 32)
                             .fill(Color.cardBackground)
-                            .shadow(color: Color.primary.opacity(0.08), radius: 30, x: 0, y: 15)
+                            .shadow(color: Color.sevenIndigo.opacity(0.08), radius: 30, x: 0, y: 15)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 32)
                                     .stroke(
                                         LinearGradient(
-                                            colors: [Color.primary.opacity(0.15), Color.clear],
+                                            colors: [Color.sevenIndigo.opacity(0.15), Color.clear],
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         ),
@@ -150,17 +143,17 @@ struct PaywallView: View {
                 
                 Spacer()
                 
-                // Premium CTA Section
+                // Get Started CTA Section
                 VStack(spacing: 20) {
                     Button(action: {
                         HapticFeedback.success.trigger()
-                        onSubscribe()
+                        onComplete()
                     }) {
                         HStack(spacing: 16) {
-                            Image(systemName: "crown.fill")
+                            Image(systemName: "sparkles")
                                 .font(.system(size: 20, weight: .bold))
                             
-                            Text("Start for $7")
+                            Text("Get Started Free")
                                 .font(.system(size: 20, weight: .bold))
                             
                             Image(systemName: "arrow.right.circle.fill")
@@ -171,13 +164,13 @@ struct PaywallView: View {
                         .padding(.vertical, 22)
                         .background(
                             LinearGradient(
-                                colors: [Color.primary, Color.secondary],
+                                colors: [Color.sevenIndigo, Color.sevenSkyBlue],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
                         .cornerRadius(28)
-                        .shadow(color: .primary.opacity(0.4), radius: 25, x: 0, y: 12)
+                        .shadow(color: .sevenIndigo.opacity(0.4), radius: 25, x: 0, y: 12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 28)
                                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
@@ -188,7 +181,7 @@ struct PaywallView: View {
                     .padding(.horizontal, 32)
                     
                     VStack(spacing: 8) {
-                        Text("Cancel anytime. No charges for perfect weeks.")
+                        Text("No subscription. No weekly fees. Only pay for credits you lose.")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.textPrimary.opacity(0.6))
                             .multilineTextAlignment(.center)
@@ -196,9 +189,9 @@ struct PaywallView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         
                         HStack(spacing: 16) {
-                            Label("Secure", systemImage: "lock.shield.fill")
-                            Label("Private", systemImage: "eye.slash.fill")
-                            Label("Cancel Anytime", systemImage: "xmark.circle.fill")
+                            Label("Free", systemImage: "gift.fill")
+                            Label("No Subscription", systemImage: "xmark.circle.fill")
+                            Label("Pay As You Go", systemImage: "creditcard.fill")
                         }
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.textPrimary.opacity(0.5))
@@ -209,14 +202,12 @@ struct PaywallView: View {
             }
         }
         .onAppear {
-            pulseAnimation = true
-            
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
                 titleAnimation = true
             }
             
             withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.3)) {
-                priceAnimation = true
+                creditsAnimation = true
             }
             
             withAnimation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.5)) {

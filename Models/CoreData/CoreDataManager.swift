@@ -60,8 +60,9 @@ class CoreDataManager: ObservableObject {
         profile.updatedAt = Date()
         profile.currentStreak = 0
         profile.longestStreak = 0
-        profile.hasActiveSubscription = false
+        profile.isOnboarding = true // Default to true for new users
         save()
+        print("✅ Created new UserProfile with isOnboarding = true")
         return profile
     }
     
@@ -219,6 +220,65 @@ class CoreDataManager: ObservableObject {
         request.sortDescriptors = [NSSortDescriptor(keyPath: \AppUsageRecord.date, ascending: false)]
         
         return (try? context.fetch(request)) ?? []
+    }
+    
+    func getTodaysUsageRecord(for bundleID: String) -> AppUsageRecord? {
+        let startOfDay = Calendar.current.startOfDay(for: Date())
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? Date()
+        
+        let goals = getActiveAppGoals()
+        guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else { return nil }
+        
+        let request: NSFetchRequest<AppUsageRecord> = AppUsageRecord.fetchRequest()
+        request.predicate = NSPredicate(format: "appGoal == %@ AND date >= %@ AND date < %@", goal, startOfDay as NSDate, endOfDay as NSDate)
+        request.fetchLimit = 1
+        
+        return try? context.fetch(request).first
+    }
+    
+    func extendAppLimit(for bundleID: String, newLimitMinutes: Int) -> Bool {
+        let goals = getActiveAppGoals()
+        guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else {
+            print("❌ No goal found for bundle ID: \(bundleID)")
+            return false
+        }
+        
+        let today = Calendar.current.startOfDay(for: Date())
+        var usageRecord = getTodaysUsageRecord(for: bundleID)
+        
+        // Create usage record if it doesn't exist
+        if usageRecord == nil {
+            usageRecord = createUsageRecord(
+                for: goal,
+                date: today,
+                actualUsageMinutes: 0,
+                didExceedLimit: false
+            )
+        }
+        
+        // Set extended limit
+        usageRecord?.extendedLimitMinutes = Int32(newLimitMinutes)
+        save()
+        
+        print("✅ Extended limit for \(goal.appName ?? bundleID) to \(newLimitMinutes) minutes for today")
+        return true
+    }
+    
+    func getEffectiveDailyLimit(for bundleID: String) -> Int {
+        let goals = getActiveAppGoals()
+        guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else {
+            return 0
+        }
+        
+        let baseLimit = Int(goal.dailyLimitMinutes)
+        
+        // Check if there's an extension for today
+        if let usageRecord = getTodaysUsageRecord(for: bundleID),
+           usageRecord.extendedLimitMinutes > 0 {
+            return Int(usageRecord.extendedLimitMinutes)
+        }
+        
+        return baseLimit
     }
     
     // MARK: - Credit Transaction Methods

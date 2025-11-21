@@ -5,10 +5,7 @@ struct SubscriptionView: View {
     @State private var showingTopUpSheet = false
     @State private var animateRing = false
     
-    private var nextPaymentAmount: Double {
-        let creditsNeeded = max(0, 7 - appState.currentCredits)
-        return Double(creditsNeeded) * 0.99
-    }
+    // No weekly payment - app is free, users only pay for credits they lose
     
     private var daysUntilReset: Int {
         let calendar = Calendar.current
@@ -65,7 +62,6 @@ struct SubscriptionView: View {
                                     )
                                     .frame(width: 200, height: 200)
                                     .rotationEffect(.degrees(-90))
-                                    .shadow(color: ringColor.opacity(0.3), radius: 12, x: 0, y: 4)
                                 
                                 VStack(spacing: 4) {
                                     Text("\(appState.currentCredits)")
@@ -132,9 +128,9 @@ struct SubscriptionView: View {
                         }
                         .padding(.horizontal, 20)
                         
-                        // Payment Status Card
-                        if nextPaymentAmount == 0 {
-                            // Perfect Week Card
+                        // Status Card
+                        if appState.currentCredits == 7 {
+                            // Perfect Day Card
                             HStack(spacing: 16) {
                                 ZStack {
                                     Circle()
@@ -153,11 +149,11 @@ struct SubscriptionView: View {
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("Perfect Week!")
+                                    Text("Perfect Day!")
                                         .font(.system(size: 22, weight: .bold, design: .rounded))
                                         .foregroundColor(.sevenEmerald)
                                     
-                                    Text("No payment required")
+                                    Text("SE7EN stays free")
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(.textSecondary)
                                 }
@@ -173,14 +169,14 @@ struct SubscriptionView: View {
                             )
                             .padding(.horizontal, 20)
                         } else {
-                            // Payment Due Card
+                            // Credits Lost Card
                             HStack(spacing: 20) {
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text("Amount Due")
+                                    Text("Credits Lost")
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(.textSecondary)
                                     
-                                    Text(String(format: "$%.2f", nextPaymentAmount))
+                                    Text("\(7 - appState.currentCredits)")
                                         .font(.system(size: 40, weight: .bold, design: .rounded))
                                         .foregroundColor(ringColor)
                                 }
@@ -188,19 +184,14 @@ struct SubscriptionView: View {
                                 Spacer()
                                 
                                 VStack(alignment: .trailing, spacing: 6) {
-                                    Text("Due In")
+                                    Text("Reset In")
                                         .font(.system(size: 14, weight: .medium))
                                         .foregroundColor(.textSecondary)
                                     
                                     HStack(spacing: 4) {
-                                        Text("\(daysUntilReset)")
-                                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                                        Text("Tomorrow")
+                                            .font(.system(size: 18, weight: .bold, design: .rounded))
                                             .foregroundColor(.textPrimary)
-                                        
-                                        Text("days")
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(.textSecondary)
-                                            .offset(y: 2)
                                     }
                                 }
                             }
@@ -282,30 +273,30 @@ struct SubscriptionView: View {
                             
                             VStack(spacing: 0) {
                                 InfoRow(
-                                    icon: "calendar.badge.clock",
+                                    icon: "arrow.clockwise.circle.fill",
                                     iconColor: .sevenIndigo,
-                                    title: "Weekly Reset",
-                                    description: "Every Monday, you start with 7 credits. You need all 7 to use SE7EN throughout the week."
+                                    title: "Daily Reset",
+                                    description: "Credits reset to 7 every day at midnight."
                                 )
                                 
                                 Divider()
                                     .padding(.horizontal, 20)
                                 
                                 InfoRow(
-                                    icon: "xmark.circle.fill",
+                                    icon: "chart.line.uptrend.xyaxis",
                                     iconColor: .sevenRose,
-                                    title: "Lose Credits",
-                                    description: "Go over any app limit and you lose 1 credit that day. Credits are deducted automatically at midnight."
+                                    title: "Progressive Penalty",
+                                    description: "Each failure costs more: 1st = 1 credit, 2nd = 2 credits, 3rd = 3 credits, and so on. Failure count resets every Monday."
                                 )
                                 
                                 Divider()
                                     .padding(.horizontal, 20)
                                 
                                 InfoRow(
-                                    icon: "exclamationmark.triangle.fill",
+                                    icon: "lock.shield.fill",
                                     iconColor: .sevenAmber,
-                                    title: "Restore to Continue",
-                                    description: "If you end the week with less than 7 credits, pay $0.99 per missing credit to restore them and continue using SE7EN."
+                                    title: "Accountability Fee",
+                                    description: "When an app is blocked, you need 7 credits to unblock it. Once paid, no additional credits are deducted for other failures that same day. Resets daily at midnight."
                                 )
                                 
                                 Divider()
@@ -314,8 +305,8 @@ struct SubscriptionView: View {
                                 InfoRow(
                                     icon: "sparkles",
                                     iconColor: .sevenEmerald,
-                                    title: "Stay Free Forever",
-                                    description: "Keep all 7 credits every week and SE7EN stays completely free. Build healthy habits, never pay a dollar."
+                                    title: "Stay Free",
+                                    description: "Keep all 7 credits daily and SE7EN stays free forever."
                                 )
                             }
                             .background(Color.cardBackground)
@@ -386,6 +377,13 @@ struct SubscriptionView: View {
         default: return .sevenRose
         }
     }
+    
+    private func formatPerCreditPrice(_ price: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.2f", price)
+    }
 }
 
 // MARK: - Stat Card
@@ -447,7 +445,7 @@ struct CreditPackageCard: View {
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(.sevenIndigo)
                 
-                Text("$\(String(format: "%.2f", package.perCreditPrice)) each")
+                Text("\(formatPerCreditPrice(package.perCreditPrice)) each")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.textSecondary)
             }

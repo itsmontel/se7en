@@ -94,7 +94,7 @@ struct TopUpSheet: View {
                                                     .foregroundColor(.success)
                                                 
                                                 VStack(alignment: .leading, spacing: 4) {
-                                                    Text("1 Credit = $0.99")
+                                                    Text("1 Credit = \(formatPrice(0.99))")
                                                         .font(.h4)
                                                         .foregroundColor(.textPrimary)
                                                     
@@ -116,7 +116,7 @@ struct TopUpSheet: View {
                                                         .font(.h4)
                                                         .foregroundColor(.textPrimary)
                                                     
-                                                    Text("Total Cost: $\(String(format: "%.2f", Double(creditsNeeded) * 0.99))")
+                                                    Text("Total Cost: \(formatPrice(Double(creditsNeeded) * 0.99))")
                                                         .font(.h3)
                                                         .foregroundColor(.primary)
                                                     
@@ -149,7 +149,7 @@ struct TopUpSheet: View {
                         Button(action: purchaseCredits) {
                             let creditsNeeded = 7 - appState.currentCredits
                             if creditsNeeded > 0 {
-                                Text("Purchase \(creditsNeeded) Credit\(creditsNeeded == 1 ? "" : "s") for $\(String(format: "%.2f", Double(creditsNeeded) * 0.99))")
+                                Text("Purchase \(creditsNeeded) Credit\(creditsNeeded == 1 ? "" : "s") for \(formatPrice(Double(creditsNeeded) * 0.99))")
                             } else {
                                 Text("No Credits Needed")
                             }
@@ -172,6 +172,13 @@ struct TopUpSheet: View {
                 }
             }
         }
+    }
+    
+    private func formatPrice(_ price: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.2f", price)
     }
     
     private func purchaseCredits() {
@@ -238,7 +245,7 @@ struct PackageCard: View {
                             .font(.h2)
                             .foregroundColor(.textPrimary)
                         
-                        Text(String(format: "$%.2f per credit", package.perCreditPrice))
+                        Text("\(formatPrice(package.perCreditPrice)) per credit")
                             .font(.bodySmall)
                             .foregroundColor(.textPrimary.opacity(0.6))
                     }

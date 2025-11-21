@@ -98,8 +98,8 @@ struct HowItWorksView: View {
     private var stepData: [(number: String, title: String, description: String, icon: String, color: Color)] {
         [
             ("1", "Set your daily app limits", "Choose which apps to monitor and set time limits for each one", "target", .primary),
-            ("2", "Stay within limits to keep credits", "Exceed a daily limit and you lose 1 credit immediately", "checkmark.circle.fill", .success),
-            ("3", "Pay only for what you lose", "At week's end, keep all 7 = free week. Lose credits = pay $1 each", "creditcard.fill", .warning)
+            ("2", "Stay within limits to keep credits", "Exceed a limit and lose credits: 1st failure = 1 credit, 2nd = 2 credits, and so on. Credits reset to 7 daily at midnight.", "checkmark.circle.fill", .success),
+            ("3", "Accountability fee to unblock", "If an app is blocked, you need 7 credits (accountability fee) to unblock it. Once paid, no additional credits are deducted for failures that day.", "creditcard.fill", .warning)
         ]
     }
 }

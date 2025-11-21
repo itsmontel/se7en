@@ -25,7 +25,6 @@ class AppState: ObservableObject {
     @Published var dailyHistory: [DailyHistory] = [] // For compatibility
     @Published var monitoredApps: [MonitoredApp] = [] // For compatibility
     @Published var isScreenTimeAuthorized = false
-    @Published var hasActiveSubscription = false
     @Published var userPet: Pet?
     @Published var downloadMotivations: [DownloadMotivation] = []
     @Published var averageScreenTimeHours: Int = 0
@@ -84,17 +83,18 @@ class AppState: ObservableObject {
     }
     
     private func checkOnboardingStatus() {
-        // Check if user has completed onboarding by seeing if they have any app goals
-        // But also respect the saved onboarding status
-        let goals = coreDataManager.getActiveAppGoals()
+        // Always respect the saved onboarding status first
         let savedPreferences = coreDataManager.loadUserPreferences()
         
-        // If user has completed onboarding before, don't reset it
-        if !savedPreferences.isOnboarding && !goals.isEmpty {
+        // If onboarding was completed before, respect that
+        if !savedPreferences.isOnboarding {
             isOnboarding = false
-        } else {
-            isOnboarding = goals.isEmpty
+            return
         }
+        
+        // Otherwise, check if user has app goals (secondary check)
+        let goals = coreDataManager.getActiveAppGoals()
+        isOnboarding = goals.isEmpty
     }
     
     // MARK: - User Preferences Persistence
@@ -104,6 +104,8 @@ class AppState: ObservableObject {
         
         userName = preferences.userName ?? ""
         userPet = preferences.pet
+        // IMPORTANT: Load onboarding status from Core Data first
+        // This ensures persistence across app restarts
         isOnboarding = preferences.isOnboarding
         averageScreenTimeHours = preferences.averageScreenTimeHours
         
@@ -111,6 +113,8 @@ class AppState: ObservableObject {
         if userPet != nil {
             updatePetHealth()
         }
+        
+        print("📱 Loaded preferences - isOnboarding: \(isOnboarding), userName: \(userName), pet: \(userPet?.name ?? "none")")
     }
     
     func saveUserPreferences() {
@@ -128,7 +132,6 @@ class AppState: ObservableObject {
         let userProfile = coreDataManager.getOrCreateUserProfile()
         currentStreak = Int(userProfile.currentStreak)
         longestStreak = Int(userProfile.longestStreak)
-        hasActiveSubscription = userProfile.hasActiveSubscription
     }
     
     private func loadCurrentWeekData() {
@@ -176,11 +179,16 @@ class AppState: ObservableObject {
         // Convert to MonitoredApp format for dashboard compatibility
         monitoredApps = goals.map { goal in
             let appName = goal.appName ?? "Unknown"
-            print("🔄 Converting \(appName) to MonitoredApp")
+            let bundleID = goal.appBundleID ?? ""
+            
+            // Get effective daily limit (includes extensions for today)
+            let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: bundleID)
+            
+            print("🔄 Converting \(appName) to MonitoredApp (limit: \(effectiveLimit) minutes)")
             return MonitoredApp(
                 name: appName,
                 icon: getAppIcon(for: appName),
-                dailyLimit: Int(goal.dailyLimitMinutes),
+                dailyLimit: effectiveLimit,
                 usedToday: getCurrentUsage(for: goal),
                 color: getAppColor(for: appName),
                 isEnabled: goal.isActive
@@ -394,6 +402,13 @@ class AppState: ObservableObject {
     
     // MARK: - Credit System
     
+    var hasPaidAccountabilityFeeToday: Bool {
+        let weeklyPlan = coreDataManager.getOrCreateCurrentWeeklyPlan()
+        let today = Calendar.current.startOfDay(for: Date())
+        let accountabilityFeePaidDate = weeklyPlan.accountabilityFeePaidDate.map { Calendar.current.startOfDay(for: $0) }
+        return accountabilityFeePaidDate == today
+    }
+    
     func deductCredit(for appName: String, reason: String) {
         _ = coreDataManager.deductCredit(reason: reason)
         loadCurrentWeekData()
@@ -448,6 +463,7 @@ class AppState: ObservableObject {
     func completeOnboarding() {
         isOnboarding = false
         saveUserPreferences() // Persist onboarding completion
+        print("✅ Onboarding completed - saved isOnboarding = false")
     }
     
     // MARK: - Week Management
@@ -514,16 +530,6 @@ class AppState: ObservableObject {
         refreshData()
     }
     
-    // MARK: - Subscription Management
-    
-    func updateSubscriptionStatus(_ isActive: Bool) {
-        let userProfile = coreDataManager.getOrCreateUserProfile()
-        userProfile.hasActiveSubscription = isActive
-        userProfile.updatedAt = Date()
-        coreDataManager.save()
-        hasActiveSubscription = isActive
-        saveUserPreferences() // Also save preferences
-    }
     
     // MARK: - Pet Health Management
     

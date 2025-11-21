@@ -14,6 +14,8 @@ struct DashboardView: View {
     @State private var showingBlockedAppModal = false
     @State private var blockedAppName: String = ""
     @State private var blockedAppBundleID: String? = nil
+    @State private var showingExtendLimitSheet = false
+    @State private var appToExtend: MonitoredApp? = nil
     
     private var healthScore: Int {
         // Calculate health based on actual app usage
@@ -58,19 +60,19 @@ struct DashboardView: View {
                             VStack(alignment: .leading, spacing: 12) {
                             // Time-based greeting
                             Text(timeBasedGreeting(userName: appState.userName))
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
                                 .foregroundColor(.textPrimary)
                         }
                         .padding(.horizontal, 20)
-                        .padding(.top, 16)
-                        .padding(.bottom, 24)
+                        .padding(.top, 12)
+                        .padding(.bottom, 16)
                         
                         // Pet name and credits on same line
                         HStack(alignment: .center) {
                             // Pet name (actual name, not type)
                             if let pet = appState.userPet {
                                 Text(pet.name)
-                                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
                                     .foregroundColor(.textPrimary)
                             }
                             
@@ -86,21 +88,21 @@ struct DashboardView: View {
                                             endPoint: .bottomTrailing
                                         )
                                     )
-                                    .frame(width: 80, height: 80)
+                                    .frame(width: 64, height: 64)
                                 
                                 VStack(spacing: 2) {
                                     Text("\(appState.currentCredits)")
-                                        .font(.system(size: 20, weight: .bold))
+                                        .font(.system(size: 18, weight: .bold))
                                         .foregroundColor(.white)
                                     
                                     Text("credits")
-                                        .font(.system(size: 10, weight: .medium))
+                                        .font(.system(size: 9, weight: .medium))
                                         .foregroundColor(.white.opacity(0.9))
                                 }
                             }
                         }
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 32)
+                        .padding(.bottom, 20)
                         
                         // Large pet illustration
                         if appState.userPet != nil {
@@ -108,30 +110,30 @@ struct DashboardView: View {
                             Image(petImageName)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(height: 280)
+                                .frame(height: 200)
                                 .padding(.horizontal, 24)
-                                .padding(.bottom, 40)
+                                .padding(.bottom, 24)
                         }
                         
                         // Health score number (correlated with actual health)
                         Text("\(healthScore)")
-                            .font(.system(size: 64, weight: .bold, design: .rounded))
+                            .font(.system(size: 48, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
-                            .padding(.bottom, 16)
+                            .padding(.bottom, 12)
                         
                         // Health bar (color based on score)
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: 6)
                             .fill(healthColor)
-                            .frame(height: 8)
+                            .frame(height: 6)
                             .padding(.horizontal, 24)
-                            .padding(.bottom, 16)
+                            .padding(.bottom, 10)
                         
                         // Health label and message
-                        VStack(spacing: 12) {
+                        VStack(spacing: 8) {
                             HStack {
                                 Spacer()
                                 Text("Health")
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.system(size: 13, weight: .medium))
                                     .foregroundColor(.textSecondary)
                                 Spacer()
                             }
@@ -139,32 +141,37 @@ struct DashboardView: View {
                             // Health message based on score
                             if let pet = appState.userPet {
                                 Text(healthMessage(petName: pet.name, score: healthScore))
-                                    .font(.system(size: 15, weight: .medium))
+                                    .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(healthColor)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 20)
                             }
                         }
-                        .padding(.bottom, 40)
+                        .padding(.bottom, 24)
                         
                         // Divider
                         Divider()
                             .padding(.horizontal, 20)
-                            .padding(.bottom, 40)
+                            .padding(.bottom, 24)
                         
                         // App Usage
-                        VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text("App Usage")
-                                .font(.system(size: 18, weight: .bold))
+                                .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(.textPrimary)
                                 .padding(.horizontal, 20)
                             
-                            VStack(spacing: 12) {
+                            VStack(spacing: 10) {
                                 ForEach(appState.monitoredApps, id: \.id) { app in
                                     AppUsageCard(
                                         app: app,
                                         creditsRemaining: appState.currentCredits,
-                                        onUnblock: { handleUnblockApp(app) }
+                                        hasPaidAccountabilityFeeToday: appState.hasPaidAccountabilityFeeToday,
+                                        onUnblock: { handleUnblockApp(app) },
+                                        onExtend: { 
+                                            appToExtend = app
+                                            showingExtendLimitSheet = true
+                                        }
                                     )
                                     .padding(.horizontal, 20)
                                 }
@@ -224,7 +231,7 @@ struct DashboardView: View {
                                 .padding(.horizontal, 20)
                             }
                         }
-                        .padding(.bottom, 40)
+                        .padding(.bottom, 24)
                         }
                         .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
                         Spacer()
@@ -265,6 +272,12 @@ struct DashboardView: View {
             } message: {
                 if let app = appToUnblock {
                     Text("Spend 1 credit to unblock \(app.name) now? You have \(appState.currentCredits) credits remaining.")
+                }
+            }
+            .sheet(isPresented: $showingExtendLimitSheet) {
+                if let app = appToExtend {
+                    ExtendLimitSheet(app: app)
+                        .environmentObject(appState)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .appBlocked)) { notification in
@@ -428,6 +441,10 @@ struct DashboardView: View {
     private func showBlockedAppModal(appName: String, bundleID: String) {
         blockedAppName = appName
         blockedAppBundleID = bundleID
+        // Ensure credits are set to 7 to show "Unblock App" button
+        if appState.credits < 7 {
+            appState.addCredits(amount: 7 - appState.credits, reason: "Test - Set to 7 credits")
+        }
         withAnimation {
             showingBlockedAppModal = true
         }

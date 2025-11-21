@@ -14,6 +14,7 @@
         <attribute name="actualUsageMinutes" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="didExceedLimit" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="extendedLimitMinutes" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <relationship name="appGoal" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="AppGoal" inverseName="usageRecords" inverseEntity="AppGoal"/>
         <relationship name="creditLoss" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CreditTransaction" inverseName="usageRecord" inverseEntity="CreditTransaction"/>

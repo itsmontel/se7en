@@ -3,7 +3,9 @@ import SwiftUI
 struct AppUsageCard: View {
     let app: MonitoredApp
     let creditsRemaining: Int
+    let hasPaidAccountabilityFeeToday: Bool
     let onUnblock: () -> Void
+    let onExtend: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -87,20 +89,44 @@ struct AppUsageCard: View {
                 }
                 Spacer()
                 
-                // Unblock button for over-limit apps
-                if app.isOverLimit && creditsRemaining > 0 {
-                    Button(action: onUnblock) {
-                        HStack(spacing: 4) {
-                            Text("Unblock")
-                            Text("1💳")
-                                .font(.system(size: 11, weight: .bold))
+                // Action buttons
+                HStack(spacing: 8) {
+                    // Extend button (show if not over limit and can afford it)
+                    if !app.isOverLimit && (creditsRemaining >= 7 || hasPaidAccountabilityFeeToday) {
+                        Button(action: onExtend) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 11))
+                                Text("Extend")
+                                    .font(.system(size: 12, weight: .semibold))
+                                if !hasPaidAccountabilityFeeToday {
+                                    Text("1💳")
+                                        .font(.system(size: 11, weight: .bold))
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(hasPaidAccountabilityFeeToday ? Color.green : Color.blue)
+                            .cornerRadius(8)
                         }
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.orange)
-                        .cornerRadius(8)
+                    }
+                    
+                    // Unblock button for over-limit apps
+                    if app.isOverLimit && creditsRemaining >= 7 {
+                        Button(action: onUnblock) {
+                            HStack(spacing: 4) {
+                                Text("Unblock")
+                                Text("1💳")
+                                    .font(.system(size: 11, weight: .bold))
+                            }
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.orange)
+                            .cornerRadius(8)
+                        }
                     }
                 }
             }
