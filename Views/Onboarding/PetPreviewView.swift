@@ -95,7 +95,7 @@ struct PetPreviewView: View {
                             // Reduce haptic feedback frequency for better performance
                             Task {
                                 try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second debounce
-                                HapticFeedback.light.trigger()
+                            HapticFeedback.light.trigger()
                             }
                         }
                     

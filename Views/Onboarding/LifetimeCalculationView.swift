@@ -20,8 +20,6 @@ struct LifetimeCalculationView: View {
     // Correct lifetime calculation
     private var yearsOfLife: Double {
         let averageLifespan = 78.0 // years
-        let wakingHoursPerDay = 16.0 // assuming 8 hours sleep
-        let totalWakingHours = averageLifespan * 365 * wakingHoursPerDay
         let screenTimeHours = averageLifespan * 365 * Double(hoursPerDay)
         return screenTimeHours / (365 * 24) // Convert to years
     }

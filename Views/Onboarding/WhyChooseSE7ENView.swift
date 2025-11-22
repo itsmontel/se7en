@@ -24,128 +24,131 @@ struct WhyChooseSE7ENView: View {
         ZStack {
             OnboardingBackground()
             
-            VStack(spacing: 0) {
-                // Header with back button and progress bar
-                OnboardingHeader(currentStep: 9, totalSteps: 11, showBackButton: true, onBack: onBack)
-                
-                Spacer()
-                
-                // Pet and Header
-                VStack(spacing: 24) {
-                    // Pet image with glow effect
-                    ZStack {
-                        Circle()
-                            .fill(Color.blue.opacity(0.1))
-                            .frame(width: 140, height: 140)
-                            .blur(radius: 20)
-                        
-                        if let image = UIImage(named: petImageName) {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 100, height: 100)
-                        } else {
-                            // Fallback to system image if pet image not found
-                            Image(systemName: "pawprint.fill")
-                                .font(.system(size: 50))
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .scaleEffect(animatePet ? 1.0 : 0.8)
-                    .opacity(animatePet ? 1.0 : 0.0)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Header with back button and progress bar
+                    OnboardingHeader(currentStep: 9, totalSteps: 11, showBackButton: true, onBack: onBack)
                     
-                    VStack(spacing: 16) {
-                        Text("Why choose SE7EN?")
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .foregroundColor(.textPrimary)
-                            .multilineTextAlignment(.center)
-                            .textCase(.none)
-                            .opacity(animateTitle ? 1.0 : 0.0)
-                        
-                        Text("The only app that combines money with habits")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                            .opacity(animateTitle ? 1.0 : 0.0)
-                    }
-                }
-                .padding(.horizontal, 32)
-                
-                Spacer()
-                
-                // Key differentiators
-                VStack(spacing: 20) {
-                    DifferentiatorCard(
-                        icon: "flame.fill",
-                        gradient: [Color.red, Color.orange],
-                        title: "Real Accountability",
-                        description: "Put your money where your mouth is. Financial stakes create real motivation.",
-                        delay: 0.2
-                    )
-                    
-                    DifferentiatorCard(
-                        icon: "creditcard.fill",
-                        gradient: [Color.green, Color.blue],
-                        title: "The 7-Credit System",
-                        description: "Start each week with 7 credits. Lose one daily when you exceed limits. Keep all 7 to stay free.",
-                        delay: 0.4
-                    )
-                    
-                    DifferentiatorCard(
-                        icon: "chart.line.uptrend.xyaxis",
-                        gradient: [Color.purple, Color.pink],
-                        title: "Designed to be Free",
-                        description: "Build healthy habits and never pay. The app rewards good behavior, not addiction.",
-                        delay: 0.6
-                    )
-                }
-                .padding(.horizontal, 24)
-                .opacity(animateFeatures ? 1.0 : 0.0)
-                
-                Spacer()
-                
-                // Call to action
-                VStack(spacing: 20) {
-                    Text("Ready to take control?")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.textPrimary)
-                        .textCase(.none)
-                        .opacity(animateButton ? 1.0 : 0.0)
-                    
-                    Button(action: {
-                        HapticFeedback.medium.trigger()
-                        // Prevent multiple taps
-                        DispatchQueue.main.async {
-                            onContinue()
-                        }
-                    }) {
-                        HStack {
-                            Text("Let's do this")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
-                                .textCase(.none)
+                    // Pet and Header
+                    VStack(spacing: 24) {
+                        // Pet image with glow effect
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue.opacity(0.1))
+                                .frame(width: 140, height: 140)
+                                .blur(radius: 20)
                             
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.white)
+                            if let image = UIImage(named: petImageName) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 100, height: 100)
+                            } else {
+                                // Fallback to system image if pet image not found
+                                Image(systemName: "pawprint.fill")
+                                    .font(.system(size: 50))
+                                    .foregroundColor(.blue)
+                            }
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 60)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.blue, Color.purple],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(20)
-                        .shadow(color: Color.blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                        .scaleEffect(animatePet ? 1.0 : 0.8)
+                        .opacity(animatePet ? 1.0 : 0.0)
+                        .padding(.top, 20)
+                        
+                        VStack(spacing: 16) {
+                            Text("Why choose SE7EN?")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(.textPrimary)
+                                .multilineTextAlignment(.center)
+                                .textCase(.none)
+                                .opacity(animateTitle ? 1.0 : 0.0)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                            
+                            Text("The only app that combines money with habits")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .opacity(animateTitle ? 1.0 : 0.0)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.horizontal, 32)
+                        .padding(.bottom, 32)
                     }
-                    .scaleEffect(animateButton ? 1.0 : 0.95)
-                    .opacity(animateButton ? 1.0 : 0.0)
+                    
+                    // Key differentiators
+                    VStack(spacing: 20) {
+                        DifferentiatorCard(
+                            icon: "flame.fill",
+                            gradient: [Color.red, Color.orange],
+                            title: "Real Accountability",
+                            description: "Put your money where your mouth is. Financial stakes create real motivation.",
+                            delay: 0.2
+                        )
+                        
+                        DifferentiatorCard(
+                            icon: "creditcard.fill",
+                            gradient: [Color.green, Color.blue],
+                            title: "The 7-Credit System",
+                            description: "Start each week with 7 credits. Lose one daily when you exceed limits. Keep all 7 to stay free.",
+                            delay: 0.4
+                        )
+                        
+                        DifferentiatorCard(
+                            icon: "chart.line.uptrend.xyaxis",
+                            gradient: [Color.purple, Color.pink],
+                            title: "Designed to be Free",
+                            description: "Build healthy habits and never pay. The app rewards good behavior, not addiction.",
+                            delay: 0.6
+                        )
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 32)
+                    .opacity(animateFeatures ? 1.0 : 0.0)
+                    
+                    // Call to action
+                    VStack(spacing: 20) {
+                        Text("Ready to take control?")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.textPrimary)
+                            .textCase(.none)
+                            .opacity(animateButton ? 1.0 : 0.0)
+                        
+                        Button(action: {
+                            HapticFeedback.medium.trigger()
+                            // Prevent multiple taps
+                            DispatchQueue.main.async {
+                                onContinue()
+                            }
+                        }) {
+                            HStack {
+                                Text("Let's do this")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .textCase(.none)
+                                
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 60)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.purple],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(20)
+                            .shadow(color: Color.blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                        }
+                        .scaleEffect(animateButton ? 1.0 : 0.95)
+                        .opacity(animateButton ? 1.0 : 0.0)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 60)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 48)
             }
         }
         .onAppear {
@@ -209,7 +212,8 @@ struct DifferentiatorCard: View {
                 Text(description)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.gray)
-                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
             }
             

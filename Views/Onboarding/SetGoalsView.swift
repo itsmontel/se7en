@@ -39,171 +39,177 @@ struct SetGoalsView: View {
                 )
                 .ignoresSafeArea()
             
-            VStack(spacing: 0) {
-                // Header with back button and progress bar
-                OnboardingHeader(currentStep: 11, totalSteps: 11, showBackButton: true, onBack: onBack)
-                
-                Spacer()
-                
-                // Pet illustration
-                Image(petImageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 120, height: 120)
-                    .opacity(titleAnimation ? 1.0 : 0.0)
-                    .scaleEffect(titleAnimation ? 1.0 : 0.8)
-                    .padding(.bottom, 40)
-                
-                // Title and subtitle
-                VStack(spacing: 16) {
-                    Text("Select Your Brainrot Apps")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(.textPrimary)
-                        .multilineTextAlignment(.center)
-                        .textCase(.none)
-                        .opacity(titleAnimation ? 1.0 : 0.0)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Header with back button and progress bar
+                    OnboardingHeader(currentStep: 11, totalSteps: 11, showBackButton: true, onBack: onBack)
                     
-                    Text("Choose which apps you want to limit or block")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
+                    // Pet illustration
+                    Image(petImageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 120, height: 120)
                         .opacity(titleAnimation ? 1.0 : 0.0)
-                }
-                .padding(.horizontal, 32)
-                .padding(.bottom, 60)
-                
-                // App selection card
-                VStack(spacing: 20) {
-                    if realAppDiscovery.isLoading {
-                        ProgressView("Loading apps...")
-                            .frame(maxWidth: .infinity)
-                    } else if realAppDiscovery.categorizedApps.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(systemName: "apps.iphone")
-                                .font(.system(size: 48, weight: .light))
-                                .foregroundColor(.textSecondary.opacity(0.5))
-                            
-                            Text("No apps selected yet")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.textPrimary)
-                            
-                            Text("Tap the button below to select your apps")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.textSecondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        .frame(minHeight: 120)
-                    } else {
-                        // Show selected apps
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Selected Apps: \(realAppDiscovery.selectedApps.count)")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.textPrimary)
-                            
-                            VStack(spacing: 8) {
-                                ForEach(Array(realAppDiscovery.getAllCategories()), id: \.self) { category in
-                                    let appsInCategory = realAppDiscovery.getApps(for: category)
-                                    if !appsInCategory.isEmpty {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            Text(category.rawValue)
-                                                .font(.system(size: 14, weight: .semibold))
-                                                .foregroundColor(.textSecondary)
-                                            
-                                            HStack(spacing: 8) {
-                                                ForEach(appsInCategory, id: \.id) { app in
-                                                    VStack(spacing: 4) {
-                                                        ZStack {
-                                                            Circle()
-                                                                .fill(Color(app.color).opacity(0.2))
-                                                                .frame(width: 44, height: 44)
+                        .scaleEffect(titleAnimation ? 1.0 : 0.8)
+                        .padding(.top, 20)
+                        .padding(.bottom, 32)
+                    
+                    // Title and subtitle
+                    VStack(spacing: 16) {
+                        Text("Select Your Brainrot Apps")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundColor(.textPrimary)
+                            .multilineTextAlignment(.center)
+                            .textCase(.none)
+                            .opacity(titleAnimation ? 1.0 : 0.0)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
+                        Text("Choose which apps you want to limit or block")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .opacity(titleAnimation ? 1.0 : 0.0)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 40)
+                    
+                    // App selection card
+                    VStack(spacing: 20) {
+                        if realAppDiscovery.isLoading {
+                            ProgressView("Loading apps...")
+                                .frame(maxWidth: .infinity)
+                        } else if realAppDiscovery.categorizedApps.isEmpty {
+                            VStack(spacing: 16) {
+                                Image(systemName: "apps.iphone")
+                                    .font(.system(size: 48, weight: .light))
+                                    .foregroundColor(.textSecondary.opacity(0.5))
+                                
+                                Text("No apps selected yet")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.textPrimary)
+                                
+                                Text("Tap the button below to select your apps")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.textSecondary)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(minHeight: 120)
+                        } else {
+                            // Show selected apps
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Selected Apps: \(realAppDiscovery.selectedApps.count)")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.textPrimary)
+                                
+                                VStack(spacing: 8) {
+                                    ForEach(Array(realAppDiscovery.getAllCategories()), id: \.self) { category in
+                                        let appsInCategory = realAppDiscovery.getApps(for: category)
+                                        if !appsInCategory.isEmpty {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Text(category.rawValue)
+                                                    .font(.system(size: 14, weight: .semibold))
+                                                    .foregroundColor(.textSecondary)
+                                                
+                                                HStack(spacing: 8) {
+                                                    ForEach(appsInCategory, id: \.id) { app in
+                                                        VStack(spacing: 4) {
+                                                            ZStack {
+                                                                Circle()
+                                                                    .fill(Color(app.color).opacity(0.2))
+                                                                    .frame(width: 44, height: 44)
+                                                                
+                                                                Image(systemName: app.iconName)
+                                                                    .font(.system(size: 18, weight: .medium))
+                                                                    .foregroundColor(Color(app.color))
+                                                            }
                                                             
-                                                            Image(systemName: app.iconName)
-                                                                .font(.system(size: 18, weight: .medium))
-                                                                .foregroundColor(Color(app.color))
+                                                            Text(app.displayName)
+                                                                .font(.system(size: 10, weight: .medium))
+                                                                .foregroundColor(.textPrimary)
+                                                                .lineLimit(2)
+                                                                .multilineTextAlignment(.center)
                                                         }
-                                                        
-                                                        Text(app.displayName)
-                                                            .font(.system(size: 10, weight: .medium))
-                                                            .foregroundColor(.textPrimary)
-                                                            .lineLimit(2)
-                                                            .multilineTextAlignment(.center)
+                                                        .frame(maxWidth: .infinity)
                                                     }
-                                                    .frame(maxWidth: .infinity)
                                                 }
                                             }
                                         }
                                     }
                                 }
+                                .padding(12)
+                                .background(Color.cardBackground)
+                                .cornerRadius(12)
                             }
-                            .padding(12)
-                            .background(Color.cardBackground)
+                        }
+                        
+                        // Select/Update apps button
+                        Button(action: {
+                            showingFamilyPicker = true
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: realAppDiscovery.selectedApps.isEmpty ? "plus.circle.fill" : "pencil.circle.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                
+                                Text(realAppDiscovery.selectedApps.isEmpty ? "Select Apps from Device" : "Update App Selection")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .textCase(.none)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.blue.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
                             .cornerRadius(12)
                         }
+                        .opacity(contentAnimation ? 1.0 : 0.0)
                     }
+                    .padding(.vertical, 30)
+                    .padding(.horizontal, 24)
                     
-                    // Select/Update apps button
+                    // Bottom text
+                    Text("You can update this later in Settings")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                        .opacity(buttonAnimation ? 1.0 : 0.0)
+                        .padding(.top, 20)
+                        .padding(.bottom, 20)
+                    
+                    // Continue button
                     Button(action: {
-                        showingFamilyPicker = true
+                        saveSelectedApps()
+                        HapticFeedback.light.trigger()
+                        onContinue()
                     }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: realAppDiscovery.selectedApps.isEmpty ? "plus.circle.fill" : "pencil.circle.fill")
-                                .font(.system(size: 18, weight: .semibold))
-                            
-                            Text(realAppDiscovery.selectedApps.isEmpty ? "Select Apps from Device" : "Update App Selection")
-                                .font(.system(size: 16, weight: .semibold))
-                                .textCase(.none)
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.blue, Color.blue.opacity(0.8)],
-                                startPoint: .leading,
-                                endPoint: .trailing
+                        Text("Continue")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
+                            .textCase(.none)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 60)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.blue.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
                             )
-                        )
-                        .cornerRadius(12)
+                            .cornerRadius(20)
                     }
-                    .opacity(contentAnimation ? 1.0 : 0.0)
-                }
-                .padding(.vertical, 30)
-                .padding(.horizontal, 24)
-                
-                Spacer()
-                
-                // Bottom text
-                Text("You can update this later in Settings")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.textSecondary)
+                    .scaleEffect(buttonAnimation ? 1.0 : 0.95)
                     .opacity(buttonAnimation ? 1.0 : 0.0)
-                    .padding(.bottom, 40)
-                
-                // Continue button
-                Button(action: {
-                    saveSelectedApps()
-                    HapticFeedback.light.trigger()
-                    onContinue()
-                }) {
-                    Text("Continue")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                        .textCase(.none)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 60)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.blue, Color.blue.opacity(0.8)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(20)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 60)
                 }
-                .scaleEffect(buttonAnimation ? 1.0 : 0.95)
-                .opacity(buttonAnimation ? 1.0 : 0.0)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 48)
             }
         }
         .sheet(isPresented: $showingFamilyPicker) {

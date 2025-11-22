@@ -133,6 +133,7 @@ struct SettingsView: View {
                                         HapticFeedback.light.trigger()
                                     }) {
                                         Image("instagramlogo")
+                                            .renderingMode(.original)
                                             .resizable()
                                             .aspectRatio(contentMode: .fit)
                                             .frame(width: 50, height: 50)
@@ -146,6 +147,7 @@ struct SettingsView: View {
                                         HapticFeedback.light.trigger()
                                     }) {
                                         Image("tiktoklogo")
+                                            .renderingMode(.original)
                                             .resizable()
                                             .aspectRatio(contentMode: .fit)
                                             .frame(width: 50, height: 50)

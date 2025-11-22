@@ -56,10 +56,13 @@ struct ScreenTimeConnectionView: View {
                     }
                     
                     VStack(spacing: 16) {
-                        Text("Connect Se7en to Screen Time")
+                        Text("Connect Se7en\nto Screen Time")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 24)
                         
                         Text("Your data is completely private and never leaves your device.")
                             .font(.system(size: 16, weight: .medium))

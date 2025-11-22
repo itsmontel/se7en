@@ -38,6 +38,8 @@
 		1027 /* AnimatedNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2027 /* AnimatedNumber.swift */; };
 		1028 /* Se7enWordmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2028 /* Se7enWordmark.swift */; };
 		1029 /* StreakView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029 /* StreakView.swift */; };
+		3035 /* StreakCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3034 /* StreakCelebrationView.swift */; };
+		3036 /* AchievementCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3037 /* AchievementCelebrationView.swift */; };
 		1030 /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2030 /* AchievementsView.swift */; };
 		1031 /* FAQView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2031 /* FAQView.swift */; };
 		1032 /* SupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2032 /* SupportView.swift */; };
@@ -65,6 +67,7 @@
 		1054 /* WhyChooseSE7ENView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2053 /* WhyChooseSE7ENView.swift */; };
 		1055 /* OnboardingBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2054 /* OnboardingBackButton.swift */; };
 		1057 /* OnboardingHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2055 /* OnboardingHeader.swift */; };
+		4001 /* ExtendLimitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4000 /* ExtendLimitSheet.swift */; };
 		1078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3026 /* Assets.xcassets */; };
 		1079 /* dogintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3027 /* dogintro.mp4 */; };
 		1080 /* catintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3028 /* catintro.mp4 */; };
@@ -106,6 +109,8 @@
 		2027 /* AnimatedNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AnimatedNumber.swift; sourceTree = "<group>"; };
 		2028 /* Se7enWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/Se7enWordmark.swift; sourceTree = "<group>"; };
 		2029 /* StreakView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakView.swift; sourceTree = "<group>"; };
+		3034 /* StreakCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakCelebrationView.swift; sourceTree = "<group>"; };
+		3037 /* AchievementCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementCelebrationView.swift; sourceTree = "<group>"; };
 		2030 /* AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Achievements/AchievementsView.swift; sourceTree = "<group>"; };
 		2031 /* FAQView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/FAQView.swift; sourceTree = "<group>"; };
 		2032 /* SupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/SupportView.swift; sourceTree = "<group>"; };
@@ -135,6 +140,7 @@
 		2053 /* WhyChooseSE7ENView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WhyChooseSE7ENView.swift; sourceTree = "<group>"; };
 		2054 /* OnboardingBackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingBackButton.swift; sourceTree = "<group>"; };
 		2055 /* OnboardingHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingHeader.swift; sourceTree = "<group>"; };
+		4000 /* ExtendLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/ExtendLimitSheet.swift; sourceTree = "<group>"; };
 		3026 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3027 /* dogintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = dogintro.mp4; sourceTree = "<group>"; };
 		3028 /* catintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = catintro.mp4; sourceTree = "<group>"; };
@@ -216,6 +222,8 @@
 				2027 /* AnimatedNumber.swift */,
 				2028 /* Se7enWordmark.swift */,
 				2029 /* StreakView.swift */,
+				3034 /* StreakCelebrationView.swift */,
+				3037 /* AchievementCelebrationView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -294,6 +302,7 @@
 				2016 /* CreditRingView.swift */,
 				2017 /* DailySummaryCard.swift */,
 				2018 /* AppUsageCard.swift */,
+				4000 /* ExtendLimitSheet.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -443,6 +452,7 @@
 				1016 /* CreditRingView.swift in Sources */,
 				1017 /* DailySummaryCard.swift in Sources */,
 				1018 /* AppUsageCard.swift in Sources */,
+				4001 /* ExtendLimitSheet.swift in Sources */,
 				1019 /* GoalsView.swift in Sources */,
 				1020 /* CreditHistoryView.swift in Sources */,
 				1021 /* SubscriptionView.swift in Sources */,
@@ -456,6 +466,8 @@
 				1027 /* AnimatedNumber.swift in Sources */,
 				1028 /* Se7enWordmark.swift in Sources */,
 				1029 /* StreakView.swift in Sources */,
+				3035 /* StreakCelebrationView.swift in Sources */,
+				3036 /* AchievementCelebrationView.swift in Sources */,
 				1030 /* AchievementsView.swift in Sources */,
 				1031 /* FAQView.swift in Sources */,
 				1032 /* SupportView.swift in Sources */,

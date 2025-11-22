@@ -467,6 +467,13 @@ struct CreditPackageCard: View {
                 )
         )
     }
+    
+    private func formatPerCreditPrice(_ price: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.2f", price)
+    }
 }
 
 // MARK: - Info Row

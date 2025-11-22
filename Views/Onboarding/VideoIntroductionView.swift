@@ -175,18 +175,18 @@ struct VideoIntroductionView: View {
     
     private func cleanupVideo() {
         // Pause and clean up player resources
-        player?.pause()
+            player?.pause()
         player?.replaceCurrentItem(with: nil) // Release video memory
         
-        // Remove time observer
-        if let observer = timeObserver, let currentPlayer = player {
-            currentPlayer.removeTimeObserver(observer)
-            timeObserver = nil
-        }
+            // Remove time observer
+            if let observer = timeObserver, let currentPlayer = player {
+                currentPlayer.removeTimeObserver(observer)
+                timeObserver = nil
+            }
         
-        // Remove notification observers
-        observers.forEach { NotificationCenter.default.removeObserver($0) }
-        observers.removeAll()
+            // Remove notification observers
+            observers.forEach { NotificationCenter.default.removeObserver($0) }
+            observers.removeAll()
         
         // Clear player reference
         player = nil
@@ -221,8 +221,8 @@ struct VideoIntroductionView: View {
             
             // Show continue button immediately
             DispatchQueue.main.async {
-                videoState.isVideoFinished = true
-                videoState.animateContinue = true
+                    videoState.isVideoFinished = true
+                    videoState.animateContinue = true
             }
             return
         }
@@ -253,8 +253,8 @@ struct VideoIntroductionView: View {
                     newPlayer.pause()
                     // Set immediately on main thread to ensure button appears
                     DispatchQueue.main.async {
-                        videoState.isVideoFinished = true
-                        videoState.animateContinue = true
+                            videoState.isVideoFinished = true
+                            videoState.animateContinue = true
                     }
                 }
             }
@@ -270,8 +270,8 @@ struct VideoIntroductionView: View {
             if !videoState.isVideoFinished {
                 // Set immediately on main thread to ensure button appears
                 DispatchQueue.main.async {
-                    videoState.isVideoFinished = true
-                    videoState.animateContinue = true
+                        videoState.isVideoFinished = true
+                        videoState.animateContinue = true
                 }
             }
         }
@@ -289,8 +289,8 @@ struct VideoIntroductionView: View {
                 DispatchQueue.main.async {
                     videoState.videoError = "Video playback failed: \(error.localizedDescription)"
                     // Show continue button immediately after error
-                    videoState.isVideoFinished = true
-                    videoState.animateContinue = true
+                        videoState.isVideoFinished = true
+                        videoState.animateContinue = true
                 }
             }
         }

@@ -2,10 +2,14 @@ import SwiftUI
 
 struct PaywallView: View {
     let onComplete: () -> Void
+    @StateObject private var storeKitService = StoreKitService.shared
     @State private var titleAnimation = false
     @State private var creditsAnimation = false
     @State private var featuresAnimation = false
     @State private var buttonAnimation = false
+    @State private var isPurchasing = false
+    @State private var subscriptionPrice: String = "$6.99"
+    @State private var subscriptionPeriod: String = "14 days"
     
     var body: some View {
         ZStack {
@@ -19,10 +23,10 @@ struct PaywallView: View {
                 
                 Spacer()
                 
-                // Free App Header Section
+                // Subscription Header Section
                 VStack(spacing: 20) {
                     // Badge
-                    Text("Free Forever")
+                    Text("7-Day Free Trial")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 16)
@@ -39,7 +43,7 @@ struct PaywallView: View {
                         .opacity(titleAnimation ? 1.0 : 0.0)
                     
                     VStack(spacing: 16) {
-                        Text("Start with 7 credits")
+                        Text("Start your free trial")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundStyle(
                                 LinearGradient(
@@ -56,7 +60,7 @@ struct PaywallView: View {
                             .scaleEffect(titleAnimation ? 1.0 : 0.8)
                             .opacity(titleAnimation ? 1.0 : 0.0)
                         
-                        Text("SE7EN is completely free")
+                        Text("Then \(subscriptionPrice) every \(subscriptionPeriod)")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.textPrimary.opacity(0.7))
                             .scaleEffect(titleAnimation ? 1.0 : 0.8)
@@ -64,13 +68,13 @@ struct PaywallView: View {
                     }
                 }
                 
-                // Credits Display Card
+                // Subscription Pricing Card
                 VStack(spacing: 32) {
-                    // Main credits display
+                    // Main pricing display
                     VStack(spacing: 16) {
-                        // Large "7" display
-                        Text("7")
-                            .font(.system(size: 96, weight: .bold, design: .rounded))
+                        // Price with enhanced styling
+                        Text(subscriptionPrice)
+                            .font(.system(size: 64, weight: .bold, design: .rounded))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [Color.sevenIndigo, Color.sevenSkyBlue],
@@ -81,7 +85,7 @@ struct PaywallView: View {
                             .scaleEffect(creditsAnimation ? 1.0 : 0.6)
                             .opacity(creditsAnimation ? 1.0 : 0.0)
                         
-                        Text("credits to start")
+                        Text("every \(subscriptionPeriod)")
                             .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.textPrimary.opacity(0.7))
                             .scaleEffect(creditsAnimation ? 1.0 : 0.6)
@@ -104,16 +108,16 @@ struct PaywallView: View {
                         // Enhanced Feature List
                         VStack(spacing: 16) {
                             PremiumFeatureBullet(
-                                text: "App is completely free",
+                                text: "7 days free, then \(subscriptionPrice) every \(subscriptionPeriod)",
                                 isAnimated: featuresAnimation
                             )
                             PremiumFeatureBullet(
-                                text: "Keep all 7 credits = stay free",
+                                text: "Start with 7 credits",
                                 isAnimated: featuresAnimation,
                                 delay: 0.1
                             )
                             PremiumFeatureBullet(
-                                text: "Only pay if you lose credits",
+                                text: "Cancel anytime",
                                 isAnimated: featuresAnimation,
                                 delay: 0.2
                             )
@@ -143,21 +147,25 @@ struct PaywallView: View {
                 
                 Spacer()
                 
-                // Get Started CTA Section
+                // Subscribe CTA Section
                 VStack(spacing: 20) {
-                    Button(action: {
-                        HapticFeedback.success.trigger()
-                        onComplete()
-                    }) {
+                    Button(action: purchaseSubscription) {
                         HStack(spacing: 16) {
-                            Image(systemName: "sparkles")
+                            if isPurchasing {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Image(systemName: "crown.fill")
+                                    .font(.system(size: 20, weight: .bold))
+                            }
+                            
+                            Text(isPurchasing ? "Processing..." : "Start Free Trial")
                                 .font(.system(size: 20, weight: .bold))
                             
-                            Text("Get Started Free")
-                                .font(.system(size: 20, weight: .bold))
-                            
-                            Image(systemName: "arrow.right.circle.fill")
-                                .font(.system(size: 20, weight: .bold))
+                            if !isPurchasing {
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .font(.system(size: 20, weight: .bold))
+                            }
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -176,12 +184,13 @@ struct PaywallView: View {
                                 .stroke(Color.white.opacity(0.2), lineWidth: 1)
                         )
                     }
+                    .disabled(isPurchasing)
                     .scaleEffect(buttonAnimation ? 1.0 : 0.8)
                     .opacity(buttonAnimation ? 1.0 : 0.0)
                     .padding(.horizontal, 32)
                     
                     VStack(spacing: 8) {
-                        Text("No subscription. No weekly fees. Only pay for credits you lose.")
+                        Text("7-day free trial, then \(subscriptionPrice) every \(subscriptionPeriod). Cancel anytime.")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.textPrimary.opacity(0.6))
                             .multilineTextAlignment(.center)
@@ -189,9 +198,9 @@ struct PaywallView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         
                         HStack(spacing: 16) {
-                            Label("Free", systemImage: "gift.fill")
-                            Label("No Subscription", systemImage: "xmark.circle.fill")
-                            Label("Pay As You Go", systemImage: "creditcard.fill")
+                            Label("Free Trial", systemImage: "gift.fill")
+                            Label("Cancel Anytime", systemImage: "xmark.circle.fill")
+                            Label("Auto-Renews", systemImage: "arrow.clockwise")
                         }
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.textPrimary.opacity(0.5))
@@ -202,6 +211,15 @@ struct PaywallView: View {
             }
         }
         .onAppear {
+            // Load subscription info
+            Task {
+                await storeKitService.loadProducts()
+                if let subscriptionInfo = storeKitService.getSubscriptionInfo() {
+                    subscriptionPrice = subscriptionInfo.price
+                    subscriptionPeriod = subscriptionInfo.period
+                }
+            }
+            
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
                 titleAnimation = true
             }
@@ -216,6 +234,26 @@ struct PaywallView: View {
             
             withAnimation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.8)) {
                 buttonAnimation = true
+            }
+        }
+    }
+    
+    private func purchaseSubscription() {
+        isPurchasing = true
+        HapticFeedback.medium.trigger()
+        
+        Task {
+            let success = await storeKitService.purchaseSubscription()
+            
+            await MainActor.run {
+                isPurchasing = false
+                
+                if success {
+                    HapticFeedback.success.trigger()
+                    onComplete()
+                } else {
+                    HapticFeedback.error.trigger()
+                }
             }
         }
     }

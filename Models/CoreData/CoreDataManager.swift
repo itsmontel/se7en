@@ -60,6 +60,7 @@ class CoreDataManager: ObservableObject {
         profile.updatedAt = Date()
         profile.currentStreak = 0
         profile.longestStreak = 0
+        profile.hasActiveSubscription = false
         profile.isOnboarding = true // Default to true for new users
         save()
         print("✅ Created new UserProfile with isOnboarding = true")

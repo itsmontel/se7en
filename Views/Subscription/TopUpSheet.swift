@@ -267,6 +267,13 @@ struct PackageCard: View {
                 .stroke(isSelected ? Color.primary : Color.clear, lineWidth: 2)
         )
     }
+    
+    private func formatPrice(_ price: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+        return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.2f", price)
+    }
 }
 
 // Helper extension for custom corner radius

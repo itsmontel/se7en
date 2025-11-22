@@ -10,72 +10,71 @@ struct WhyItWorksView: View {
         ZStack {
             OnboardingBackground()
             
-            VStack(spacing: 0) {
-                // Progress bar at top
-                OnboardingProgressBar(currentStep: 6, totalSteps: 8)
-                    .padding(.top, 60)
-                    .padding(.horizontal, 24)
-                
-                Spacer()
-                
-                // Enhanced Title Section
-                VStack(spacing: 12) {
-                    Text("Why this works")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundColor(.textPrimary)
-                        .scaleEffect(titleAnimation ? 1.0 : 0.8)
-                        .opacity(titleAnimation ? 1.0 : 0.0)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Progress bar at top
+                    OnboardingProgressBar(currentStep: 6, totalSteps: 8)
+                        .padding(.top, 60)
+                        .padding(.horizontal, 24)
                     
-                    Text("Psychology meets technology")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.gray)
-                        .scaleEffect(titleAnimation ? 1.0 : 0.8)
-                        .opacity(titleAnimation ? 1.0 : 0.0)
-                }
-                .padding(.top, 20)
-                .padding(.bottom, 24)
-                
-                // Enhanced Illustration Cards
-                VStack(spacing: 20) {
-                    PremiumIllustrationCard(
-                        icon: "brain.head.profile",
-                        title: "Accountability Creates Change",
-                        description: "When there's something on the line, you follow through.",
-                        color: .primary,
-                        isAnimated: cardAnimations[0]
-                    )
-                    
-                    PremiumIllustrationCard(
-                        icon: "dollarsign.circle.fill",
-                        title: "Pay Only For What You Lose",
-                        description: "7 credits = a free week.\nLess than 7 = you pay the difference.",
-                        color: .success,
-                        isAnimated: cardAnimations[1]
-                    )
-                }
-                .padding(.horizontal, 24)
-                
-                Spacer()
-                
-                // Enhanced CTA Button
-                VStack(spacing: 16) {
-                    Button(action: {
-                        HapticFeedback.light.trigger()
-                        onContinue()
-                    }) {
-                        Text("Continue")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Color.blue.opacity(0.8))
-                            .cornerRadius(16)
+                    // Enhanced Title Section
+                    VStack(spacing: 12) {
+                        Text("Why this works")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(.textPrimary)
+                            .scaleEffect(titleAnimation ? 1.0 : 0.8)
+                            .opacity(titleAnimation ? 1.0 : 0.0)
+                        
+                        Text("Psychology meets technology")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.gray)
+                            .scaleEffect(titleAnimation ? 1.0 : 0.8)
+                            .opacity(titleAnimation ? 1.0 : 0.0)
                     }
-                    .scaleEffect(buttonAnimation ? 1.0 : 0.95)
-                    .opacity(buttonAnimation ? 1.0 : 0.0)
+                    .padding(.top, 20)
+                    .padding(.bottom, 32)
+                    
+                    // Enhanced Illustration Cards
+                    VStack(spacing: 20) {
+                        PremiumIllustrationCard(
+                            icon: "brain.head.profile",
+                            title: "Accountability Creates Change",
+                            description: "When there's something on the line, you follow through.",
+                            color: .primary,
+                            isAnimated: cardAnimations[0]
+                        )
+                        
+                        PremiumIllustrationCard(
+                            icon: "dollarsign.circle.fill",
+                            title: "Pay Only For What You Lose",
+                            description: "7 credits = a free week.\nLess than 7 = you pay the difference.",
+                            color: .success,
+                            isAnimated: cardAnimations[1]
+                        )
+                    }
                     .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
+                    
+                    // Enhanced CTA Button
+                    VStack(spacing: 16) {
+                        Button(action: {
+                            HapticFeedback.light.trigger()
+                            onContinue()
+                        }) {
+                            Text("Continue")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(Color.blue.opacity(0.8))
+                                .cornerRadius(16)
+                        }
+                        .scaleEffect(buttonAnimation ? 1.0 : 0.95)
+                        .opacity(buttonAnimation ? 1.0 : 0.0)
+                        .padding(.horizontal, 24)
+                    }
+                    .padding(.bottom, 60)
                 }
-                .padding(.bottom, 48)
             }
         }
         .onAppear {

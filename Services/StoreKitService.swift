@@ -5,8 +5,9 @@ import Combine
 class StoreKitService: ObservableObject {
     nonisolated static let shared = StoreKitService()
     
-    // Product IDs for the app (credits only - app is free)
+    // Product IDs for the app
     private enum ProductIDs {
+        static let biWeeklySubscription = "se7en_biweekly_subscription"
         static let oneCredit = "se7en_one_credit"
         static let twoCredits = "se7en_two_credits"
         static let threeCredits = "se7en_three_credits"
@@ -16,7 +17,9 @@ class StoreKitService: ObservableObject {
         static let sevenCredits = "se7en_seven_credits"
     }
     
+    @Published var subscriptionProduct: Product?
     @Published var creditProducts: [Product] = []
+    @Published var isSubscribed = false
     @Published var purchaseState: PurchaseState = .idle
     
     private var updateListenerTask: Task<Void, Error>?
@@ -43,6 +46,7 @@ class StoreKitService: ObservableObject {
     func loadProducts() async {
         do {
             let products = try await Product.products(for: [
+                ProductIDs.biWeeklySubscription,
                 ProductIDs.oneCredit,
                 ProductIDs.twoCredits,
                 ProductIDs.threeCredits,
@@ -52,12 +56,23 @@ class StoreKitService: ObservableObject {
                 ProductIDs.sevenCredits
             ])
             
-            creditProducts = products
+            for product in products {
+                switch product.id {
+                case ProductIDs.biWeeklySubscription:
+                    subscriptionProduct = product
+                case ProductIDs.oneCredit, ProductIDs.twoCredits, ProductIDs.threeCredits,
+                     ProductIDs.fourCredits, ProductIDs.fiveCredits, ProductIDs.sixCredits,
+                     ProductIDs.sevenCredits:
+                    creditProducts.append(product)
+                default:
+                    break
+                }
+            }
             
             // Sort credit products by price
             creditProducts.sort { $0.price < $1.price }
             
-            print("Loaded \(products.count) credit products")
+            print("Loaded subscription and \(creditProducts.count) credit products")
         } catch {
             print("Failed to load products: \(error)")
         }
@@ -68,10 +83,43 @@ class StoreKitService: ObservableObject {
     func restorePurchases() async {
         do {
             try await AppStore.sync()
+            await checkSubscriptionStatus()
             print("Purchases restored")
         } catch {
             print("Failed to restore purchases: \(error)")
         }
+    }
+    
+    // MARK: - Subscription Management
+    
+    func purchaseSubscription() async -> Bool {
+        guard let product = subscriptionProduct else {
+            print("Subscription product not available")
+            return false
+        }
+        
+        return await purchase(product)
+    }
+    
+    func checkSubscriptionStatus() async {
+        // Check for active subscription entitlements
+        for await result in Transaction.currentEntitlements {
+            do {
+                let transaction = try checkVerified(result)
+                
+                if transaction.productID == ProductIDs.biWeeklySubscription &&
+                   transaction.revocationDate == nil {
+                    isSubscribed = true
+                    appState.updateSubscriptionStatus(true)
+                    return
+                }
+            } catch {
+                print("Failed to verify transaction: \(error)")
+            }
+        }
+        
+        isSubscribed = false
+        appState.updateSubscriptionStatus(false)
     }
     
     // MARK: - Credit Purchases
@@ -222,5 +270,32 @@ class StoreKitService: ObservableObject {
         return product.displayPrice
     }
     
-    // MARK: - Payment Processing (Removed - app is free, users only pay for credits)
+    // MARK: - Subscription Info
+    
+    func getSubscriptionInfo() -> (price: String, period: String, trialDays: Int)? {
+        guard let product = subscriptionProduct else { return nil }
+        
+        let price = product.displayPrice
+        let period = localizedPeriod(for: product.subscription?.subscriptionPeriod) ?? "14 days"
+        let trialDays = product.subscription?.introductoryOffer?.period.value ?? 7
+        
+        return (price: price, period: period, trialDays: trialDays)
+    }
+    
+    private func localizedPeriod(for period: Product.SubscriptionPeriod?) -> String? {
+        guard let period = period else { return nil }
+        
+        switch period.unit {
+        case .day:
+            return period.value == 1 ? "day" : "\(period.value) days"
+        case .week:
+            return period.value == 1 ? "week" : "\(period.value) weeks"
+        case .month:
+            return period.value == 1 ? "month" : "\(period.value) months"
+        case .year:
+            return period.value == 1 ? "year" : "\(period.value) years"
+        @unknown default:
+            return "period"
+        }
+    }
 }

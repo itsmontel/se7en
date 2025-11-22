@@ -29,6 +29,13 @@ class AppState: ObservableObject {
     @Published var downloadMotivations: [DownloadMotivation] = []
     @Published var averageScreenTimeHours: Int = 0
     @Published var userName: String = ""
+    @Published var hasActiveSubscription = false
+    @Published var shouldShowStreakCelebration = false
+    @Published var newStreakValue = 0
+    @Published var shouldShowAchievementCelebration = false
+    @Published var newAchievement: Achievement?
+    
+    private var previousStreak = 0
     
     // Computed property for compatibility
     var hasCompletedOnboarding: Bool {
@@ -130,11 +137,13 @@ class AppState: ObservableObject {
     
     private func loadUserProfile() {
         let userProfile = coreDataManager.getOrCreateUserProfile()
+        previousStreak = currentStreak // Store previous before updating
         currentStreak = Int(userProfile.currentStreak)
         longestStreak = Int(userProfile.longestStreak)
+        hasActiveSubscription = userProfile.hasActiveSubscription
     }
     
-    private func loadCurrentWeekData() {
+    func loadCurrentWeekData() {
         // Perform daily reset check first
         coreDataManager.performDailyResetIfNeeded()
         
@@ -300,14 +309,16 @@ class AppState: ObservableObject {
         // Update local state
         unlockedAchievements.append(achievementId)
         
-        // Trigger haptic feedback
-        HapticFeedback.success.trigger()
-        
-        // Send notification
+        // Trigger celebration
         if let achievement = achievements.first(where: { $0.id == achievementId }) {
+            newAchievement = achievement
+            shouldShowAchievementCelebration = true
             notificationService.sendAchievementUnlockedNotification(achievementTitle: achievement.title)
             print("🏆 Achievement Unlocked: \(achievement.title)")
         }
+        
+        // Trigger haptic feedback
+        HapticFeedback.success.trigger()
     }
     
     // MARK: - App Goal Management
@@ -409,6 +420,18 @@ class AppState: ObservableObject {
         return accountabilityFeePaidDate == today
     }
     
+    // MARK: - Subscription Management
+    
+    func updateSubscriptionStatus(_ isActive: Bool) {
+        let userProfile = coreDataManager.getOrCreateUserProfile()
+        userProfile.hasActiveSubscription = isActive
+        userProfile.updatedAt = Date()
+        coreDataManager.save()
+        
+        hasActiveSubscription = isActive
+        saveUserPreferences() // Also save preferences
+    }
+    
     func deductCredit(for appName: String, reason: String) {
         _ = coreDataManager.deductCredit(reason: reason)
         loadCurrentWeekData()
@@ -439,11 +462,22 @@ class AppState: ObservableObject {
         let userProfile = coreDataManager.getOrCreateUserProfile()
         let weeklyPlan = coreDataManager.getCurrentWeeklyPlan()
         
+        // Store previous streak before updating
+        previousStreak = Int(userProfile.currentStreak)
+        
         // If user kept all 7 credits, increment streak
         if weeklyPlan?.creditsRemaining == 7 {
             userProfile.currentStreak += 1
             if userProfile.currentStreak > userProfile.longestStreak {
                 userProfile.longestStreak = userProfile.currentStreak
+            }
+            
+            // Check if streak increased (not just maintained)
+            let newStreak = Int(userProfile.currentStreak)
+            if newStreak > previousStreak {
+                // Trigger celebration animation
+                newStreakValue = newStreak
+                shouldShowStreakCelebration = true
             }
             
             // Send streak milestone notification

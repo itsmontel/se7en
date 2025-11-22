@@ -97,65 +97,65 @@ struct BlockedAppModal: View {
                 Spacer()
                 
                 ScrollView {
-                    VStack(spacing: 0) {
-                        // Pet Image Section with gradient background
-                        ZStack {
-                            // Gradient background
-                            LinearGradient(
-                                colors: [
-                                    Color.error.opacity(0.15),
-                                    Color.error.opacity(0.05),
-                                    Color.cardBackground
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            
-                            VStack(spacing: 20) {
-                                // Sick pet image
-                                Image(sickPetImageName)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
+            VStack(spacing: 0) {
+                // Pet Image Section with gradient background
+                ZStack {
+                    // Gradient background
+                    LinearGradient(
+                        colors: [
+                            Color.error.opacity(0.15),
+                            Color.error.opacity(0.05),
+                            Color.cardBackground
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    
+                    VStack(spacing: 20) {
+                        // Sick pet image
+                        Image(sickPetImageName)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
                                     .frame(width: 160, height: 160)
-                                    .scaleEffect(petScale)
-                                    .shadow(color: Color.error.opacity(0.3), radius: 20, x: 0, y: 10)
-                                    .id(sickPetImageName) // Force re-render
-                            }
+                            .scaleEffect(petScale)
+                            .shadow(color: Color.error.opacity(0.3), radius: 20, x: 0, y: 10)
+                            .id(sickPetImageName) // Force re-render
+                    }
                             .padding(.top, 30)
                             .padding(.bottom, 20)
-                        }
-                        
-                        // Content Section
+                }
+                
+                // Content Section
                         VStack(spacing: 18) {
-                            // Title
+                    // Title
                             VStack(spacing: 10) {
-                                Text("Daily Limit Reached")
+                        Text("Daily Limit Reached")
                                     .font(.system(size: 24, weight: .bold, design: .rounded))
-                                    .foregroundColor(.textPrimary)
-                                
-                                // Divider line
-                                Rectangle()
-                                    .fill(LinearGradient(
-                                        colors: [Color.error.opacity(0.5), Color.error.opacity(0.2)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    ))
-                                    .frame(height: 3)
-                                    .cornerRadius(1.5)
+                            .foregroundColor(.textPrimary)
+                        
+                        // Divider line
+                        Rectangle()
+                            .fill(LinearGradient(
+                                colors: [Color.error.opacity(0.5), Color.error.opacity(0.2)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ))
+                            .frame(height: 3)
+                            .cornerRadius(1.5)
                                     .padding(.horizontal, 30)
-                            }
+                    }
                             .padding(.top, 24)
-                            
-                            // Message
+                    
+                    // Message
                             VStack(spacing: 12) {
-                                Text("Bad news, \(userName)!")
+                        Text("Bad news, \(userName)!")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.textPrimary)
-                                
-                                Text("You've hit your daily limit for **\(appName)**. As a result, \(petName) is feeling sick, and SE7EN has blocked this app until tomorrow at midnight.")
+                            .foregroundColor(.textPrimary)
+                        
+                        Text("You've hit your daily limit for **\(appName)**. As a result, \(petName) is feeling sick, and SE7EN has blocked this app until tomorrow at midnight.")
                                     .font(.system(size: 15, weight: .regular, design: .rounded))
-                                    .foregroundColor(.textSecondary)
-                                    .multilineTextAlignment(.center)
+                            .foregroundColor(.textSecondary)
+                            .multilineTextAlignment(.center)
                                     .lineSpacing(3)
                                     .fixedSize(horizontal: false, vertical: true)
                                 
@@ -191,26 +191,26 @@ struct BlockedAppModal: View {
                                     if creditsRemaining < 7 {
                                         Text("To continue using it today, you need to buy credits to reach **7 credits** (accountability fee). Once you have 7 credits, you can unblock this app. Other apps that haven't exceeded their limits will continue to work normally. Credits reset to 7 daily at midnight.")
                                             .font(.system(size: 14, weight: .medium, design: .rounded))
-                                            .foregroundColor(.textPrimary.opacity(0.8))
-                                            .multilineTextAlignment(.center)
+                            .foregroundColor(.textPrimary.opacity(0.8))
+                            .multilineTextAlignment(.center)
                                             .lineSpacing(3)
                                             .fixedSize(horizontal: false, vertical: true)
                                             .padding(.top, 4)
-                                    }
+                    }
                                 }
                             }
-                            
-                            // Credit indicator
+                    
+                    // Credit indicator
                             VStack(spacing: 6) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "creditcard.fill")
+                        HStack(spacing: 8) {
+                            Image(systemName: "creditcard.fill")
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundColor(creditsRemaining < 7 ? .error : .primary)
-                                    
+                            
                                     Text("\(creditsRemaining) / 7 credits")
                                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                                         .foregroundColor(creditsRemaining < 7 ? .error : .textPrimary)
-                                }
+                        }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 9)
                                 .background(creditsRemaining < 7 ? Color.error.opacity(0.1) : Color.primary.opacity(0.1))
@@ -227,9 +227,9 @@ struct BlockedAppModal: View {
                                 }
                             }
                             .padding(.top, 2)
-                            
-                            // Buttons
-                            if showButtons {
+                    
+                    // Buttons
+                    if showButtons {
                                 VStack(spacing: 12) {
                                     // Unlock button (only enabled if credits >= 7)
                                     if creditsRemaining < 7 {
@@ -260,64 +260,64 @@ struct BlockedAppModal: View {
                                             .shadow(color: Color.primary.opacity(0.3), radius: 8, x: 0, y: 4)
                                         }
                                     } else {
-                                        Button(action: {
-                                            HapticFeedback.medium.trigger()
-                                            unblockWithCredit()
-                                        }) {
+                            Button(action: {
+                                HapticFeedback.medium.trigger()
+                                unblockWithCredit()
+                            }) {
                                             HStack(spacing: 10) {
-                                                Image(systemName: "lock.open.fill")
+                                    Image(systemName: "lock.open.fill")
                                                     .font(.system(size: 17, weight: .semibold))
-                                                
+                                    
                                                 Text("Unblock App")
                                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                            }
-                                            .foregroundColor(.white)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 16)
-                                            .background(
-                                                LinearGradient(
-                                                    colors: [Color.primary, Color.primary.opacity(0.8)],
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
-                                                )
-                                            )
-                                            .cornerRadius(DesignSystem.cornerRadiusMedium)
-                                            .shadow(color: Color.primary.opacity(0.3), radius: 8, x: 0, y: 4)
-                                        }
-                                    }
-                                    
-                                    // Wait till tomorrow button
-                                    Button(action: {
-                                        HapticFeedback.light.trigger()
-                                        dismissModal()
-                                    }) {
-                                        HStack(spacing: 10) {
-                                            Image(systemName: "clock.fill")
-                                                .font(.system(size: 17, weight: .semibold))
-                                            
-                                            Text("I Can Wait Till Tomorrow")
-                                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                        }
-                                        .foregroundColor(.primary)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 16)
-                                        .background(Color.primary.opacity(0.1))
-                                        .cornerRadius(DesignSystem.cornerRadiusMedium)
-                                    }
                                 }
-                                .padding(.top, 6)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 16)
+                                .background(
+                                                LinearGradient(
+                                        colors: [Color.primary, Color.primary.opacity(0.8)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(DesignSystem.cornerRadiusMedium)
+                                .shadow(color: Color.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+                            }
+                                    }
+                            
+                            // Wait till tomorrow button
+                            Button(action: {
+                                HapticFeedback.light.trigger()
+                                dismissModal()
+                            }) {
+                                        HStack(spacing: 10) {
+                                    Image(systemName: "clock.fill")
+                                                .font(.system(size: 17, weight: .semibold))
+                                    
+                                    Text("I Can Wait Till Tomorrow")
+                                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                }
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 16)
+                                .background(Color.primary.opacity(0.1))
+                                .cornerRadius(DesignSystem.cornerRadiusMedium)
                             }
                         }
+                                .padding(.top, 6)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
                     }
-                }
-                .frame(maxWidth: 600)
+            }
+            .frame(maxWidth: 600)
                 .frame(maxHeight: UIScreen.main.bounds.height * 0.85)
-                .background(Color.cardBackground)
-                .cornerRadius(DesignSystem.cornerRadiusLarge)
-                .shadow(color: Color.black.opacity(0.3), radius: 40, x: 0, y: 20)
+            .background(Color.cardBackground)
+            .cornerRadius(DesignSystem.cornerRadiusLarge)
+            .shadow(color: Color.black.opacity(0.3), radius: 40, x: 0, y: 20)
                 
                 Spacer()
             }

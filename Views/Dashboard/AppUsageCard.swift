@@ -111,21 +111,21 @@ struct AppUsageCard: View {
                             .cornerRadius(8)
                         }
                     }
-                    
-                    // Unblock button for over-limit apps
+                
+                // Unblock button for over-limit apps
                     if app.isOverLimit && creditsRemaining >= 7 {
-                        Button(action: onUnblock) {
-                            HStack(spacing: 4) {
-                                Text("Unblock")
-                                Text("1💳")
-                                    .font(.system(size: 11, weight: .bold))
-                            }
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.orange)
-                            .cornerRadius(8)
+                    Button(action: onUnblock) {
+                        HStack(spacing: 4) {
+                            Text("Unblock")
+                            Text("1💳")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.orange)
+                        .cornerRadius(8)
                         }
                     }
                 }

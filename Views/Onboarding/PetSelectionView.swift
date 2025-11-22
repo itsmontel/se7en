@@ -19,102 +19,106 @@ struct PetSelectionView: View {
             
             if showNameInput {
                 // Pet naming screen like BrainRot
-                VStack(spacing: 0) {
-                    // Back button for naming screen
-                    HStack {
-                        OnboardingBackButton(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                showNameInput = false
-                            }
-                            HapticFeedback.light.trigger()
-                        })
-                        .padding(.top, 60)
-                        .padding(.leading, 24)
-                        Spacer()
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(spacing: 40) {
-                        // Selected pet display - bigger
-                        Image("\(selectedPetType.folderName.lowercased())fullhealth")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 220, height: 220)
-                            .shadow(color: .black.opacity(0.1), radius: 15, x: 0, y: 8)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Back button for naming screen
+                        HStack {
+                            OnboardingBackButton(action: {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    showNameInput = false
+                                }
+                                HapticFeedback.light.trigger()
+                            })
+                            .padding(.top, 60)
+                            .padding(.leading, 24)
+                            Spacer()
+                        }
                         
-                        VStack(spacing: 20) {
-                            Text("Name your \(selectedPetType.rawValue.lowercased())")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundColor(.textPrimary)
-                                .multilineTextAlignment(.center)
-                                .textCase(.none)
+                        VStack(spacing: 32) {
+                            // Selected pet display - bigger
+                            Image("\(selectedPetType.folderName.lowercased())fullhealth")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 220, height: 220)
+                                .shadow(color: .black.opacity(0.1), radius: 15, x: 0, y: 8)
+                                .padding(.top, 20)
                             
+                            VStack(spacing: 16) {
+                                Text("Name your \(selectedPetType.rawValue.lowercased())")
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .foregroundColor(.textPrimary)
+                                    .multilineTextAlignment(.center)
+                                    .textCase(.none)
+                                    .padding(.horizontal, 24)
+                                
+                                VStack(spacing: 8) {
+                                    Text("Give your new companion a")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(.gray)
+                                    Text("special name! This \(selectedPetType.rawValue.lowercased())")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(.gray)
+                                    Text("will be your motivation buddy.")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundColor(.gray)
+                                }
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 24)
+                            }
+                            
+                            // Name input field
                             VStack(spacing: 8) {
-                                Text("Give your new companion a")
-                                    .font(.system(size: 18, weight: .medium))
+                                TextField("", text: $petName)
+                                    .font(.system(size: 24, weight: .bold))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.blue.opacity(0.3), lineWidth: 2)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(12)
+                                    )
+                                    .padding(.horizontal, 32)
+                                
+                                Text("Choose a name that makes you smile")
+                                    .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(.gray)
-                                Text("special name! This \(selectedPetType.rawValue.lowercased())")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(.gray)
-                                Text("will be your motivation buddy.")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(.gray)
+                                    .padding(.horizontal, 32)
                             }
-                            .multilineTextAlignment(.center)
-                        }
-                        
-                        // Name input field
-                        VStack(spacing: 8) {
-                            TextField("", text: $petName)
-                                .font(.system(size: 24, weight: .bold))
-                                .multilineTextAlignment(.center)
-                                .padding(.vertical, 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.blue.opacity(0.3), lineWidth: 2)
-                                        .background(Color(.systemGray6))
-                                        .cornerRadius(12)
-                                )
-                                .padding(.horizontal, 32)
                             
-                            Text("Choose a name that makes you smile")
-                                .font(.system(size: 14, weight: .medium))
+                            // Pet description
+                            Text(selectedPetType.description)
+                                .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 32)
+                                .padding(.top, 8)
+                            
+                            // Centered continue button
+                            Button(action: {
+                                if !petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    savePet()
+                                    HapticFeedback.light.trigger()
+                                    onContinue()
+                                }
+                            }) {
+                                Text("Continue")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .textCase(.none)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 60)
+                                    .background(petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 
+                                              Color.gray.opacity(0.3) : 
+                                              Color.blue.opacity(0.8))
+                                    .cornerRadius(20)
+                            }
+                            .disabled(petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 32)
+                            .padding(.bottom, 60)
                         }
-                        
-                        // Pet description
-                        Text(selectedPetType.description)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
                     }
-                    
-                    Spacer()
-                    
-                    // Centered continue button
-                    Button(action: {
-                        if !petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            savePet()
-                            HapticFeedback.light.trigger()
-                            onContinue()
-                        }
-                    }) {
-                        Text("Continue")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.white)
-                            .textCase(.none)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 60)
-                            .background(petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 
-                                      Color.gray.opacity(0.3) : 
-                                      Color.blue.opacity(0.8))
-                            .cornerRadius(20)
-                    }
-                    .disabled(petName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 48)
                 }
             } else {
                 // Pet selection screen
