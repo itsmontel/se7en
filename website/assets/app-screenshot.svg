@@ -1,0 +1,55 @@
+<svg width="360" height="780" viewBox="0 0 360 780" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- iPhone Frame -->
+  <rect width="360" height="780" rx="40" fill="#1F2937"/>
+  
+  <!-- Screen Background -->
+  <rect x="10" y="10" width="340" height="760" rx="35" fill="#F3F4F6"/>
+  
+  <!-- Status Bar -->
+  <rect x="10" y="10" width="340" height="50" rx="35" fill="white"/>
+  <text x="180" y="35" font-family="Arial, sans-serif" font-size="12" fill="#111827" text-anchor="middle" font-weight="600">9:41</text>
+  
+  <!-- Header -->
+  <text x="180" y="100" font-family="Arial, sans-serif" font-size="24" fill="#4F46E5" text-anchor="middle" font-weight="700">SE7EN</text>
+  
+  <!-- Credit Ring -->
+  <circle cx="180" cy="240" r="80" fill="white" stroke="#4F46E5" stroke-width="8"/>
+  <text x="180" y="260" font-family="Arial, sans-serif" font-size="64" fill="#4F46E5" text-anchor="middle" font-weight="700">7</text>
+  
+  <!-- Credits Label -->
+  <text x="180" y="285" font-family="Arial, sans-serif" font-size="14" fill="#6B7280" text-anchor="middle">credits</text>
+  
+  <!-- Daily Summary Card -->
+  <rect x="30" y="360" width="300" height="100" rx="16" fill="white"/>
+  <text x="50" y="390" font-family="Arial, sans-serif" font-size="16" fill="#111827" font-weight="600">Today's Progress</text>
+  <rect x="50" y="405" width="260" height="8" rx="4" fill="#E5E7EB"/>
+  <rect x="50" y="405" width="195" height="8" rx="4" fill="#10B981"/>
+  <text x="50" y="440" font-family="Arial, sans-serif" font-size="14" fill="#6B7280">2h 15m / 3h limit</text>
+  
+  <!-- App Cards -->
+  <!-- Instagram Card -->
+  <rect x="30" y="490" width="300" height="70" rx="12" fill="white"/>
+  <circle cx="60" cy="525" r="20" fill="#E93CAC"/>
+  <text x="95" y="520" font-family="Arial, sans-serif" font-size="16" fill="#111827" font-weight="600">Instagram</text>
+  <text x="95" y="540" font-family="Arial, sans-serif" font-size="12" fill="#10B981">45m / 2h</text>
+  <circle cx="300" cy="525" r="12" fill="#10B981"/>
+  <text x="300" y="530" font-family="Arial, sans-serif" font-size="16" fill="white" text-anchor="middle" font-weight="700">✓</text>
+  
+  <!-- TikTok Card -->
+  <rect x="30" y="580" width="300" height="70" rx="12" fill="white"/>
+  <circle cx="60" cy="615" r="20" fill="#000000"/>
+  <text x="95" y="610" font-family="Arial, sans-serif" font-size="16" fill="#111827" font-weight="600">TikTok</text>
+  <text x="95" y="630" font-family="Arial, sans-serif" font-size="12" fill="#10B981">1h 30m / 2h</text>
+  <circle cx="300" cy="615" r="12" fill="#10B981"/>
+  <text x="300" y="620" font-family="Arial, sans-serif" font-size="16" fill="white" text-anchor="middle" font-weight="700">✓</text>
+  
+  <!-- Bottom Nav -->
+  <rect x="10" y="710" width="340" height="60" rx="30" fill="white"/>
+  <circle cx="90" cy="740" r="12" fill="#4F46E5"/>
+  <circle cx="180" cy="740" r="12" fill="#9CA3AF"/>
+  <circle cx="270" cy="740" r="12" fill="#9CA3AF"/>
+  
+  <!-- Placeholder Text -->
+  <text x="180" y="700" font-family="Arial, sans-serif" font-size="10" fill="#9CA3AF" text-anchor="middle">Replace with actual screenshot</text>
+</svg>
+

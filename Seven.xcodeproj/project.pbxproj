@@ -3,150 +3,150 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 55;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		1001 /* SevenApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2001 /* SevenApp.swift */; };
-		1002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2002 /* ContentView.swift */; };
-		1003 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2003 /* AppState.swift */; };
-		1004 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2004 /* Models.swift */; };
-		1005 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2005 /* Colors.swift */; };
-		1006 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2006 /* Typography.swift */; };
-		1007 /* Styling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2007 /* Styling.swift */; };
-		1008 /* View+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2008 /* View+Extensions.swift */; };
-		1009 /* OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2009 /* OnboardingContainerView.swift */; };
-		1010 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2010 /* WelcomeView.swift */; };
-		1011 /* HowItWorksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2011 /* HowItWorksView.swift */; };
-		1012 /* WhyItWorksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2012 /* WhyItWorksView.swift */; };
-		1013 /* SetGoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2013 /* SetGoalsView.swift */; };
-		1014 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2014 /* PaywallView.swift */; };
-		1015 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2015 /* DashboardView.swift */; };
-		1016 /* CreditRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2016 /* CreditRingView.swift */; };
-		1017 /* DailySummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2017 /* DailySummaryCard.swift */; };
-		1018 /* AppUsageCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2018 /* AppUsageCard.swift */; };
-		1019 /* GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2019 /* GoalsView.swift */; };
-		1020 /* CreditHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2020 /* CreditHistoryView.swift */; };
-		1021 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2021 /* SubscriptionView.swift */; };
-		1022 /* TopUpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2022 /* TopUpSheet.swift */; };
-		1023 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2023 /* SettingsView.swift */; };
-		1024 /* CreditLossAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2024 /* CreditLossAlert.swift */; };
-		1025 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2025 /* LoadingView.swift */; };
-		1026 /* SuccessToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2026 /* SuccessToast.swift */; };
-		1084 /* BlockedAppModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3032 /* BlockedAppModal.swift */; };
-		1085 /* DeviceActivityExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3033 /* DeviceActivityExtensions.swift */; };
-		1027 /* AnimatedNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2027 /* AnimatedNumber.swift */; };
-		1028 /* Se7enWordmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2028 /* Se7enWordmark.swift */; };
-		1029 /* StreakView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029 /* StreakView.swift */; };
-		3035 /* StreakCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3034 /* StreakCelebrationView.swift */; };
-		3036 /* AchievementCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3037 /* AchievementCelebrationView.swift */; };
-		1030 /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2030 /* AchievementsView.swift */; };
-		1031 /* FAQView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2031 /* FAQView.swift */; };
-		1032 /* SupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2032 /* SupportView.swift */; };
-		1033 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2033 /* PrivacyPolicyView.swift */; };
-		1034 /* TermsOfServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2034 /* TermsOfServiceView.swift */; };
-		1035 /* CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2035 /* CoreDataManager.swift */; };
-		1036 /* ScreenTimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2036 /* ScreenTimeService.swift */; };
-		1037 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2037 /* NotificationService.swift */; };
-		1038 /* DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2038 /* DeviceActivityMonitorExtension.swift */; };
-		1044 /* FamilyActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2063 /* FamilyActivityService.swift */; };
-		1039 /* StoreKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2039 /* StoreKitService.swift */; };
-		1040 /* SE7ENDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 2040 /* SE7ENDataModel.xcdatamodeld */; };
-		1041 /* AppDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2044 /* AppDiscoveryService.swift */; };
-		1042 /* RealAppDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2060 /* RealAppDiscoveryService.swift */; };
-		1043 /* CategoryAppSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2061 /* CategoryAppSelectionView.swift */; };
-		1045 /* PetSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2045 /* PetSelectionView.swift */; };
-		1046 /* PetPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2046 /* PetPreviewView.swift */; };
-		1047 /* VideoIntroductionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2062 /* VideoIntroductionView.swift */; };
-		1048 /* MotivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2047 /* MotivationView.swift */; };
-		1049 /* DidYouKnowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2048 /* DidYouKnowView.swift */; };
-		1050 /* ScreenTimeInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2049 /* ScreenTimeInputView.swift */; };
-		1051 /* LifetimeCalculationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2050 /* LifetimeCalculationView.swift */; };
-		1052 /* ScreenTimeConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2051 /* ScreenTimeConnectionView.swift */; };
-		1056 /* PetHealthCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2052 /* PetHealthCard.swift */; };
-		1054 /* WhyChooseSE7ENView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2053 /* WhyChooseSE7ENView.swift */; };
-		1055 /* OnboardingBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2054 /* OnboardingBackButton.swift */; };
-		1057 /* OnboardingHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2055 /* OnboardingHeader.swift */; };
-		4001 /* ExtendLimitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4000 /* ExtendLimitSheet.swift */; };
+		1002 /* Views/ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2002 /* Views/ContentView.swift */; };
+		1003 /* Models/AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2003 /* Models/AppState.swift */; };
+		1004 /* Models/Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2004 /* Models/Models.swift */; };
+		1005 /* DesignSystem/Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2005 /* DesignSystem/Colors.swift */; };
+		1006 /* DesignSystem/Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2006 /* DesignSystem/Typography.swift */; };
+		1007 /* DesignSystem/Styling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2007 /* DesignSystem/Styling.swift */; };
+		1008 /* Extensions/View+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2008 /* Extensions/View+Extensions.swift */; };
+		1009 /* Views/Onboarding/OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2009 /* Views/Onboarding/OnboardingContainerView.swift */; };
+		1010 /* Views/Onboarding/WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2010 /* Views/Onboarding/WelcomeView.swift */; };
+		1011 /* Views/Onboarding/HowItWorksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2011 /* Views/Onboarding/HowItWorksView.swift */; };
+		1012 /* Views/Onboarding/WhyItWorksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2012 /* Views/Onboarding/WhyItWorksView.swift */; };
+		1013 /* Views/Onboarding/SetGoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2013 /* Views/Onboarding/SetGoalsView.swift */; };
+		1014 /* Views/Onboarding/PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2014 /* Views/Onboarding/PaywallView.swift */; };
+		1015 /* Views/Dashboard/DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2015 /* Views/Dashboard/DashboardView.swift */; };
+		1016 /* Views/Dashboard/CreditRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2016 /* Views/Dashboard/CreditRingView.swift */; };
+		1017 /* Views/Dashboard/DailySummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2017 /* Views/Dashboard/DailySummaryCard.swift */; };
+		1018 /* Views/Dashboard/AppUsageCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2018 /* Views/Dashboard/AppUsageCard.swift */; };
+		1019 /* Views/Goals/GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2019 /* Views/Goals/GoalsView.swift */; };
+		1020 /* Views/Credits/CreditHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2020 /* Views/Credits/CreditHistoryView.swift */; };
+		1021 /* Views/Subscription/SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2021 /* Views/Subscription/SubscriptionView.swift */; };
+		1022 /* Views/Subscription/TopUpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2022 /* Views/Subscription/TopUpSheet.swift */; };
+		1023 /* Views/Settings/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2023 /* Views/Settings/SettingsView.swift */; };
+		1024 /* Components/CreditLossAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2024 /* Components/CreditLossAlert.swift */; };
+		1025 /* Components/LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2025 /* Components/LoadingView.swift */; };
+		1026 /* Components/SuccessToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2026 /* Components/SuccessToast.swift */; };
+		1027 /* Components/AnimatedNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2027 /* Components/AnimatedNumber.swift */; };
+		1028 /* Components/Se7enWordmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2028 /* Components/Se7enWordmark.swift */; };
+		1029 /* Components/StreakView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029 /* Components/StreakView.swift */; };
+		1030 /* Views/Achievements/AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2030 /* Views/Achievements/AchievementsView.swift */; };
+		1031 /* Views/Settings/FAQView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2031 /* Views/Settings/FAQView.swift */; };
+		1032 /* Views/Settings/SupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2032 /* Views/Settings/SupportView.swift */; };
+		1033 /* Views/Settings/PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2033 /* Views/Settings/PrivacyPolicyView.swift */; };
+		1034 /* Views/Settings/TermsOfServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2034 /* Views/Settings/TermsOfServiceView.swift */; };
+		1035 /* Models/CoreData/CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2035 /* Models/CoreData/CoreDataManager.swift */; };
+		1036 /* Services/ScreenTimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2036 /* Services/ScreenTimeService.swift */; };
+		1037 /* Services/NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2037 /* Services/NotificationService.swift */; };
+		1038 /* Services/DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2038 /* Services/DeviceActivityMonitorExtension.swift */; };
+		1039 /* Services/StoreKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2039 /* Services/StoreKitService.swift */; };
+		1040 /* Models/CoreData/SE7ENDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 2040 /* Models/CoreData/SE7ENDataModel.xcdatamodeld */; };
+		1041 /* Services/AppDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2044 /* Services/AppDiscoveryService.swift */; };
+		1042 /* Services/RealAppDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2060 /* Services/RealAppDiscoveryService.swift */; };
+		1043 /* Views/Dashboard/CategoryAppSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2061 /* Views/Dashboard/CategoryAppSelectionView.swift */; };
+		1044 /* Services/FamilyActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2063 /* Services/FamilyActivityService.swift */; };
+		1045 /* Views/Onboarding/PetSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2045 /* Views/Onboarding/PetSelectionView.swift */; };
+		1046 /* Views/Onboarding/PetPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2046 /* Views/Onboarding/PetPreviewView.swift */; };
+		1047 /* Views/Onboarding/VideoIntroductionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2062 /* Views/Onboarding/VideoIntroductionView.swift */; };
+		1048 /* Views/Onboarding/MotivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2047 /* Views/Onboarding/MotivationView.swift */; };
+		1049 /* Views/Onboarding/DidYouKnowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2048 /* Views/Onboarding/DidYouKnowView.swift */; };
+		1050 /* Views/Onboarding/ScreenTimeInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2049 /* Views/Onboarding/ScreenTimeInputView.swift */; };
+		1051 /* Views/Onboarding/LifetimeCalculationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2050 /* Views/Onboarding/LifetimeCalculationView.swift */; };
+		1052 /* Views/Onboarding/ScreenTimeConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2051 /* Views/Onboarding/ScreenTimeConnectionView.swift */; };
+		1054 /* Views/Onboarding/WhyChooseSE7ENView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2053 /* Views/Onboarding/WhyChooseSE7ENView.swift */; };
+		1055 /* Views/Onboarding/OnboardingBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2054 /* Views/Onboarding/OnboardingBackButton.swift */; };
+		1056 /* Views/Dashboard/PetHealthCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2052 /* Views/Dashboard/PetHealthCard.swift */; };
+		1057 /* Views/Onboarding/OnboardingHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2055 /* Views/Onboarding/OnboardingHeader.swift */; };
 		1078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3026 /* Assets.xcassets */; };
 		1079 /* dogintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3027 /* dogintro.mp4 */; };
 		1080 /* catintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3028 /* catintro.mp4 */; };
 		1081 /* bunnyintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3029 /* bunnyintro.mp4 */; };
 		1082 /* hamsterintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3030 /* hamsterintro.mp4 */; };
 		1083 /* horseintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3031 /* horseintro.mp4 */; };
+		1084 /* Views/Components/BlockedAppModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3032 /* Views/Components/BlockedAppModal.swift */; };
+		1085 /* Extensions/DeviceActivityExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3033 /* Extensions/DeviceActivityExtensions.swift */; };
+		3035 /* Components/StreakCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3034 /* Components/StreakCelebrationView.swift */; };
+		3036 /* Components/AchievementCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3037 /* Components/AchievementCelebrationView.swift */; };
+		4001 /* Views/Dashboard/ExtendLimitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4000 /* Views/Dashboard/ExtendLimitSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		100 /* Seven.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Seven.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2001 /* SevenApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SevenApp.swift; sourceTree = "<group>"; };
-		2002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ContentView.swift; sourceTree = "<group>"; };
-		2003 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/AppState.swift; sourceTree = "<group>"; };
-		2004 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/Models.swift; sourceTree = "<group>"; };
-		2005 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem/Colors.swift; sourceTree = "<group>"; };
-		2006 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem/Typography.swift; sourceTree = "<group>"; };
-		2007 /* Styling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem/Styling.swift; sourceTree = "<group>"; };
-		2008 /* View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extensions/View+Extensions.swift"; sourceTree = "<group>"; };
-		2009 /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingContainerView.swift; sourceTree = "<group>"; };
-		2010 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WelcomeView.swift; sourceTree = "<group>"; };
-		2011 /* HowItWorksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/HowItWorksView.swift; sourceTree = "<group>"; };
-		2012 /* WhyItWorksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WhyItWorksView.swift; sourceTree = "<group>"; };
-		2013 /* SetGoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/SetGoalsView.swift; sourceTree = "<group>"; };
-		2014 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PaywallView.swift; sourceTree = "<group>"; };
-		2015 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/DashboardView.swift; sourceTree = "<group>"; };
-		2016 /* CreditRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/CreditRingView.swift; sourceTree = "<group>"; };
-		2017 /* DailySummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/DailySummaryCard.swift; sourceTree = "<group>"; };
-		2018 /* AppUsageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/AppUsageCard.swift; sourceTree = "<group>"; };
-		2019 /* GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Goals/GoalsView.swift; sourceTree = "<group>"; };
-		2020 /* CreditHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Credits/CreditHistoryView.swift; sourceTree = "<group>"; };
-		2021 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Subscription/SubscriptionView.swift; sourceTree = "<group>"; };
-		2022 /* TopUpSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Subscription/TopUpSheet.swift; sourceTree = "<group>"; };
-		2023 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
-		2024 /* CreditLossAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/CreditLossAlert.swift; sourceTree = "<group>"; };
-		2025 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/LoadingView.swift; sourceTree = "<group>"; };
-		2026 /* SuccessToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/SuccessToast.swift; sourceTree = "<group>"; };
-		3032 /* BlockedAppModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Views/Components/BlockedAppModal.swift"; sourceTree = "<group>"; };
-		3033 /* DeviceActivityExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extensions/DeviceActivityExtensions.swift"; sourceTree = "<group>"; };
-		2027 /* AnimatedNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AnimatedNumber.swift; sourceTree = "<group>"; };
-		2028 /* Se7enWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/Se7enWordmark.swift; sourceTree = "<group>"; };
-		2029 /* StreakView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakView.swift; sourceTree = "<group>"; };
-		3034 /* StreakCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakCelebrationView.swift; sourceTree = "<group>"; };
-		3037 /* AchievementCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementCelebrationView.swift; sourceTree = "<group>"; };
-		2030 /* AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Achievements/AchievementsView.swift; sourceTree = "<group>"; };
-		2031 /* FAQView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/FAQView.swift; sourceTree = "<group>"; };
-		2032 /* SupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/SupportView.swift; sourceTree = "<group>"; };
-		2033 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/PrivacyPolicyView.swift; sourceTree = "<group>"; };
-		2034 /* TermsOfServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/TermsOfServiceView.swift; sourceTree = "<group>"; };
-		2035 /* CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/CoreData/CoreDataManager.swift; sourceTree = "<group>"; };
-		2036 /* ScreenTimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ScreenTimeService.swift; sourceTree = "<group>"; };
-		2037 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/NotificationService.swift; sourceTree = "<group>"; };
-		2038 /* DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
-		2063 /* FamilyActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/FamilyActivityService.swift; sourceTree = "<group>"; };
-		2039 /* StoreKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/StoreKitService.swift; sourceTree = "<group>"; };
+		2002 /* Views/ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ContentView.swift; sourceTree = "<group>"; };
+		2003 /* Models/AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/AppState.swift; sourceTree = "<group>"; };
+		2004 /* Models/Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/Models.swift; sourceTree = "<group>"; };
+		2005 /* DesignSystem/Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem/Colors.swift; sourceTree = "<group>"; };
+		2006 /* DesignSystem/Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem/Typography.swift; sourceTree = "<group>"; };
+		2007 /* DesignSystem/Styling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem/Styling.swift; sourceTree = "<group>"; };
+		2008 /* Extensions/View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extensions/View+Extensions.swift"; sourceTree = "<group>"; };
+		2009 /* Views/Onboarding/OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingContainerView.swift; sourceTree = "<group>"; };
+		2010 /* Views/Onboarding/WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WelcomeView.swift; sourceTree = "<group>"; };
+		2011 /* Views/Onboarding/HowItWorksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/HowItWorksView.swift; sourceTree = "<group>"; };
+		2012 /* Views/Onboarding/WhyItWorksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WhyItWorksView.swift; sourceTree = "<group>"; };
+		2013 /* Views/Onboarding/SetGoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/SetGoalsView.swift; sourceTree = "<group>"; };
+		2014 /* Views/Onboarding/PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PaywallView.swift; sourceTree = "<group>"; };
+		2015 /* Views/Dashboard/DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/DashboardView.swift; sourceTree = "<group>"; };
+		2016 /* Views/Dashboard/CreditRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/CreditRingView.swift; sourceTree = "<group>"; };
+		2017 /* Views/Dashboard/DailySummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/DailySummaryCard.swift; sourceTree = "<group>"; };
+		2018 /* Views/Dashboard/AppUsageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/AppUsageCard.swift; sourceTree = "<group>"; };
+		2019 /* Views/Goals/GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Goals/GoalsView.swift; sourceTree = "<group>"; };
+		2020 /* Views/Credits/CreditHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Credits/CreditHistoryView.swift; sourceTree = "<group>"; };
+		2021 /* Views/Subscription/SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Subscription/SubscriptionView.swift; sourceTree = "<group>"; };
+		2022 /* Views/Subscription/TopUpSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Subscription/TopUpSheet.swift; sourceTree = "<group>"; };
+		2023 /* Views/Settings/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
+		2024 /* Components/CreditLossAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/CreditLossAlert.swift; sourceTree = "<group>"; };
+		2025 /* Components/LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/LoadingView.swift; sourceTree = "<group>"; };
+		2026 /* Components/SuccessToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/SuccessToast.swift; sourceTree = "<group>"; };
+		2027 /* Components/AnimatedNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AnimatedNumber.swift; sourceTree = "<group>"; };
+		2028 /* Components/Se7enWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/Se7enWordmark.swift; sourceTree = "<group>"; };
+		2029 /* Components/StreakView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakView.swift; sourceTree = "<group>"; };
+		2030 /* Views/Achievements/AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Achievements/AchievementsView.swift; sourceTree = "<group>"; };
+		2031 /* Views/Settings/FAQView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/FAQView.swift; sourceTree = "<group>"; };
+		2032 /* Views/Settings/SupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/SupportView.swift; sourceTree = "<group>"; };
+		2033 /* Views/Settings/PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/PrivacyPolicyView.swift; sourceTree = "<group>"; };
+		2034 /* Views/Settings/TermsOfServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/TermsOfServiceView.swift; sourceTree = "<group>"; };
+		2035 /* Models/CoreData/CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/CoreData/CoreDataManager.swift; sourceTree = "<group>"; };
+		2036 /* Services/ScreenTimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ScreenTimeService.swift; sourceTree = "<group>"; };
+		2037 /* Services/NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/NotificationService.swift; sourceTree = "<group>"; };
+		2038 /* Services/DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
+		2039 /* Services/StoreKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/StoreKitService.swift; sourceTree = "<group>"; };
 		2041 /* SE7ENDataModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = SE7ENDataModel.xcdatamodel; sourceTree = "<group>"; };
 		2042 /* Seven.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Seven.entitlements; sourceTree = "<group>"; };
 		2043 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		2044 /* AppDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/AppDiscoveryService.swift; sourceTree = "<group>"; };
-		2060 /* RealAppDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/RealAppDiscoveryService.swift; sourceTree = "<group>"; };
-		2061 /* CategoryAppSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/CategoryAppSelectionView.swift; sourceTree = "<group>"; };
-		2045 /* PetSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PetSelectionView.swift; sourceTree = "<group>"; };
-		2046 /* PetPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PetPreviewView.swift; sourceTree = "<group>"; };
-		2062 /* VideoIntroductionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/VideoIntroductionView.swift; sourceTree = "<group>"; };
-		2047 /* MotivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/MotivationView.swift; sourceTree = "<group>"; };
-		2048 /* DidYouKnowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/DidYouKnowView.swift; sourceTree = "<group>"; };
-		2049 /* ScreenTimeInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/ScreenTimeInputView.swift; sourceTree = "<group>"; };
-		2050 /* LifetimeCalculationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/LifetimeCalculationView.swift; sourceTree = "<group>"; };
-		2051 /* ScreenTimeConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/ScreenTimeConnectionView.swift; sourceTree = "<group>"; };
-		2052 /* PetHealthCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/PetHealthCard.swift; sourceTree = "<group>"; };
-		2053 /* WhyChooseSE7ENView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WhyChooseSE7ENView.swift; sourceTree = "<group>"; };
-		2054 /* OnboardingBackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingBackButton.swift; sourceTree = "<group>"; };
-		2055 /* OnboardingHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingHeader.swift; sourceTree = "<group>"; };
-		4000 /* ExtendLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/ExtendLimitSheet.swift; sourceTree = "<group>"; };
+		2044 /* Services/AppDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/AppDiscoveryService.swift; sourceTree = "<group>"; };
+		2045 /* Views/Onboarding/PetSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PetSelectionView.swift; sourceTree = "<group>"; };
+		2046 /* Views/Onboarding/PetPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PetPreviewView.swift; sourceTree = "<group>"; };
+		2047 /* Views/Onboarding/MotivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/MotivationView.swift; sourceTree = "<group>"; };
+		2048 /* Views/Onboarding/DidYouKnowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/DidYouKnowView.swift; sourceTree = "<group>"; };
+		2049 /* Views/Onboarding/ScreenTimeInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/ScreenTimeInputView.swift; sourceTree = "<group>"; };
+		2050 /* Views/Onboarding/LifetimeCalculationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/LifetimeCalculationView.swift; sourceTree = "<group>"; };
+		2051 /* Views/Onboarding/ScreenTimeConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/ScreenTimeConnectionView.swift; sourceTree = "<group>"; };
+		2052 /* Views/Dashboard/PetHealthCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/PetHealthCard.swift; sourceTree = "<group>"; };
+		2053 /* Views/Onboarding/WhyChooseSE7ENView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WhyChooseSE7ENView.swift; sourceTree = "<group>"; };
+		2054 /* Views/Onboarding/OnboardingBackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingBackButton.swift; sourceTree = "<group>"; };
+		2055 /* Views/Onboarding/OnboardingHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingHeader.swift; sourceTree = "<group>"; };
+		2060 /* Services/RealAppDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/RealAppDiscoveryService.swift; sourceTree = "<group>"; };
+		2061 /* Views/Dashboard/CategoryAppSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/CategoryAppSelectionView.swift; sourceTree = "<group>"; };
+		2062 /* Views/Onboarding/VideoIntroductionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/VideoIntroductionView.swift; sourceTree = "<group>"; };
+		2063 /* Services/FamilyActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/FamilyActivityService.swift; sourceTree = "<group>"; };
 		3026 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3027 /* dogintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = dogintro.mp4; sourceTree = "<group>"; };
 		3028 /* catintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = catintro.mp4; sourceTree = "<group>"; };
 		3029 /* bunnyintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = bunnyintro.mp4; sourceTree = "<group>"; };
 		3030 /* hamsterintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = hamsterintro.mp4; sourceTree = "<group>"; };
 		3031 /* horseintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = horseintro.mp4; sourceTree = "<group>"; };
+		3032 /* Views/Components/BlockedAppModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/BlockedAppModal.swift; sourceTree = "<group>"; };
+		3033 /* Extensions/DeviceActivityExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions/DeviceActivityExtensions.swift; sourceTree = "<group>"; };
+		3034 /* Components/StreakCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakCelebrationView.swift; sourceTree = "<group>"; };
+		3037 /* Components/AchievementCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementCelebrationView.swift; sourceTree = "<group>"; };
+		4000 /* Views/Dashboard/ExtendLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/ExtendLimitSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,15 +160,115 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		89 = {
+		101 = {
 			isa = PBXGroup;
 			children = (
-				90 /* Seven */,
-				99 /* Products */,
+				2035 /* Models/CoreData/CoreDataManager.swift */,
+				2040 /* Models/CoreData/SE7ENDataModel.xcdatamodeld */,
 			);
 			sourceTree = "<group>";
 		};
-		90 /* Seven */ = {
+		102 = {
+			isa = PBXGroup;
+			children = (
+				2009 /* Views/Onboarding/OnboardingContainerView.swift */,
+				2010 /* Views/Onboarding/WelcomeView.swift */,
+				2045 /* Views/Onboarding/PetSelectionView.swift */,
+				2046 /* Views/Onboarding/PetPreviewView.swift */,
+				2062 /* Views/Onboarding/VideoIntroductionView.swift */,
+				2047 /* Views/Onboarding/MotivationView.swift */,
+				2048 /* Views/Onboarding/DidYouKnowView.swift */,
+				2049 /* Views/Onboarding/ScreenTimeInputView.swift */,
+				2050 /* Views/Onboarding/LifetimeCalculationView.swift */,
+				2051 /* Views/Onboarding/ScreenTimeConnectionView.swift */,
+				2011 /* Views/Onboarding/HowItWorksView.swift */,
+				2012 /* Views/Onboarding/WhyItWorksView.swift */,
+				2013 /* Views/Onboarding/SetGoalsView.swift */,
+				2014 /* Views/Onboarding/PaywallView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		103 = {
+			isa = PBXGroup;
+			children = (
+				2015 /* Views/Dashboard/DashboardView.swift */,
+				2061 /* Views/Dashboard/CategoryAppSelectionView.swift */,
+				2052 /* Views/Dashboard/PetHealthCard.swift */,
+				2016 /* Views/Dashboard/CreditRingView.swift */,
+				2017 /* Views/Dashboard/DailySummaryCard.swift */,
+				2018 /* Views/Dashboard/AppUsageCard.swift */,
+				4000 /* Views/Dashboard/ExtendLimitSheet.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		104 = {
+			isa = PBXGroup;
+			children = (
+				2019 /* Views/Goals/GoalsView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		105 = {
+			isa = PBXGroup;
+			children = (
+				2020 /* Views/Credits/CreditHistoryView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		106 = {
+			isa = PBXGroup;
+			children = (
+				2021 /* Views/Subscription/SubscriptionView.swift */,
+				2022 /* Views/Subscription/TopUpSheet.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		107 = {
+			isa = PBXGroup;
+			children = (
+				2023 /* Views/Settings/SettingsView.swift */,
+				2031 /* Views/Settings/FAQView.swift */,
+				2032 /* Views/Settings/SupportView.swift */,
+				2033 /* Views/Settings/PrivacyPolicyView.swift */,
+				2034 /* Views/Settings/TermsOfServiceView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		108 = {
+			isa = PBXGroup;
+			children = (
+				2030 /* Views/Achievements/AchievementsView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		199 = {
+			isa = PBXGroup;
+			children = (
+				2008 /* Extensions/View+Extensions.swift */,
+				3033 /* Extensions/DeviceActivityExtensions.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		89 = {
+			isa = PBXGroup;
+			children = (
+				90,
+				99 /* Products */,
+				8F12620A2ED291550094DB0A /* Recovered References */,
+			);
+			sourceTree = "<group>";
+		};
+		8F12620A2ED291550094DB0A /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				2053 /* Views/Onboarding/WhyChooseSE7ENView.swift */,
+				2054 /* Views/Onboarding/OnboardingBackButton.swift */,
+				2055 /* Views/Onboarding/OnboardingHeader.swift */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+		90 = {
 			isa = PBXGroup;
 			children = (
 				2001 /* SevenApp.swift */,
@@ -180,80 +280,72 @@
 				3029 /* bunnyintro.mp4 */,
 				3030 /* hamsterintro.mp4 */,
 				3031 /* horseintro.mp4 */,
-				91 /* Models */,
-				92 /* Views */,
-				93 /* Components */,
-				94 /* DesignSystem */,
-				199 /* Extensions */,
-				96 /* Services */,
+				91,
+				92,
+				93,
+				94,
+				199,
+				96,
 			);
 			sourceTree = "<group>";
 		};
-		91 /* Models */ = {
+		91 = {
 			isa = PBXGroup;
 			children = (
-				2003 /* AppState.swift */,
-				2004 /* Models.swift */,
-				101 /* CoreData */,
+				2003 /* Models/AppState.swift */,
+				2004 /* Models/Models.swift */,
+				101,
 			);
 			sourceTree = "<group>";
 		};
-		92 /* Views */ = {
+		92 = {
 			isa = PBXGroup;
 			children = (
-				2002 /* ContentView.swift */,
-				102 /* Onboarding */,
-				103 /* Dashboard */,
-				104 /* Goals */,
-				105 /* Credits */,
-				106 /* Subscription */,
-				107 /* Settings */,
-				108 /* Achievements */,
+				2002 /* Views/ContentView.swift */,
+				102,
+				103,
+				104,
+				105,
+				106,
+				107,
+				108,
 			);
 			sourceTree = "<group>";
 		};
-		93 /* Components */ = {
+		93 = {
 			isa = PBXGroup;
 			children = (
-				2024 /* CreditLossAlert.swift */,
-				2025 /* LoadingView.swift */,
-				2026 /* SuccessToast.swift */,
-				3032 /* BlockedAppModal.swift */,
-				2027 /* AnimatedNumber.swift */,
-				2028 /* Se7enWordmark.swift */,
-				2029 /* StreakView.swift */,
-				3034 /* StreakCelebrationView.swift */,
-				3037 /* AchievementCelebrationView.swift */,
+				2024 /* Components/CreditLossAlert.swift */,
+				2025 /* Components/LoadingView.swift */,
+				2026 /* Components/SuccessToast.swift */,
+				3032 /* Views/Components/BlockedAppModal.swift */,
+				2027 /* Components/AnimatedNumber.swift */,
+				2028 /* Components/Se7enWordmark.swift */,
+				2029 /* Components/StreakView.swift */,
+				3034 /* Components/StreakCelebrationView.swift */,
+				3037 /* Components/AchievementCelebrationView.swift */,
 			);
 			sourceTree = "<group>";
 		};
-		94 /* DesignSystem */ = {
+		94 = {
 			isa = PBXGroup;
 			children = (
-				2005 /* Colors.swift */,
-				2006 /* Typography.swift */,
-				2007 /* Styling.swift */,
+				2005 /* DesignSystem/Colors.swift */,
+				2006 /* DesignSystem/Typography.swift */,
+				2007 /* DesignSystem/Styling.swift */,
 			);
 			sourceTree = "<group>";
 		};
-		199 /* Extensions */ = {
+		96 = {
 			isa = PBXGroup;
 			children = (
-				2008 /* View+Extensions.swift */,
-				3033 /* DeviceActivityExtensions.swift */,
-			);
-			sourceTree = "<group>";
-		};
-		96 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				2036 /* ScreenTimeService.swift */,
-				2037 /* NotificationService.swift */,
-				2038 /* DeviceActivityMonitorExtension.swift */,
-				2063 /* FamilyActivityService.swift */,
-				2039 /* StoreKitService.swift */,
-				2044 /* AppDiscoveryService.swift */,
-				2060 /* RealAppDiscoveryService.swift */,
+				2036 /* Services/ScreenTimeService.swift */,
+				2037 /* Services/NotificationService.swift */,
+				2038 /* Services/DeviceActivityMonitorExtension.swift */,
+				2063 /* Services/FamilyActivityService.swift */,
+				2039 /* Services/StoreKitService.swift */,
+				2044 /* Services/AppDiscoveryService.swift */,
+				2060 /* Services/RealAppDiscoveryService.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -263,87 +355,6 @@
 				100 /* Seven.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		101 /* CoreData */ = {
-			isa = PBXGroup;
-			children = (
-				2035 /* CoreDataManager.swift */,
-				2040 /* SE7ENDataModel.xcdatamodeld */,
-			);
-			sourceTree = "<group>";
-		};
-		102 /* Onboarding */ = {
-			isa = PBXGroup;
-			children = (
-				2009 /* OnboardingContainerView.swift */,
-				2010 /* WelcomeView.swift */,
-				2045 /* PetSelectionView.swift */,
-				2046 /* PetPreviewView.swift */,
-				2062 /* VideoIntroductionView.swift */,
-				2047 /* MotivationView.swift */,
-				2048 /* DidYouKnowView.swift */,
-				2049 /* ScreenTimeInputView.swift */,
-				2050 /* LifetimeCalculationView.swift */,
-				2051 /* ScreenTimeConnectionView.swift */,
-				2011 /* HowItWorksView.swift */,
-				2012 /* WhyItWorksView.swift */,
-				2013 /* SetGoalsView.swift */,
-				2014 /* PaywallView.swift */,
-			);
-			sourceTree = "<group>";
-		};
-		103 /* Dashboard */ = {
-			isa = PBXGroup;
-			children = (
-				2015 /* DashboardView.swift */,
-				2061 /* CategoryAppSelectionView.swift */,
-				2052 /* PetHealthCard.swift */,
-				2016 /* CreditRingView.swift */,
-				2017 /* DailySummaryCard.swift */,
-				2018 /* AppUsageCard.swift */,
-				4000 /* ExtendLimitSheet.swift */,
-			);
-			sourceTree = "<group>";
-		};
-		104 /* Goals */ = {
-			isa = PBXGroup;
-			children = (
-				2019 /* GoalsView.swift */,
-			);
-			sourceTree = "<group>";
-		};
-		105 /* Credits */ = {
-			isa = PBXGroup;
-			children = (
-				2020 /* CreditHistoryView.swift */,
-			);
-			sourceTree = "<group>";
-		};
-		106 /* Subscription */ = {
-			isa = PBXGroup;
-			children = (
-				2021 /* SubscriptionView.swift */,
-				2022 /* TopUpSheet.swift */,
-			);
-			sourceTree = "<group>";
-		};
-		107 /* Settings */ = {
-			isa = PBXGroup;
-			children = (
-				2023 /* SettingsView.swift */,
-				2031 /* FAQView.swift */,
-				2032 /* SupportView.swift */,
-				2033 /* PrivacyPolicyView.swift */,
-				2034 /* TermsOfServiceView.swift */,
-			);
-			sourceTree = "<group>";
-		};
-		108 /* Achievements */ = {
-			isa = PBXGroup;
-			children = (
-				2030 /* AchievementsView.swift */,
-			);
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -378,7 +389,6 @@
 				TargetAttributes = {
 					98 = {
 						CreatedOnToolsVersion = 15.0;
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -423,66 +433,66 @@
 			buildActionMask = 2147483647;
 			files = (
 				1001 /* SevenApp.swift in Sources */,
-				1002 /* ContentView.swift in Sources */,
-				1003 /* AppState.swift in Sources */,
-				1004 /* Models.swift in Sources */,
-				1005 /* Colors.swift in Sources */,
-				1006 /* Typography.swift in Sources */,
-				1007 /* Styling.swift in Sources */,
-				1008 /* View+Extensions.swift in Sources */,
-				1009 /* OnboardingContainerView.swift in Sources */,
-				1010 /* WelcomeView.swift in Sources */,
-				1045 /* PetSelectionView.swift in Sources */,
-				1046 /* PetPreviewView.swift in Sources */,
-				1047 /* VideoIntroductionView.swift in Sources */,
-				1048 /* MotivationView.swift in Sources */,
-				1049 /* DidYouKnowView.swift in Sources */,
-				1050 /* ScreenTimeInputView.swift in Sources */,
-				1051 /* LifetimeCalculationView.swift in Sources */,
-			1052 /* ScreenTimeConnectionView.swift in Sources */,
-			1054 /* WhyChooseSE7ENView.swift in Sources */,
-			1055 /* OnboardingBackButton.swift in Sources */,
-			1057 /* OnboardingHeader.swift in Sources */,
-			1011 /* HowItWorksView.swift in Sources */,
-				1012 /* WhyItWorksView.swift in Sources */,
-				1013 /* SetGoalsView.swift in Sources */,
-				1014 /* PaywallView.swift in Sources */,
-				1015 /* DashboardView.swift in Sources */,
-				1056 /* PetHealthCard.swift in Sources */,
-				1016 /* CreditRingView.swift in Sources */,
-				1017 /* DailySummaryCard.swift in Sources */,
-				1018 /* AppUsageCard.swift in Sources */,
-				4001 /* ExtendLimitSheet.swift in Sources */,
-				1019 /* GoalsView.swift in Sources */,
-				1020 /* CreditHistoryView.swift in Sources */,
-				1021 /* SubscriptionView.swift in Sources */,
-				1022 /* TopUpSheet.swift in Sources */,
-				1023 /* SettingsView.swift in Sources */,
-				1024 /* CreditLossAlert.swift in Sources */,
-				1025 /* LoadingView.swift in Sources */,
-				1026 /* SuccessToast.swift in Sources */,
-				1084 /* BlockedAppModal.swift in Sources */,
-				1085 /* DeviceActivityExtensions.swift in Sources */,
-				1027 /* AnimatedNumber.swift in Sources */,
-				1028 /* Se7enWordmark.swift in Sources */,
-				1029 /* StreakView.swift in Sources */,
-				3035 /* StreakCelebrationView.swift in Sources */,
-				3036 /* AchievementCelebrationView.swift in Sources */,
-				1030 /* AchievementsView.swift in Sources */,
-				1031 /* FAQView.swift in Sources */,
-				1032 /* SupportView.swift in Sources */,
-				1033 /* PrivacyPolicyView.swift in Sources */,
-				1034 /* TermsOfServiceView.swift in Sources */,
-				1035 /* CoreDataManager.swift in Sources */,
-				1036 /* ScreenTimeService.swift in Sources */,
-				1037 /* NotificationService.swift in Sources */,
-				1038 /* DeviceActivityMonitorExtension.swift in Sources */,
-				1044 /* FamilyActivityService.swift in Sources */,
-				1039 /* StoreKitService.swift in Sources */,
-				1040 /* SE7ENDataModel.xcdatamodeld in Sources */,
-				1041 /* AppDiscoveryService.swift in Sources */,
-				1042 /* RealAppDiscoveryService.swift in Sources */,
-				1043 /* CategoryAppSelectionView.swift in Sources */,
+				1002 /* Views/ContentView.swift in Sources */,
+				1003 /* Models/AppState.swift in Sources */,
+				1004 /* Models/Models.swift in Sources */,
+				1005 /* DesignSystem/Colors.swift in Sources */,
+				1006 /* DesignSystem/Typography.swift in Sources */,
+				1007 /* DesignSystem/Styling.swift in Sources */,
+				1008 /* Extensions/View+Extensions.swift in Sources */,
+				1009 /* Views/Onboarding/OnboardingContainerView.swift in Sources */,
+				1010 /* Views/Onboarding/WelcomeView.swift in Sources */,
+				1045 /* Views/Onboarding/PetSelectionView.swift in Sources */,
+				1046 /* Views/Onboarding/PetPreviewView.swift in Sources */,
+				1047 /* Views/Onboarding/VideoIntroductionView.swift in Sources */,
+				1048 /* Views/Onboarding/MotivationView.swift in Sources */,
+				1049 /* Views/Onboarding/DidYouKnowView.swift in Sources */,
+				1050 /* Views/Onboarding/ScreenTimeInputView.swift in Sources */,
+				1051 /* Views/Onboarding/LifetimeCalculationView.swift in Sources */,
+				1052 /* Views/Onboarding/ScreenTimeConnectionView.swift in Sources */,
+				1054 /* Views/Onboarding/WhyChooseSE7ENView.swift in Sources */,
+				1055 /* Views/Onboarding/OnboardingBackButton.swift in Sources */,
+				1057 /* Views/Onboarding/OnboardingHeader.swift in Sources */,
+				1011 /* Views/Onboarding/HowItWorksView.swift in Sources */,
+				1012 /* Views/Onboarding/WhyItWorksView.swift in Sources */,
+				1013 /* Views/Onboarding/SetGoalsView.swift in Sources */,
+				1014 /* Views/Onboarding/PaywallView.swift in Sources */,
+				1015 /* Views/Dashboard/DashboardView.swift in Sources */,
+				1056 /* Views/Dashboard/PetHealthCard.swift in Sources */,
+				1016 /* Views/Dashboard/CreditRingView.swift in Sources */,
+				1017 /* Views/Dashboard/DailySummaryCard.swift in Sources */,
+				1018 /* Views/Dashboard/AppUsageCard.swift in Sources */,
+				4001 /* Views/Dashboard/ExtendLimitSheet.swift in Sources */,
+				1019 /* Views/Goals/GoalsView.swift in Sources */,
+				1020 /* Views/Credits/CreditHistoryView.swift in Sources */,
+				1021 /* Views/Subscription/SubscriptionView.swift in Sources */,
+				1022 /* Views/Subscription/TopUpSheet.swift in Sources */,
+				1023 /* Views/Settings/SettingsView.swift in Sources */,
+				1024 /* Components/CreditLossAlert.swift in Sources */,
+				1025 /* Components/LoadingView.swift in Sources */,
+				1026 /* Components/SuccessToast.swift in Sources */,
+				1084 /* Views/Components/BlockedAppModal.swift in Sources */,
+				1085 /* Extensions/DeviceActivityExtensions.swift in Sources */,
+				1027 /* Components/AnimatedNumber.swift in Sources */,
+				1028 /* Components/Se7enWordmark.swift in Sources */,
+				1029 /* Components/StreakView.swift in Sources */,
+				3035 /* Components/StreakCelebrationView.swift in Sources */,
+				3036 /* Components/AchievementCelebrationView.swift in Sources */,
+				1030 /* Views/Achievements/AchievementsView.swift in Sources */,
+				1031 /* Views/Settings/FAQView.swift in Sources */,
+				1032 /* Views/Settings/SupportView.swift in Sources */,
+				1033 /* Views/Settings/PrivacyPolicyView.swift in Sources */,
+				1034 /* Views/Settings/TermsOfServiceView.swift in Sources */,
+				1035 /* Models/CoreData/CoreDataManager.swift in Sources */,
+				1036 /* Services/ScreenTimeService.swift in Sources */,
+				1037 /* Services/NotificationService.swift in Sources */,
+				1038 /* Services/DeviceActivityMonitorExtension.swift in Sources */,
+				1044 /* Services/FamilyActivityService.swift in Sources */,
+				1039 /* Services/StoreKitService.swift in Sources */,
+				1040 /* Models/CoreData/SE7ENDataModel.xcdatamodeld in Sources */,
+				1041 /* Services/AppDiscoveryService.swift in Sources */,
+				1042 /* Services/RealAppDiscoveryService.swift in Sources */,
+				1043 /* Views/Dashboard/CategoryAppSelectionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -616,7 +626,7 @@
 				CODE_SIGN_ENTITLEMENTS = Seven.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
@@ -631,7 +641,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -647,7 +657,7 @@
 				CODE_SIGN_ENTITLEMENTS = Seven.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
@@ -662,7 +672,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -694,7 +704,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCVersionGroup section */
-		2040 /* SE7ENDataModel.xcdatamodeld */ = {
+		2040 /* Models/CoreData/SE7ENDataModel.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
 				2041 /* SE7ENDataModel.xcdatamodel */,
