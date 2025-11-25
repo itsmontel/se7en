@@ -122,6 +122,9 @@ class CoreDataManager: ObservableObject {
                 currentPlan.lastFailureDate = nil
                 currentPlan.accountabilityFeePaidDate = nil
                 
+                // Apply pending limit changes
+                applyPendingLimitChanges()
+                
                 save()
             }
             
@@ -192,6 +195,20 @@ class CoreDataManager: ObservableObject {
         goal.dailyLimitMinutes = Int32(dailyLimitMinutes)
         goal.updatedAt = Date()
         save()
+    }
+    
+    func applyPendingLimitChanges() {
+        let goals = getActiveAppGoals()
+        for goal in goals {
+            guard let bundleID = goal.appBundleID else { continue }
+            let key = "pendingLimit_\(bundleID)"
+            
+            if let pendingLimit = UserDefaults.standard.object(forKey: key) as? Int {
+                print("📝 Applying pending limit change for \(goal.appName ?? "Unknown"): \(pendingLimit) minutes")
+                updateAppGoal(goal, dailyLimitMinutes: pendingLimit)
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
     }
     
     func deleteAppGoal(_ goal: AppGoal) {
@@ -277,6 +294,43 @@ class CoreDataManager: ObservableObject {
         if let usageRecord = getTodaysUsageRecord(for: bundleID),
            usageRecord.extendedLimitMinutes > 0 {
             return Int(usageRecord.extendedLimitMinutes)
+        }
+        
+        // Check restriction period settings
+        let restrictionPeriod = UserDefaults.standard.string(forKey: "restrictionPeriod_\(bundleID)") ?? "Daily"
+        let restrictionLimit = UserDefaults.standard.object(forKey: "restrictionLimit_\(bundleID)") as? Int
+        
+        // If there's a restriction limit set, check if it's still active
+        if let restrictionLimit = restrictionLimit {
+            let endDate = UserDefaults.standard.object(forKey: "restrictionEndDate_\(bundleID)") as? Date ?? Date.distantFuture
+            let now = Date()
+            
+            if now < endDate {
+                // Restriction is still active, use restriction limit
+                return restrictionLimit
+            } else {
+                // Restriction has expired, check if we should revert to base limit
+                if restrictionPeriod == "One-time" {
+                    // One-time restrictions expire and revert to base limit
+                    // Clear the restriction settings
+                    UserDefaults.standard.removeObject(forKey: "restrictionPeriod_\(bundleID)")
+                    UserDefaults.standard.removeObject(forKey: "restrictionLimit_\(bundleID)")
+                    UserDefaults.standard.removeObject(forKey: "restrictionStartDate_\(bundleID)")
+                    UserDefaults.standard.removeObject(forKey: "restrictionEndDate_\(bundleID)")
+                    print("🔄 One-time restriction expired for \(bundleID), reverting to base limit")
+                    return baseLimit
+                } else if restrictionPeriod == "Weekly" {
+                    // Weekly restrictions expire after 7 days
+                    UserDefaults.standard.removeObject(forKey: "restrictionPeriod_\(bundleID)")
+                    UserDefaults.standard.removeObject(forKey: "restrictionLimit_\(bundleID)")
+                    UserDefaults.standard.removeObject(forKey: "restrictionStartDate_\(bundleID)")
+                    UserDefaults.standard.removeObject(forKey: "restrictionEndDate_\(bundleID)")
+                    print("🔄 Weekly restriction expired for \(bundleID), reverting to base limit")
+                    return baseLimit
+                }
+                // Daily restrictions don't expire, but use restriction limit if set
+                return restrictionLimit
+            }
         }
         
         return baseLimit

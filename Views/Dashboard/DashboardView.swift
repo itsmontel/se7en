@@ -16,13 +16,6 @@ struct DashboardView: View {
     @State private var blockedAppBundleID: String? = nil
     @State private var showingExtendLimitSheet = false
     @State private var appToExtend: MonitoredApp? = nil
-    @State private var showingStreakPreview = false
-    @State private var showingAchievementPreview = false
-    
-    // Preview achievement for testing
-    private var previewAchievement: Achievement? {
-        appState.achievements.first { $0.id == "week_warrior" } ?? appState.achievements.first
-    }
     
     private var healthScore: Int {
         // Calculate health based on actual app usage
@@ -156,71 +149,6 @@ struct DashboardView: View {
                         }
                         .padding(.bottom, 24)
                         
-                        // Preview Buttons (for testing)
-                        VStack(spacing: 12) {
-                            // Test Streak Celebration Button
-                            Button(action: {
-                                showingStreakPreview = true
-                                HapticFeedback.medium.trigger()
-                            }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "flame.fill")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundColor(.sevenAmber)
-                                    
-                                    Text("Preview Streak Celebration")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.textPrimary)
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.textSecondary)
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 16)
-                                .background(Color.sevenAmber.opacity(0.1))
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.sevenAmber.opacity(0.2), lineWidth: 1)
-                                )
-                            }
-                            
-                            // Test Achievement Celebration Button
-                            Button(action: {
-                                showingAchievementPreview = true
-                                HapticFeedback.medium.trigger()
-                            }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "trophy.fill")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundColor(.sevenIndigo)
-                                    
-                                    Text("Preview Achievement Celebration")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.textPrimary)
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.textSecondary)
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 16)
-                                .background(Color.sevenIndigo.opacity(0.1))
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.sevenIndigo.opacity(0.2), lineWidth: 1)
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-                        
                         // Divider
                         Divider()
                             .padding(.horizontal, 20)
@@ -247,38 +175,6 @@ struct DashboardView: View {
                                     )
                                     .padding(.horizontal, 20)
                                 }
-                                
-                                // Test Blocked App Modal Button (for testing/design purposes)
-                                Button(action: {
-                                    // Show test blocked app modal - use first monitored app or default to Instagram
-                                    if let firstApp = appState.monitoredApps.first {
-                                        // Try to get bundle ID from Core Data
-                                        let goals = CoreDataManager.shared.getActiveAppGoals()
-                                        let matchingGoal = goals.first { $0.appName == firstApp.name }
-                                        let bundleID = matchingGoal?.appBundleID ?? "com.\(firstApp.name.lowercased().replacingOccurrences(of: " ", with: ""))"
-                                        showBlockedAppModal(appName: firstApp.name, bundleID: bundleID)
-                                    } else {
-                                        // Default test with Instagram
-                                        showBlockedAppModal(appName: "Instagram", bundleID: "com.instagram.instagram")
-                                    }
-                                }) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "eye.fill")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(.orange)
-                                        
-                                        Text("Test Blocked App Modal")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.orange)
-                                        
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 16)
-                                    .background(Color.orange.opacity(0.1))
-                                    .cornerRadius(12)
-                                }
-                                .padding(.horizontal, 20)
                                 
                                 // Add App Button
                                 Button(action: {
@@ -320,25 +216,23 @@ struct DashboardView: View {
                 }
                 
                 // Streak Celebration Overlay
-                if appState.shouldShowStreakCelebration || showingStreakPreview {
+                if appState.shouldShowStreakCelebration {
                     StreakCelebrationView(
-                        streak: appState.shouldShowStreakCelebration ? appState.newStreakValue : max(1, appState.currentStreak),
+                        streak: appState.newStreakValue,
                         pet: appState.userPet,
                         onDismiss: {
                             appState.shouldShowStreakCelebration = false
-                            showingStreakPreview = false
                         }
                     )
                 }
                 
                 // Achievement Celebration Overlay
-                if appState.shouldShowAchievementCelebration || showingAchievementPreview {
-                    if let achievement = appState.shouldShowAchievementCelebration ? appState.newAchievement : previewAchievement {
+                if appState.shouldShowAchievementCelebration {
+                    if let achievement = appState.newAchievement {
                         AchievementCelebrationView(
                             achievement: achievement,
                             onDismiss: {
                                 appState.shouldShowAchievementCelebration = false
-                                showingAchievementPreview = false
                             }
                         )
                     }
@@ -408,22 +302,7 @@ struct DashboardView: View {
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        // Test button to show blocked app modal
-                        Button(action: {
-                            // Show test blocked app modal
-                            showBlockedAppModal(appName: "Instagram", bundleID: "com.instagram.instagram")
-                        }) {
-                            Image(systemName: "eye.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.blue)
-                                .padding(8)
-                                .background(Color.blue.opacity(0.1))
-                                .clipShape(Circle())
-                        }
-                        
                     CompactStreakView(streak: appState.currentStreak)
-                    }
                 }
             }
             .sheet(isPresented: $showingAddAppSheet) {

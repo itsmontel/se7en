@@ -904,6 +904,217 @@ struct AppLaunchesReport: View {
 
 struct GoalCard: View {
     @Binding var app: MonitoredApp
+    @EnvironmentObject var appState: AppState
+    @State private var restrictionPeriod: RestrictionPeriod = .daily
+    @State private var hasTimeRestriction: Bool = false
+    @State private var blockStartTime: Date = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: Date()) ?? Date()
+    @State private var blockEndTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
+    @State private var showAdvancedOptions: Bool = false
+    @State private var pendingLimitChange: Int? = nil
+    
+    enum RestrictionPeriod: String, CaseIterable {
+        case daily = "Daily"
+        case weekly = "Weekly"
+        case oneTime = "One-time"
+    }
+    
+    private func handleLimitChange(newValue: Int) {
+        // Find the app goal in Core Data by name
+        let goals = CoreDataManager.shared.getActiveAppGoals()
+        guard let goal = goals.first(where: { $0.appName == app.name }) else {
+            print("⚠️ Could not find goal for app: \(app.name)")
+            return
+        }
+        
+        // Check if we're editing an active day's limit (if app has been used today)
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let goalUpdatedDate = calendar.startOfDay(for: goal.updatedAt ?? Date())
+        let isToday = calendar.isDate(goalUpdatedDate, inSameDayAs: today)
+        
+        if isToday && app.usedToday > 0 {
+            // Changes take effect tomorrow - store as pending in UserDefaults
+            let key = "pendingLimit_\(goal.appBundleID ?? app.name)"
+            UserDefaults.standard.set(newValue, forKey: key)
+            pendingLimitChange = newValue
+            HapticFeedback.light.trigger()
+            print("📝 Limit change scheduled for tomorrow: \(newValue) minutes")
+            return
+        }
+        
+        // Update the goal in Core Data immediately
+        CoreDataManager.shared.updateAppGoal(goal, dailyLimitMinutes: newValue)
+        
+        // Clear any pending changes
+        let key = "pendingLimit_\(goal.appBundleID ?? app.name)"
+        UserDefaults.standard.removeObject(forKey: key)
+        pendingLimitChange = nil
+        
+        // If set to 0, immediately block the app
+        if newValue == 0 {
+            if let bundleID = goal.appBundleID {
+                ScreenTimeService.shared.blockApp(bundleID)
+                HapticFeedback.medium.trigger()
+                print("🚫 App \(app.name) blocked immediately (0 minute limit)")
+            }
+        } else {
+            // If changing from 0 to non-zero, unblock the app (unless in time restriction window)
+            if app.dailyLimit == 0 && newValue > 0 {
+                if let bundleID = goal.appBundleID {
+                    // Check if we're in a time restriction window
+                    if hasTimeRestriction && isInTimeRestrictionWindow() {
+                        // Keep blocked during time window
+                        print("⏰ App \(app.name) remains blocked during time restriction window")
+                    } else {
+                        ScreenTimeService.shared.unblockApp(bundleID)
+                        HapticFeedback.light.trigger()
+                        print("✅ App \(app.name) unblocked (limit changed to \(newValue) minutes)")
+                    }
+                }
+            }
+        }
+        
+        // Save restriction period and time restriction settings
+        saveRestrictionSettings(for: goal, limit: newValue)
+        
+        // Reload app goals to reflect changes
+        appState.loadAppGoals()
+    }
+    
+    private func isInTimeRestrictionWindow() -> Bool {
+        guard hasTimeRestriction else { return false }
+        
+        let calendar = Calendar.current
+        let now = Date()
+        let currentHour = calendar.component(.hour, from: now)
+        let currentMinute = calendar.component(.minute, from: now)
+        let currentTimeMinutes = currentHour * 60 + currentMinute
+        
+        let startHour = calendar.component(.hour, from: blockStartTime)
+        let startMinute = calendar.component(.minute, from: blockStartTime)
+        let startTimeMinutes = startHour * 60 + startMinute
+        
+        let endHour = calendar.component(.hour, from: blockEndTime)
+        let endMinute = calendar.component(.minute, from: blockEndTime)
+        let endTimeMinutes = endHour * 60 + endMinute
+        
+        // Handle overnight blocking (e.g., 9pm to 9am)
+        if startTimeMinutes > endTimeMinutes {
+            // Overnight window
+            return currentTimeMinutes >= startTimeMinutes || currentTimeMinutes < endTimeMinutes
+        } else {
+            // Same-day window
+            return currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes
+        }
+    }
+    
+    private func saveRestrictionSettings(for goal: AppGoal, limit: Int) {
+        let bundleID = goal.appBundleID ?? app.name
+        let calendar = Calendar.current
+        let now = Date()
+        let today = calendar.startOfDay(for: now)
+        
+        // Save restriction period
+        UserDefaults.standard.set(restrictionPeriod.rawValue, forKey: "restrictionPeriod_\(bundleID)")
+        
+        // Calculate and save end date based on restriction period
+        let endDate: Date
+        switch restrictionPeriod {
+        case .daily:
+            // Daily restrictions don't expire (they reset daily)
+            endDate = Date.distantFuture
+        case .weekly:
+            // Weekly restrictions last 7 days from today
+            endDate = calendar.date(byAdding: .day, value: 7, to: today) ?? Date.distantFuture
+        case .oneTime:
+            // One-time restrictions expire at end of today
+            endDate = calendar.date(byAdding: .day, value: 1, to: today) ?? Date.distantFuture
+        }
+        
+        UserDefaults.standard.set(today, forKey: "restrictionStartDate_\(bundleID)")
+        UserDefaults.standard.set(endDate, forKey: "restrictionEndDate_\(bundleID)")
+        UserDefaults.standard.set(limit, forKey: "restrictionLimit_\(bundleID)")
+        
+        // Save time restriction settings
+        if hasTimeRestriction {
+            UserDefaults.standard.set(true, forKey: "timeRestriction_\(bundleID)")
+            UserDefaults.standard.set(blockStartTime, forKey: "blockStartTime_\(bundleID)")
+            UserDefaults.standard.set(blockEndTime, forKey: "blockEndTime_\(bundleID)")
+        } else {
+            UserDefaults.standard.set(false, forKey: "timeRestriction_\(bundleID)")
+        }
+        
+        print("💾 Saved restriction settings: \(restrictionPeriod.rawValue) for \(app.name), expires: \(endDate)")
+    }
+    
+    private func loadTimeRestrictionSettings(for goal: AppGoal) {
+        let bundleID = goal.appBundleID ?? app.name
+        hasTimeRestriction = UserDefaults.standard.bool(forKey: "timeRestriction_\(bundleID)")
+        if let startTime = UserDefaults.standard.object(forKey: "blockStartTime_\(bundleID)") as? Date {
+            blockStartTime = startTime
+        }
+        if let endTime = UserDefaults.standard.object(forKey: "blockEndTime_\(bundleID)") as? Date {
+            blockEndTime = endTime
+        }
+        if let periodString = UserDefaults.standard.string(forKey: "restrictionPeriod_\(bundleID)"),
+           let period = RestrictionPeriod(rawValue: periodString) {
+            restrictionPeriod = period
+        }
+        
+        // Check for pending limit changes
+        pendingLimitChange = UserDefaults.standard.object(forKey: "pendingLimit_\(bundleID)") as? Int
+    }
+    
+    private func isRestrictionActive(for goal: AppGoal) -> Bool {
+        let bundleID = goal.appBundleID ?? app.name
+        
+        // Check if restriction period has expired
+        guard let endDate = UserDefaults.standard.object(forKey: "restrictionEndDate_\(bundleID)") as? Date else {
+            // No restriction period set, assume daily (always active)
+            return true
+        }
+        
+        let now = Date()
+        if now >= endDate {
+            // Restriction has expired
+            print("⏰ Restriction period expired for \(app.name)")
+            return false
+        }
+        
+        return true
+    }
+    
+    private func getRestrictionExpirationInfo() -> String? {
+        let goals = CoreDataManager.shared.getActiveAppGoals()
+        guard let goal = goals.first(where: { $0.appName == app.name }) else { return nil }
+        let bundleID = goal.appBundleID ?? app.name
+        
+        guard let endDate = UserDefaults.standard.object(forKey: "restrictionEndDate_\(bundleID)") as? Date else {
+            return nil
+        }
+        
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if restrictionPeriod == .daily {
+            return "Resets daily at midnight"
+        } else if restrictionPeriod == .weekly {
+            let daysRemaining = calendar.dateComponents([.day], from: now, to: endDate).day ?? 0
+            if daysRemaining > 0 {
+                return "Expires in \(daysRemaining) day\(daysRemaining == 1 ? "" : "s")"
+            } else {
+                return "Expires today"
+            }
+        } else if restrictionPeriod == .oneTime {
+            if calendar.isDateInToday(endDate) {
+                return "Expires at midnight tonight"
+            } else {
+                return "Expires today"
+            }
+        }
+        
+        return nil
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -938,29 +1149,54 @@ struct GoalCard: View {
                         .progressViewStyle(LinearProgressViewStyle(tint: app.statusColor))
                     
                     HStack {
+                        if app.dailyLimit == 0 {
+                            Text("App is blocked")
+                                .font(.caption)
+                                .foregroundColor(.error)
+                        } else {
                         Text("Used \(formatMinutes(app.usedToday)) of \(formatMinutes(app.dailyLimit))")
                             .font(.caption)
                             .foregroundColor(.textPrimary.opacity(0.6))
+                        }
                         
                         Spacer()
                         
+                        if app.dailyLimit == 0 {
+                            Text("Blocked")
+                                .font(.captionBold)
+                                .foregroundColor(.error)
+                        } else {
                         Text(app.statusColor == .error ? "Over limit" : app.statusColor == .warning ? "Near limit" : "On track")
                             .font(.captionBold)
                             .foregroundColor(app.statusColor)
+                        }
                     }
                 }
                 
                 Divider()
                 
                 // Time Limit Picker
+                VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Daily Limit:")
                         .font(.bodyMedium)
                         .foregroundColor(.textPrimary.opacity(0.7))
                     
                     Spacer()
+                        
+                        if let pending = pendingLimitChange {
+                            HStack(spacing: 4) {
+                                Image(systemName: "clock")
+                                    .font(.caption)
+                                    .foregroundColor(.warning)
+                                Text("Changes tomorrow")
+                                    .font(.caption)
+                                    .foregroundColor(.warning)
+                            }
+                        }
                     
                     Picker("Limit", selection: $app.dailyLimit) {
+                            Text("Blocked (0 min)").tag(0)
                         Text("15 min").tag(15)
                         Text("30 min").tag(30)
                         Text("45 min").tag(45)
@@ -972,15 +1208,98 @@ struct GoalCard: View {
                     }
                     .pickerStyle(.menu)
                     .tint(.primary)
+                        .onChange(of: app.dailyLimit) { newValue in
+                            handleLimitChange(newValue: newValue)
+                        }
+                    }
+                    
+                    // Advanced Options Toggle
+                    Button(action: {
+                        withAnimation {
+                            showAdvancedOptions.toggle()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: showAdvancedOptions ? "chevron.down" : "chevron.right")
+                                .font(.caption)
+                            Text("Advanced Options")
+                                .font(.caption)
+                            Spacer()
+                        }
+                        .foregroundColor(.textSecondary)
+                    }
+                    
+                    // Advanced Options
+                    if showAdvancedOptions {
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Restriction Period
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Restriction Period:")
+                                    .font(.captionBold)
+                                    .foregroundColor(.textPrimary.opacity(0.7))
+                                
+                                Picker("Period", selection: $restrictionPeriod) {
+                                    ForEach(RestrictionPeriod.allCases, id: \.self) { period in
+                                        Text(period.rawValue).tag(period)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .onChange(of: restrictionPeriod) { _ in
+                                    // When restriction period changes, save settings
+                                    let goals = CoreDataManager.shared.getActiveAppGoals()
+                                    if let goal = goals.first(where: { $0.appName == app.name }) {
+                                        saveRestrictionSettings(for: goal, limit: app.dailyLimit)
+                                    }
+                                }
+                                
+                                // Show expiration info
+                                if let expirationInfo = getRestrictionExpirationInfo() {
+                                    Text(expirationInfo)
+                                        .font(.caption2)
+                                        .foregroundColor(.textSecondary)
+                                        .padding(.top, 4)
+                                }
+                            }
+                            
+                            // Time-based Blocking
+                            VStack(alignment: .leading, spacing: 8) {
+                                Toggle("Time-based Blocking", isOn: $hasTimeRestriction)
+                                    .font(.captionBold)
+                                    .tint(.primary)
+                                
+                                if hasTimeRestriction {
+                                    VStack(spacing: 8) {
+                                        DatePicker("Block from:", selection: $blockStartTime, displayedComponents: .hourAndMinute)
+                                            .font(.caption)
+                                        
+                                        DatePicker("Block until:", selection: $blockEndTime, displayedComponents: .hourAndMinute)
+                                            .font(.caption)
+                                    }
+                                    .padding(.leading, 8)
+                                }
+                            }
+                        }
+                        .padding(.top, 8)
+                        .padding(.leading, 8)
+                    }
                 }
             }
         }
         .padding(16)
         .cardStyle()
         .opacity(app.isEnabled ? 1.0 : 0.6)
+        .onAppear {
+            let goals = CoreDataManager.shared.getActiveAppGoals()
+            if let goal = goals.first(where: { $0.appName == app.name }) {
+                loadTimeRestrictionSettings(for: goal)
+            }
+        }
     }
     
     private func formatMinutes(_ minutes: Int) -> String {
+        if minutes == 0 {
+            return "0 min"
+        }
         let hours = minutes / 60
         let mins = minutes % 60
         if hours > 0 {

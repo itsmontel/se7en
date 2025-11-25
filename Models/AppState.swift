@@ -171,7 +171,10 @@ class AppState: ObservableObject {
         }
     }
     
-    private func loadAppGoals() {
+    func loadAppGoals() {
+        // Clean up expired restrictions before loading
+        cleanupExpiredRestrictions()
+        
         let goals = coreDataManager.getActiveAppGoals()
         print("📊 Loading \(goals.count) app goals from Core Data")
         
@@ -254,6 +257,30 @@ class AppState: ObservableObject {
             "Reddit": "text.bubble.fill"
         ]
         return icons[appName] ?? "app.circle.fill"
+    }
+    
+    private func cleanupExpiredRestrictions() {
+        let goals = coreDataManager.getActiveAppGoals()
+        let now = Date()
+        
+        for goal in goals {
+            guard let bundleID = goal.appBundleID else { continue }
+            
+            // Check if restriction has expired
+            if let endDate = UserDefaults.standard.object(forKey: "restrictionEndDate_\(bundleID)") as? Date,
+               now >= endDate {
+                let restrictionPeriod = UserDefaults.standard.string(forKey: "restrictionPeriod_\(bundleID)") ?? ""
+                
+                if restrictionPeriod == "One-time" || restrictionPeriod == "Weekly" {
+                    // Clean up expired restrictions
+                    UserDefaults.standard.removeObject(forKey: "restrictionPeriod_\(bundleID)")
+                    UserDefaults.standard.removeObject(forKey: "restrictionLimit_\(bundleID)")
+                    UserDefaults.standard.removeObject(forKey: "restrictionStartDate_\(bundleID)")
+                    UserDefaults.standard.removeObject(forKey: "restrictionEndDate_\(bundleID)")
+                    print("🧹 Cleaned up expired \(restrictionPeriod) restriction for \(goal.appName ?? bundleID)")
+                }
+            }
+        }
     }
     
     private func getAppColor(for appName: String) -> Color {
@@ -570,16 +597,19 @@ class AppState: ObservableObject {
     func updatePetHealth() {
         guard var pet = userPet else { return }
         
-        // Update pet health based on current credits
+        // Calculate pet health based on app usage percentages
+        let healthPercentage = calculatePetHealthPercentage()
+        
+        // Convert health percentage to PetHealthState
         let newHealthState: PetHealthState
-        switch currentCredits {
-        case 7:
+        switch healthPercentage {
+        case 90...100:
             newHealthState = .fullHealth
-        case 5...6:
+        case 70..<90:
             newHealthState = .happy
-        case 3...4:
+        case 50..<70:
             newHealthState = .content
-        case 1...2:
+        case 20..<50:
             newHealthState = .sad
         default:
             newHealthState = .sick
@@ -599,6 +629,53 @@ class AppState: ObservableObject {
                 )
             }
         }
+    }
+    
+    /// Calculate pet health percentage based on the lowest app's remaining time percentage
+    /// - Returns: Health percentage from 0-100
+    private func calculatePetHealthPercentage() -> Int {
+        // If no monitored apps, pet is at full health
+        guard !monitoredApps.isEmpty else { return 100 }
+        
+        // Find the lowest percentage of time remaining across all apps
+        var lowestPercentRemaining: Double = 100
+        
+        for app in monitoredApps where app.isEnabled && app.dailyLimit > 0 {
+            // Calculate percentage of time remaining (not used)
+            let percentUsed = app.percentageUsed * 100 // Convert to 0-100 scale
+            let percentRemaining = max(0, 100 - percentUsed)
+            
+            if percentRemaining < lowestPercentRemaining {
+                lowestPercentRemaining = percentRemaining
+            }
+        }
+        
+        // Calculate health based on the lowest percentage remaining
+        // Formula:
+        // - If 60%+ remaining: health = 100 (full health)
+        // - If 40-60% remaining: health decreases by 1 per percent below 60
+        // - If below 40% remaining: health decreases by 2 per percent below 40
+        
+        let healthPercentage: Int
+        
+        if lowestPercentRemaining >= 60 {
+            // Over 60% time remaining = perfect health
+            healthPercentage = 100
+        } else if lowestPercentRemaining >= 40 {
+            // Between 40-60%: health = 40 + percentRemaining (linear decrease of 1 per %)
+            // At 60%: health = 40 + 60 = 100
+            // At 40%: health = 40 + 40 = 80
+            healthPercentage = 40 + Int(lowestPercentRemaining)
+        } else {
+            // Below 40%: health = 2 * percentRemaining (steeper decrease of 2 per %)
+            // At 40%: health = 80
+            // At 30%: health = 60
+            // At 10%: health = 20
+            // At 0%: health = 0
+            healthPercentage = Int(lowestPercentRemaining * 2)
+        }
+        
+        return max(0, min(100, healthPercentage))
     }
     
     func setUserPet(_ pet: Pet) {

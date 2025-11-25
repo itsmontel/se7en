@@ -241,9 +241,23 @@ class ScreenTimeService: ObservableObject {
             // Update or create usage record for today
             updateUsageRecord(for: goal, currentUsage: currentUsage)
             
-            // Check if limit is exceeded and handle accordingly
-            if currentUsage > Int(goal.dailyLimitMinutes) {
+            // Get effective limit (respects restriction periods)
+            let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: bundleID)
+            
+            // Check time-based blocking first
+            if shouldBlockBasedOnTimeWindow(bundleID: bundleID) {
+                blockApp(bundleID)
+                continue
+            }
+            
+            // Check if limit is exceeded and handle accordingly (using effective limit)
+            if currentUsage > effectiveLimit {
                 handleLimitExceeded(for: bundleID)
+            }
+            
+            // Check if limit is 0 (completely blocked)
+            if effectiveLimit == 0 {
+                blockApp(bundleID)
             }
         }
         
@@ -404,6 +418,41 @@ class ScreenTimeService: ObservableObject {
         managedSettingsStore.clearAllSettings()
         
         print("✅ Successfully unblocked all apps")
+    }
+    
+    // MARK: - Time-based Blocking
+    
+    func shouldBlockBasedOnTimeWindow(bundleID: String) -> Bool {
+        let hasTimeRestriction = UserDefaults.standard.bool(forKey: "timeRestriction_\(bundleID)")
+        guard hasTimeRestriction else { return false }
+        
+        guard let startTime = UserDefaults.standard.object(forKey: "blockStartTime_\(bundleID)") as? Date,
+              let endTime = UserDefaults.standard.object(forKey: "blockEndTime_\(bundleID)") as? Date else {
+            return false
+        }
+        
+        let calendar = Calendar.current
+        let now = Date()
+        let currentHour = calendar.component(.hour, from: now)
+        let currentMinute = calendar.component(.minute, from: now)
+        let currentTimeMinutes = currentHour * 60 + currentMinute
+        
+        let startHour = calendar.component(.hour, from: startTime)
+        let startMinute = calendar.component(.minute, from: startTime)
+        let startTimeMinutes = startHour * 60 + startMinute
+        
+        let endHour = calendar.component(.hour, from: endTime)
+        let endMinute = calendar.component(.minute, from: endTime)
+        let endTimeMinutes = endHour * 60 + endMinute
+        
+        // Handle overnight blocking (e.g., 9pm to 9am)
+        if startTimeMinutes > endTimeMinutes {
+            // Overnight window
+            return currentTimeMinutes >= startTimeMinutes || currentTimeMinutes < endTimeMinutes
+        } else {
+            // Same-day window
+            return currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes
+        }
     }
     
     // MARK: - Limit Handling (No Auto Credit Loss)
