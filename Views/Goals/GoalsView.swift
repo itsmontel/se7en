@@ -832,7 +832,7 @@ struct AppLaunchesReport: View {
             
             // Top 5 apps by weekly usage
             VStack(alignment: .leading, spacing: 12) {
-                Text("Top 5 Apps")
+                Text("Top 5 Apps This Week")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.textPrimary)
                 

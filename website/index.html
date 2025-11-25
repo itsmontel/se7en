@@ -53,9 +53,8 @@
             <div class="features-grid-extended">
                 <!-- Row 1 -->
                 <div class="feature-card-extended feature-tall">
-                    <img src="assets/Simulator Screenshot - iPhone 16 Pro - 2025-11-24 at 22.17.11-portrait.png" alt="7-Credit System" class="feature-screenshot">
                     <h3 class="feature-title-extended">7-Credit System</h3>
-                    <p class="feature-description-extended">Stay accountable with our unique credit-based approach. Keep your 7 credits by staying within limits, or pay $0.99 per lost credit at week's end.</p>
+                    <p class="feature-description-extended">Stay accountable with our unique credit-based approach. Keep your 7 credits by staying within your daily limits, or pay $0.99 per lost credit to extend your time when you exceed them.</p>
                 </div>
                 
                 <div class="feature-card-extended feature-standard">
@@ -65,56 +64,42 @@
                 </div>
                 
                 <div class="feature-card-extended feature-standard">
-                    <img src="assets/Simulator Screenshot - iPhone 16 Pro - 2025-11-24 at 22.17.21-portrait.png" alt="Real-time Monitoring" class="feature-screenshot">
                     <h3 class="feature-title-extended">Real-time Monitoring</h3>
-                    <p class="feature-description-extended">Track app usage live with Screen Time API.</p>
+                    <p class="feature-description-extended">Track app usage live with Screen Time API. See exactly how much time you've spent on each app throughout the day, updated in real-time as you use your device.</p>
                 </div>
                 
                 <!-- Row 2 -->
                 <div class="feature-card-extended feature-standard">
-                    <img src="assets/Simulator Screenshot - iPhone 16 Pro - 2025-11-24 at 23.21.48-portrait.png" alt="Zero-minute Blocking" class="feature-screenshot">
                     <h3 class="feature-title-extended">Zero-minute Blocking</h3>
-                    <p class="feature-description-extended">Completely block distracting apps instantly.</p>
+                    <p class="feature-description-extended">Completely block distracting apps instantly. Set a limit of zero minutes to prevent access entirely and stay focused.</p>
                 </div>
                 
                 <div class="feature-card-extended feature-tall">
-                    <img src="assets/Simulator Screenshot - iPhone 16 Pro - 2025-11-24 at 23.22.54-portrait.png" alt="Pet Companion" class="feature-screenshot">
+                    <img src="assets/Petcompanion.png" alt="Pet Companion" class="feature-screenshot">
                     <h3 class="feature-title-extended">Pet Companion</h3>
-                    <p class="feature-description-extended">Your virtual pet reflects your digital health. Keep it happy by managing your screen time wisely. Choose from dogs, cats, bunnies, and more.</p>
-                </div>
-                
-                <div class="feature-card-extended feature-standard">
-                    <img src="assets/Simulator Screenshot - iPhone 16 Pro - 2025-11-24 at 23.23.41-portrait.png" alt="Achievements" class="feature-screenshot">
-                    <h3 class="feature-title-extended">Achievements</h3>
-                    <p class="feature-description-extended">Unlock achievements and celebrate milestones.</p>
+                    <p class="feature-description-extended">Your own personal virtual pet reflects your digital health. Keep it happy by managing your screen time wisely. Choose from dog, cat, bunny, hamster and horse.</p>
                 </div>
                 
                 <!-- Row 3 -->
                 <div class="feature-card-extended feature-standard">
-                    <img src="assets/Simulator Screenshot - iPhone 16 Pro - 2025-11-24 at 23.47.17-portrait.png" alt="Time-based Blocking" class="feature-screenshot">
+                    <img src="assets/TrackusageMonitor.png" alt="Time-based Blocking" class="feature-screenshot">
                     <h3 class="feature-title-extended">Time-based Blocking</h3>
                     <p class="feature-description-extended">Block apps during specific hours like 9pm to 9am.</p>
                 </div>
                 
-                <div class="feature-card-extended feature-standard">
-                    <img src="assets/Simulator Screenshot - iPhone 16 Pro - 2025-11-24 at 23.47.38-portrait.png" alt="Coach Insights" class="feature-screenshot">
-                    <h3 class="feature-title-extended">Coach Insights</h3>
-                    <p class="feature-description-extended">AI-powered tips to improve your habits.</p>
+                <div class="feature-card-extended feature-standard feature-coach-insights">
+                    <div class="coach-insights-image-container">
+                        <img src="assets/lighthome.png" alt="Dark and Light Modes Light Mode" class="coach-insights-image coach-insights-light">
+                        <img src="assets/darkhome.png" alt="Dark and Light Modes Dark Mode" class="coach-insights-image coach-insights-dark">
+                    </div>
+                    <h3 class="feature-title-extended">Dark and Light Modes</h3>
+                    <p class="feature-description-extended">Switch between dark and light themes to match your preference and reduce eye strain.</p>
                 </div>
                 
                 <div class="feature-card-extended feature-tall">
                     <img src="assets/Simulator Screenshot - iPhone 16 Pro - 2025-11-24 at 23.53.05-portrait.png" alt="Restriction Periods" class="feature-screenshot">
                     <h3 class="feature-title-extended">Restriction Periods</h3>
                     <p class="feature-description-extended">Set daily, weekly, or one-time restrictions that automatically expire. Changes take effect the next day, keeping today's limits locked.</p>
-                </div>
-                
-                <!-- Row 4 -->
-                <div class="feature-card-extended feature-standard feature-dark-light-card">
-                    <div class="feature-screenshot-wrapper">
-                        <img src="assets/Darkandlightmode.png" alt="Dark and Light Modes" class="feature-screenshot feature-screenshot-fade">
-                    </div>
-                    <h3 class="feature-title-extended">Dark and Light Modes</h3>
-                    <p class="feature-description-extended">Switch between dark and light themes to match your preference and reduce eye strain.</p>
                 </div>
             </div>
         </div>
@@ -150,8 +135,8 @@
     <!-- CTA Section -->
     <section class="cta-section">
         <div class="container">
-            <h2 class="cta-title">Ready to stop the scroll?</h2>
-            <p class="cta-subtitle">Join thousands reclaiming their digital wellbeing</p>
+            <h2 class="cta-title">Ready to take back control?</h2>
+            <p class="cta-subtitle">Join thousands building healthier digital habits with SE7EN</p>
             
             <div class="app-badges">
                 <a href="#waitlist-form" class="badge-link" onclick="scrollToWaitlist(event)">
@@ -219,6 +204,39 @@
                 }, 2000);
             }, 600);
         }
+
+        // Dark and Light Modes Image Animation
+        document.addEventListener('DOMContentLoaded', function() {
+            const lightImage = document.querySelector('.coach-insights-light');
+            const darkImage = document.querySelector('.coach-insights-dark');
+            
+            if (!lightImage || !darkImage) {
+                console.log('Images not found');
+                return;
+            }
+            
+            let isLightMode = true;
+            
+            function switchImage() {
+                if (isLightMode) {
+                    // Switch to dark mode
+                    lightImage.classList.remove('active');
+                    darkImage.classList.add('active');
+                    isLightMode = false;
+                } else {
+                    // Switch to light mode
+                    darkImage.classList.remove('active');
+                    lightImage.classList.add('active');
+                    isLightMode = true;
+                }
+            }
+            
+            // Start with light mode active
+            lightImage.classList.add('active');
+            
+            // Switch images every 3 seconds
+            setInterval(switchImage, 3000);
+        });
     </script>
 </body>
 </html>

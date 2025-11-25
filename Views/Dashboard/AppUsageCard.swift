@@ -16,9 +16,18 @@ struct AppUsageCard: View {
                         .fill(app.color.opacity(0.15))
                         .frame(width: 48, height: 48)
                     
-                    Image(systemName: app.icon)
-                        .font(.system(size: 22))
-                        .foregroundColor(app.color)
+                    // Use Instagram logo PNG if app is Instagram, otherwise use SF Symbol
+                    if app.name == "Instagram" {
+                        Image("instagramlogo")
+                            .renderingMode(.original)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 28, height: 28)
+                    } else {
+                        Image(systemName: app.icon)
+                            .font(.system(size: 22))
+                            .foregroundColor(app.color)
+                    }
                 }
                 
                 // App Name and Status
