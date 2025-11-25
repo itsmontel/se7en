@@ -24,9 +24,9 @@ struct AppUsageCard: View {
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 28, height: 28)
                     } else {
-                        Image(systemName: app.icon)
-                            .font(.system(size: 22))
-                            .foregroundColor(app.color)
+                    Image(systemName: app.icon)
+                        .font(.system(size: 22))
+                        .foregroundColor(app.color)
                     }
                 }
                 

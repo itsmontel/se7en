@@ -1,0 +1,16 @@
+# Netlify Configuration for SE7EN Website
+
+[build]
+  # No build command needed for static site
+  publish = "."
+
+# Environment variable injection
+# Set API_URL in Netlify dashboard: Site Settings → Environment Variables
+# This will be available as window.API_URL in your HTML
+
+# Redirects (optional)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+

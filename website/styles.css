@@ -142,6 +142,46 @@ body {
     }
 }
 
+/* Waitlist Message Styles */
+.waitlist-message {
+    margin-top: 16px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    animation: slideDown 0.3s ease-out;
+    transition: opacity 0.3s ease;
+}
+
+.waitlist-message-success {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.waitlist-message-error {
+    background-color: rgba(244, 63, 94, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.waitlist-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .email-input::placeholder {
     color: #9CA3AF;
 }
@@ -557,6 +597,42 @@ body {
     z-index: 1;
 }
 
+/* Stats Monitoring Image Animation */
+.stats-image-container {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 20px 20px 0 0;
+    aspect-ratio: 9 / 16;
+    background: var(--soft-purple-tint);
+}
+
+.stats-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(1);
+    transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1), transform 2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: block;
+    z-index: 1;
+}
+
+.stats-image.active {
+    opacity: 1;
+    transform: scale(1);
+    z-index: 2;
+}
+
+.stats-image:not(.active) {
+    opacity: 0;
+    transform: scale(1.02);
+    z-index: 1;
+}
+
 .feature-title-extended {
     font-family: var(--font-display);
     font-size: 20px;
@@ -592,6 +668,14 @@ body {
 .feature-tall .feature-screenshot {
     max-height: none;
     object-fit: contain;
+    border-radius: 0 0 20px 20px;
+    margin-top: auto;
+}
+
+.credits-image {
+    max-width: 85%;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .feature-standard .feature-screenshot {
@@ -658,51 +742,30 @@ body {
     }
 }
 
-/* How It Works Section */
-.how-it-works {
-    padding: 100px 0;
-    background-color: var(--soft-purple-tint);
+/* Quote Section */
+.quote-section {
+    padding: 120px 0;
+    background-color: transparent;
 }
 
-.steps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 48px;
-    max-width: 1000px;
+.app-quote {
+    max-width: 800px;
     margin: 0 auto;
-}
-
-.step {
-    text-align: center;
-}
-
-.step-number {
-    width: 64px;
-    height: 64px;
-    background-color: var(--charcoal);
-    color: var(--white);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    font-weight: 600;
-    margin: 0 auto 24px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-.step-title {
     font-family: var(--font-display);
-    font-size: 24px;
+    font-size: 32px;
     font-weight: 600;
-    margin-bottom: 12px;
+    line-height: 1.5;
     color: var(--charcoal);
+    text-align: center;
+    border: none;
+    padding: 0;
+    margin: 0 auto;
+    quotes: none;
 }
 
-.step-description {
-    color: #6B7280;
-    font-size: 16px;
-    line-height: 1.6;
+.app-quote::before,
+.app-quote::after {
+    content: '';
 }
 
 /* CTA Section */
@@ -734,6 +797,431 @@ body {
     opacity: 0.8;
     letter-spacing: 0.5px;
     font-family: var(--font-body);
+}
+
+/* Waitlist Popup Modal */
+.waitlist-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.waitlist-popup.show {
+    display: flex;
+    opacity: 1;
+    pointer-events: all;
+}
+
+.waitlist-popup-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(17, 24, 39, 0.25);
+    animation: fadeInBackdrop 0.4s ease;
+}
+
+@keyframes fadeInBackdrop {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.waitlist-popup-content {
+    position: relative;
+    background: linear-gradient(145deg, #ffffff 0%, #fafbff 50%, #f8fafc 100%);
+    border-radius: 24px;
+    padding: 36px 32px;
+    max-width: 400px;
+    width: 85%;
+    box-shadow: 
+        0 20px 60px rgba(79, 70, 229, 0.2),
+        0 10px 30px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(79, 70, 229, 0.08),
+        0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+    animation: slideUpBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform: translateY(40px) scale(0.95);
+    opacity: 0;
+    border: 1.5px solid rgba(79, 70, 229, 0.1);
+}
+
+.waitlist-popup.show .waitlist-popup-content {
+    animation: slideUpBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+@keyframes slideUpBounce {
+    0% {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+    }
+    60% {
+        transform: translateY(-6px) scale(1.02);
+    }
+    80% {
+        transform: translateY(2px) scale(0.99);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.waitlist-popup-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(107, 114, 128, 0.1);
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    color: #6B7280;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.waitlist-popup-close:hover {
+    background: rgba(244, 63, 94, 0.1);
+    color: #dc2626;
+    transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
+}
+
+.waitlist-popup-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.waitlist-popup-logo {
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, #6366f1 50%, var(--secondary) 100%);
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: floatPulse 3s ease-in-out infinite;
+    box-shadow: 
+        0 12px 30px rgba(79, 70, 229, 0.3),
+        0 6px 15px rgba(79, 70, 229, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    position: relative;
+    overflow: hidden;
+}
+
+.waitlist-popup-logo::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 4s infinite;
+    transform: rotate(45deg);
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+    50% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+}
+
+.waitlist-popup-logo-text {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -1px;
+    position: relative;
+    z-index: 2;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.waitlist-popup-seven {
+    color: #fbbf24;
+    text-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+}
+
+@keyframes floatPulse {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        box-shadow: 
+            0 12px 30px rgba(79, 70, 229, 0.3),
+            0 6px 15px rgba(79, 70, 229, 0.15),
+            0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    }
+    50% {
+        transform: translateY(-4px) scale(1.03);
+        box-shadow: 
+            0 16px 36px rgba(79, 70, 229, 0.35),
+            0 8px 18px rgba(79, 70, 229, 0.2),
+            0 0 0 1px rgba(255, 255, 255, 0.25) inset;
+    }
+}
+
+.waitlist-popup-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--charcoal);
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--primary) 0%, #6366f1 50%, var(--secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+
+.waitlist-popup-subtitle {
+    font-size: 15px;
+    color: #64748b;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+    font-weight: 400;
+}
+
+.waitlist-popup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.waitlist-popup-input {
+    width: 100%;
+    padding: 16px 20px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    font-size: 15px;
+    font-family: var(--font-body);
+    color: var(--charcoal);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--white);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+    font-weight: 500;
+}
+
+.waitlist-popup-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 
+        0 0 0 6px rgba(79, 70, 229, 0.12),
+        0 8px 20px rgba(79, 70, 229, 0.08);
+    transform: translateY(-2px);
+}
+
+.waitlist-popup-input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.waitlist-popup-button {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, var(--primary) 0%, #6366f1 50%, var(--secondary) 100%);
+    color: var(--white);
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: var(--font-display);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 
+        0 6px 20px rgba(79, 70, 229, 0.3),
+        0 3px 10px rgba(79, 70, 229, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.waitlist-popup-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.waitlist-popup-button:hover::before {
+    left: 100%;
+}
+
+.waitlist-popup-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 24px rgba(79, 70, 229, 0.4),
+        0 4px 12px rgba(79, 70, 229, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+}
+
+.waitlist-popup-button:active {
+    transform: translateY(-1px);
+    box-shadow: 
+        0 6px 16px rgba(79, 70, 229, 0.4),
+        0 3px 8px rgba(79, 70, 229, 0.2);
+}
+
+.waitlist-popup-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.button-icon {
+    transition: transform 0.3s ease;
+    font-size: 20px;
+}
+
+.waitlist-popup-button:hover .button-icon {
+    transform: translateX(4px);
+}
+
+.waitlist-popup-note {
+    text-align: center;
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+    font-weight: 400;
+}
+
+.waitlist-popup-message {
+    margin-top: 16px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    animation: slideDownMessage 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.3s ease;
+}
+
+.waitlist-popup-message-success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(34, 197, 94, 0.08) 100%);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+.waitlist-popup-message-error {
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.1) 0%, rgba(239, 68, 68, 0.08) 100%);
+    color: #dc2626;
+    border: 1px solid rgba(244, 63, 94, 0.2);
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.1);
+}
+
+@keyframes slideDownMessage {
+    from {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes slideDownFade {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+    }
+}
+
+@keyframes subtleShake {
+    0%, 100% {
+        transform: translateY(0) scale(1) rotate(0deg);
+    }
+    25% {
+        transform: translateY(-2px) scale(1.01) rotate(0.5deg);
+    }
+    75% {
+        transform: translateY(2px) scale(1.01) rotate(-0.5deg);
+    }
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+    .waitlist-popup-content {
+        padding: 32px 24px;
+        max-width: 90%;
+        border-radius: 20px;
+    }
+    
+    .waitlist-popup-title {
+        font-size: 24px;
+    }
+    
+    .waitlist-popup-logo {
+        width: 80px;
+        height: 80px;
+        border-radius: 18px;
+        margin-bottom: 16px;
+    }
+    
+    .waitlist-popup-logo-text {
+        font-size: 20px;
+    }
+    
+    .waitlist-popup-subtitle {
+        font-size: 14px;
+    }
+    
+    .waitlist-popup-header {
+        margin-bottom: 24px;
+    }
+    
+    .waitlist-popup-input,
+    .waitlist-popup-button {
+        padding: 14px 18px;
+        font-size: 15px;
+    }
+    
+    .waitlist-popup-close {
+        top: 14px;
+        right: 14px;
+        padding: 8px;
+    }
 }
 
 /* Footer */
@@ -924,6 +1412,15 @@ body {
     .features-grid,
     .steps {
         grid-template-columns: 1fr;
+    }
+    
+    .quote-section {
+        padding: 80px 0;
+    }
+    
+    .app-quote {
+        font-size: 24px;
+        padding: 0 20px;
     }
     
     .phone-mockup {
