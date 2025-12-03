@@ -14,6 +14,7 @@ struct SetGoalsView: View {
     @State private var showingFamilyPicker = false
     @State private var familySelection = FamilyActivitySelection()
     @StateObject private var realAppDiscovery = RealAppDiscoveryService.shared
+    @StateObject private var screenTimeService = ScreenTimeService.shared
     
     private var petImageName: String {
         if let pet = appState.userPet {
@@ -149,7 +150,14 @@ struct SetGoalsView: View {
                         
                         // Select/Update apps button
                         Button(action: {
-                            showingFamilyPicker = true
+                            // Only show picker if Screen Time is already authorized
+                            // Authorization should have been done in previous step
+                            if screenTimeService.isAuthorized {
+                                showingFamilyPicker = true
+                            } else {
+                                // If not authorized, show error or redirect
+                                print("⚠️ Screen Time not authorized - cannot show app picker")
+                            }
                         }) {
                             HStack(spacing: 12) {
                                 Image(systemName: realAppDiscovery.selectedApps.isEmpty ? "plus.circle.fill" : "pencil.circle.fill")
@@ -213,11 +221,14 @@ struct SetGoalsView: View {
             }
         }
         .sheet(isPresented: $showingFamilyPicker) {
-            FamilyActivityPicker(selection: $familySelection)
-                .onChange(of: familySelection) { newSelection in
-                    realAppDiscovery.processSelectedApps(newSelection)
-                    showingFamilyPicker = false
-                }
+            // Only show picker if authorized
+            if screenTimeService.isAuthorized {
+                FamilyActivityPicker(selection: $familySelection)
+                    .onChange(of: familySelection) { newSelection in
+                        realAppDiscovery.processSelectedApps(newSelection)
+                        showingFamilyPicker = false
+                    }
+            }
         }
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {

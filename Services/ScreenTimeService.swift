@@ -481,15 +481,14 @@ class ScreenTimeService: ObservableObject {
         
         // Only deduct credits if this is the first failure of the day (accountability fee not paid)
         if !hasPaidAccountabilityFeeToday {
-            // Deduct credits using progressive penalty system
+            // Deduct all credits (user must pay 99 cents or wait till tomorrow)
             let transaction = coreDataManager.deductCredit(
                 reason: "Exceeded daily limit for \(appName)",
                 for: usageRecord
             )
             
-            let creditsDeducted = abs(Int(transaction.amount))
             let remainingCredits = Int(weeklyPlan.creditsRemaining)
-            print("💳 Progressive penalty applied: \(creditsDeducted) credit\(creditsDeducted == 1 ? "" : "s") deducted. Remaining: \(remainingCredits)")
+            print("💳 Daily limit exceeded: Credits set to 0. User must pay 99¢ to renew for today or wait till tomorrow. Remaining: \(remainingCredits)")
         } else {
             // Accountability fee already paid today - no credit deduction
             print("💳 Accountability fee already paid today - no credit deduction. App will still be blocked.")

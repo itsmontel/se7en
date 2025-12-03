@@ -44,10 +44,11 @@ struct TermsOfServiceView: View {
                     title: "How SE7EN Works",
                     icon: "app.badge",
                     content: [
-                        "You start each week with 7 credits at no charge",
-                        "Exceeding daily app limits costs 1 credit each time",
-                        "You pay $1 for each credit lost at week's end",
-                        "Perfect weeks (all 7 credits kept) are completely free"
+                        "You start each day with 7 credits at no charge",
+                        "If you exceed your daily app limit, you have two options:",
+                        "1. Pay 99¢ to restore your credits and continue using the app today",
+                        "2. Wait until midnight when your credits reset automatically",
+                        "Perfect days (staying within limits) are completely free"
                     ]
                 )
                 
@@ -55,10 +56,10 @@ struct TermsOfServiceView: View {
                     title: "Billing and Payments",
                     icon: "creditcard",
                     content: [
-                        "Charges are processed weekly for lost credits only",
+                        "Accountability fee (99¢) is charged immediately when you choose to renew for the day",
                         "Payments are handled securely through Apple's App Store",
-                        "All sales are final - no refunds for intentional limit violations",
-                        "Subscription cancellation doesn't affect current week charges"
+                        "All sales are final - no refunds for accountability fee payments",
+                        "Credits reset to 7 daily at midnight at no charge"
                     ]
                 )
                 

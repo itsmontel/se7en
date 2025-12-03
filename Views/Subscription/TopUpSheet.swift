@@ -60,82 +60,71 @@ struct TopUpSheet: View {
                             .cardStyle()
                             .padding(.horizontal, 20)
                             
-                            // Package Selection
-                            VStack {
-                                if availablePackages.isEmpty {
-                                    VStack(spacing: 16) {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 48))
-                                            .foregroundColor(.success)
-                                        
-                                        Text("You're all set!")
-                                            .font(.h3)
-                                            .foregroundColor(.textPrimary)
-                                        
-                                        Text("You already have the maximum 7 credits. No need to top up!")
-                                            .font(.bodyMedium)
-                                            .foregroundColor(.textPrimary.opacity(0.7))
-                                            .multilineTextAlignment(.center)
-                                    }
-                                    .padding(32)
-                                    .cardStyle()
-                                } else {
-                                    VStack(spacing: 20) {
-                                        Text("Credit Pricing")
-                                            .font(.h4)
-                                            .foregroundColor(.textPrimary)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                        
-                                        // Pricing Information
-                                        VStack(spacing: 16) {
-                                            HStack {
-                                                Image(systemName: "dollarsign.circle.fill")
-                                                    .font(.system(size: 24))
-                                                    .foregroundColor(.success)
-                                                
-                                                VStack(alignment: .leading, spacing: 4) {
-                                                    Text("1 Credit = \(formatPrice(0.99))")
-                                                        .font(.h4)
-                                                        .foregroundColor(.textPrimary)
-                                                    
-                                                    Text("Pay only for credits you lose")
-                                                        .font(.bodyMedium)
-                                                        .foregroundColor(.textPrimary.opacity(0.7))
-                                                }
-                                                
-                                                Spacer()
-                                            }
-                                            .padding(16)
-                                            .cardStyle()
+                            // Accountability Fee Option (if credits < 7)
+                            let creditsNeeded = 7 - appState.currentCredits
+                            if creditsNeeded > 0 {
+                                VStack(spacing: 16) {
+                                    // Accountability Fee Card
+                                    VStack(spacing: 12) {
+                                        HStack {
+                                            Image(systemName: "clock.arrow.circlepath")
+                                                .font(.system(size: 24))
+                                                .foregroundColor(.primary)
                                             
-                                            // Credits needed calculation
-                                            let creditsNeeded = 7 - appState.currentCredits
-                                            if creditsNeeded > 0 {
-                                                VStack(spacing: 12) {
-                                                    Text("Credits Needed: \(creditsNeeded)")
-                                                        .font(.h4)
-                                                        .foregroundColor(.textPrimary)
-                                                    
-                                                    Text("Total Cost: \(formatPrice(Double(creditsNeeded) * 0.99))")
-                                                        .font(.h3)
-                                                        .foregroundColor(.primary)
-                                                    
-                                                    Text("This will restore you to 7/7 credits")
-                                                        .font(.bodyMedium)
-                                                        .foregroundColor(.textPrimary.opacity(0.6))
-                                                        .multilineTextAlignment(.center)
-                                                }
-                                                .padding(20)
-                                                .frame(maxWidth: .infinity)
-                                                .background(Color.primary.opacity(0.1))
-                                                .cornerRadius(16)
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text("Accountability Fee")
+                                                    .font(.h4)
+                                                    .foregroundColor(.textPrimary)
+                                                
+                                                Text("Restore credits for today")
+                                                    .font(.bodyMedium)
+                                                    .foregroundColor(.textSecondary)
                                             }
+                                            
+                                            Spacer()
+                                            
+                                            Text(formatPrice(0.99))
+                                                .font(.h2)
+                                                .foregroundColor(.primary)
                                         }
+                                        
+                                        Divider()
+                                        
+                                        Text("Pay 99¢ to restore your 7 credits and continue using apps today. Credits reset to 7 daily at midnight.")
+                                            .font(.bodySmall)
+                                            .foregroundColor(.textSecondary)
+                                            .multilineTextAlignment(.leading)
                                     }
+                                    .padding(20)
+                                    .cardStyle()
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: DesignSystem.cornerRadiusMedium)
+                                            .stroke(Color.primary.opacity(0.3), lineWidth: 2)
+                                    )
                                 }
+                                .padding(.horizontal, 20)
+                            } else {
+                                VStack(spacing: 16) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 48))
+                                        .foregroundColor(.success)
+                                    
+                                    Text("You're all set!")
+                                        .font(.h3)
+                                        .foregroundColor(.textPrimary)
+                                    
+                                    Text("You already have 7 credits. No payment needed!")
+                                        .font(.bodyMedium)
+                                        .foregroundColor(.textPrimary.opacity(0.7))
+                                        .multilineTextAlignment(.center)
+                                }
+                                .padding(32)
+                                .cardStyle()
+                                .padding(.horizontal, 20)
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 100) // Extra space for button
+                            
+                            Spacer()
+                                .frame(height: 100) // Extra space for button
                         }
                     }
                     
@@ -146,12 +135,12 @@ struct TopUpSheet: View {
                             .frame(height: 1)
                             .blur(radius: 0.5)
                         
-                        Button(action: purchaseCredits) {
+                        Button(action: purchaseAccountabilityFee) {
                             let creditsNeeded = 7 - appState.currentCredits
                             if creditsNeeded > 0 {
-                                Text("Purchase \(creditsNeeded) Credit\(creditsNeeded == 1 ? "" : "s") for \(formatPrice(Double(creditsNeeded) * 0.99))")
+                                Text("Pay 99¢ to Restore Credits")
                             } else {
-                                Text("No Credits Needed")
+                                Text("No Payment Needed")
                             }
                         }
                         .buttonStyle(PrimaryButtonStyle(isEnabled: appState.currentCredits < 7))
@@ -181,12 +170,13 @@ struct TopUpSheet: View {
         return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.2f", price)
     }
     
-    private func purchaseCredits() {
+    private func purchaseAccountabilityFee() {
         let creditsNeeded = 7 - appState.currentCredits
         guard creditsNeeded > 0 else { return }
         
-        // In a real app, this would process the in-app purchase
-        appState.addCredits(amount: creditsNeeded, reason: "Credit Top-up Purchase")
+        // Pay accountability fee (99 cents) - this restores credits to 7
+        CoreDataManager.shared.payAccountabilityFee()
+        appState.loadCurrentWeekData()
         
         HapticFeedback.success.trigger()
         

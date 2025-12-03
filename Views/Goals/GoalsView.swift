@@ -525,12 +525,9 @@ struct WeeklyHealthReport: View {
             return (score, mood)
         }
         
-        // For past days, simulate based on how recent
-        let daysAgo = calendar.dateComponents([.day], from: date, to: Date()).day ?? 0
-        let score = max(20, 100 - (daysAgo * 5))
-        let mood: PetHealthState = score >= 80 ? .fullHealth : score >= 60 ? .happy : score >= 40 ? .content : score >= 20 ? .sad : .sick
-        
-        return (score, mood)
+        // For past days, return 0 for new users (no historical data)
+        // In the future, this could be populated from CoreData if we track daily health
+        return (0, .content)
     }
     
     var body: some View {

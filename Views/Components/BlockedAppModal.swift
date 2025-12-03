@@ -35,12 +35,9 @@ struct BlockedAppModal: View {
         appState.credits
     }
     
-    private var failureCount: Int {
-        appState.getCurrentFailureCount()
-    }
-    
     private var penaltyCredits: Int {
-        appState.getNextFailurePenalty()
+        // Always 7 credits (99 cents) for accountability fee
+        return 7
     }
     
     // Check if accountability fee has been paid today (means at least one failure already occurred)
@@ -60,28 +57,7 @@ struct BlockedAppModal: View {
         hasPaidAccountabilityFeeToday && creditsRemaining >= 7
     }
     
-    // Get the actual failure number for display
-    // If accountability fee is paid, this is at least the 2nd failure
-    private var displayFailureNumber: Int {
-        if isSubsequentFailure {
-            // If accountability fee paid, this is at least 2nd failure
-            // Use failureCount + 1, but ensure it's at least 2
-            return max(2, failureCount + 1)
-        } else {
-            // First failure - use failureCount + 1
-            return failureCount + 1
-        }
-    }
-    
-    private var displayFailureOrdinal: String {
-        let count = displayFailureNumber
-        switch count {
-        case 1: return "1st"
-        case 2: return "2nd"
-        case 3: return "3rd"
-        default: return "\(count)th"
-        }
-    }
+    // Simple accountability fee system - no progressive penalties
     
     var body: some View {
         ZStack {
@@ -159,18 +135,10 @@ struct BlockedAppModal: View {
                                     .lineSpacing(3)
                                     .fixedSize(horizontal: false, vertical: true)
                                 
-                                // Progressive penalty warning and explanation
-                                if isSubsequentFailure {
-                                    // Subsequent failure after accountability fee paid - don't show "first failure" message
-                                    Text("You've exceeded your limit for **\(appName)**. Since you've already paid your accountability fee today, no additional credits will be deducted.")
-                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                        .foregroundColor(.error)
-                                        .multilineTextAlignment(.center)
-                                        .lineSpacing(3)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .padding(.top, 4)
-                                    
-                                    Text("You've already paid your accountability fee for today (have 7 credits). This app is blocked because you exceeded its limit. If you exceed limits on other apps today, they'll also be blocked but no additional credits will be deducted. Credits reset to 7 daily at midnight.")
+                                // Simple accountability fee system
+                                if hasPaidAccountabilityFeeToday {
+                                    // Already paid accountability fee today
+                                    Text("You've already paid your accountability fee for today (99¢). This app is blocked because you exceeded its limit. If you exceed limits on other apps today, they'll also be blocked but no additional payment is required. Credits reset to 7 daily at midnight.")
                                         .font(.system(size: 14, weight: .medium, design: .rounded))
                                         .foregroundColor(.textPrimary.opacity(0.8))
                                         .multilineTextAlignment(.center)
@@ -178,8 +146,8 @@ struct BlockedAppModal: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                         .padding(.top, 4)
                                 } else {
-                                    // First failure - show penalty warning
-                                    Text("This is your **\(displayFailureOrdinal) failure** this week. You'll lose **\(penaltyCredits) credit\(penaltyCredits == 1 ? "" : "s")** for this failure.")
+                                    // First failure - need to pay 99 cents or wait
+                                    Text("You've exceeded your daily limit. To continue using this app today, you can pay **99¢** to restore your credits. Otherwise, wait until tomorrow at midnight when your credits reset.")
                                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                                         .foregroundColor(.error)
                                         .multilineTextAlignment(.center)
@@ -187,16 +155,13 @@ struct BlockedAppModal: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                         .padding(.top, 4)
                                     
-                                    // Show explanation based on credits
-                                    if creditsRemaining < 7 {
-                                        Text("To continue using it today, you need to buy credits to reach **7 credits** (accountability fee). Once you have 7 credits, you can unblock this app. Other apps that haven't exceeded their limits will continue to work normally. Credits reset to 7 daily at midnight.")
-                                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.textPrimary.opacity(0.8))
-                            .multilineTextAlignment(.center)
-                                            .lineSpacing(3)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                            .padding(.top, 4)
-                    }
+                                    Text("Once you pay the accountability fee, you'll have 7 credits for the rest of today. Other apps that haven't exceeded their limits will continue to work normally.")
+                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                        .foregroundColor(.textPrimary.opacity(0.8))
+                                        .multilineTextAlignment(.center)
+                                        .lineSpacing(3)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .padding(.top, 4)
                                 }
                             }
                     
@@ -216,8 +181,8 @@ struct BlockedAppModal: View {
                                 .background(creditsRemaining < 7 ? Color.error.opacity(0.1) : Color.primary.opacity(0.1))
                                 .cornerRadius(10)
                                 
-                                if creditsRemaining < 7 {
-                                    Text("Need \(7 - creditsRemaining) more credit\(7 - creditsRemaining == 1 ? "" : "s") to unblock")
+                                if !hasPaidAccountabilityFeeToday {
+                                    Text("Pay 99¢ to restore credits and unblock")
                                         .font(.system(size: 12, weight: .medium, design: .rounded))
                                         .foregroundColor(.error)
                                 } else {
@@ -231,19 +196,19 @@ struct BlockedAppModal: View {
                     // Buttons
                     if showButtons {
                                 VStack(spacing: 12) {
-                                    // Unlock button (only enabled if credits >= 7)
-                                    if creditsRemaining < 7 {
+                                    // Pay accountability fee button (if not paid) or unblock button (if paid)
+                                    if !hasPaidAccountabilityFeeToday {
                                         Button(action: {
                                             HapticFeedback.medium.trigger()
                                             dismissModal()
-                                            // Navigate to credits/purchase screen
+                                            // Navigate to credits/purchase screen to pay 99 cents
                                             NotificationCenter.default.post(name: NSNotification.Name("OpenCreditsView"), object: nil)
                                         }) {
                                             HStack(spacing: 10) {
                                                 Image(systemName: "creditcard.fill")
                                                     .font(.system(size: 17, weight: .semibold))
                                                 
-                                                Text("Buy \(7 - creditsRemaining) Credit\(7 - creditsRemaining == 1 ? "" : "s") to Unblock")
+                                                Text("Pay 99¢ to Renew for Today")
                                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                                             }
                                             .foregroundColor(.white)
@@ -260,30 +225,30 @@ struct BlockedAppModal: View {
                                             .shadow(color: Color.primary.opacity(0.3), radius: 8, x: 0, y: 4)
                                         }
                                     } else {
-                            Button(action: {
-                                HapticFeedback.medium.trigger()
-                                unblockWithCredit()
-                            }) {
+                                        Button(action: {
+                                            HapticFeedback.medium.trigger()
+                                            unblockWithCredit()
+                                        }) {
                                             HStack(spacing: 10) {
-                                    Image(systemName: "lock.open.fill")
+                                                Image(systemName: "lock.open.fill")
                                                     .font(.system(size: 17, weight: .semibold))
-                                    
+                                                
                                                 Text("Unblock App")
                                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
+                                            }
+                                            .foregroundColor(.white)
+                                            .frame(maxWidth: .infinity)
                                             .padding(.vertical, 16)
-                                .background(
+                                            .background(
                                                 LinearGradient(
-                                        colors: [Color.primary, Color.primary.opacity(0.8)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(DesignSystem.cornerRadiusMedium)
-                                .shadow(color: Color.primary.opacity(0.3), radius: 8, x: 0, y: 4)
-                            }
+                                                    colors: [Color.primary, Color.primary.opacity(0.8)],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                            .cornerRadius(DesignSystem.cornerRadiusMedium)
+                                            .shadow(color: Color.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+                                        }
                                     }
                             
                             // Wait till tomorrow button

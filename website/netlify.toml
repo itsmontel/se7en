@@ -1,12 +1,19 @@
 # Netlify Configuration for SE7EN Website
 
 [build]
-  # No build command needed for static site
+  # Build command to inject environment variables
+  command = "node inject-env.js"
   publish = "."
 
+# Secrets scanning configuration
+# These keys are safe to expose - Supabase anon key is designed for public use
+# The URL is also public and safe to expose
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,SUPABASE_ANON_KEY"
+  SECRETS_SCAN_OMIT_PATHS = "FIND_ANON_KEY.md,*.md"
+
 # Environment variable injection
-# Set API_URL in Netlify dashboard: Site Settings → Environment Variables
-# This will be available as window.API_URL in your HTML
+# Set SUPABASE_URL and SUPABASE_ANON_KEY in Netlify dashboard: Site Settings → Environment Variables
 
 # Redirects (optional)
 [[redirects]]

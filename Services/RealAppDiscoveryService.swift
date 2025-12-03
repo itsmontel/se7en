@@ -218,7 +218,7 @@ class RealAppDiscoveryService: ObservableObject {
         return AppCategory.allCases.filter { !getApps(for: $0).isEmpty }
     }
     
-    private func extractBundleID(from token: AnyHashable) -> String {
+    func extractBundleID(from token: AnyHashable) -> String {
         // The token contains the bundle ID in its description
         // This is a workaround since tokens don't expose bundleID directly
         let description = String(describing: token)
@@ -233,7 +233,7 @@ class RealAppDiscoveryService: ObservableObject {
         return "unknown.app"
     }
     
-    private func extractDisplayName(from token: AnyHashable) -> String? {
+    func extractDisplayName(from token: AnyHashable) -> String? {
         // Try to get the display name from the token
         // This is a simplified version - in production you'd want more robust extraction
         let bundleID = extractBundleID(from: token)

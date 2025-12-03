@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SE7EN - Take Back Control of Your Screen Time</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Supabase Client -->
+    <!-- ENV_INJECTION_POINT -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- Header -->
@@ -164,6 +167,26 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
+            <!-- Footer Waitlist Section -->
+            <div class="footer-waitlist">
+                <h3 class="footer-waitlist-title">Join the Waitlist</h3>
+                <p class="footer-waitlist-subtitle">Be the first to know when SE7EN launches</p>
+                <form class="footer-waitlist-form" onsubmit="handleFooterWaitlist(event)">
+                    <input 
+                        type="email" 
+                        placeholder="Enter your email" 
+                        class="footer-waitlist-input" 
+                        id="footer-waitlist-email"
+                        required
+                    >
+                    <button type="submit" class="footer-waitlist-button">
+                        <span class="footer-button-text">Join</span>
+                        <span class="footer-button-icon">→</span>
+                    </button>
+                </form>
+                <p class="footer-waitlist-note">No spam, unsubscribe anytime</p>
+            </div>
+            
             <div class="footer-links">
                 <a href="privacy.html">Privacy</a>
                 <a href="terms.html">Terms</a>
@@ -175,18 +198,79 @@
     </footer>
 
     <script>
-        // API Configuration
-        // Option 1: Set via Netlify environment variable (recommended)
-        // In Netlify: Site Settings → Environment Variables → Add "API_URL"
-        // Option 2: Update the fallback URL below with your Railway API URL
-        const API_URL = (function() {
-            // Check for Netlify injected variable (set during build)
-            if (typeof window.API_URL !== 'undefined') {
-                return window.API_URL;
+        // Supabase Configuration
+        // Option 1: Set via Netlify environment variables (recommended)
+        // In Netlify: Site Settings → Environment Variables → Add:
+        //   - SUPABASE_URL = https://your-project.supabase.co
+        //   - SUPABASE_ANON_KEY = your-anon-key-here
+        // Option 2: Update the fallback values below with your Supabase credentials
+        
+        const SUPABASE_URL = (function() {
+            if (typeof window.SUPABASE_URL !== 'undefined') {
+                return window.SUPABASE_URL;
             }
-            // Fallback: Update this with your Railway API URL
-            return 'https://your-railway-api.up.railway.app';
+            // Fallback: Update with your Supabase project URL (or use Netlify env vars)
+            return 'https://your-project.supabase.co';
         })();
+        
+        const SUPABASE_ANON_KEY = (function() {
+            if (typeof window.SUPABASE_ANON_KEY !== 'undefined') {
+                return window.SUPABASE_ANON_KEY;
+            }
+            // Fallback: Update with your Supabase anon key (or use Netlify env vars)
+            return 'your-anon-key-here';
+        })();
+        
+        // Initialize Supabase client
+        let supabaseClient = null;
+        if (window.supabase) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            console.error('Supabase library not loaded');
+        }
+        
+        // Helper function to add email to waitlist with source tracking
+        // source options: 'header', 'footer', 'popup', 'app_store_popup'
+        async function addToWaitlist(email, source = 'unknown') {
+            if (!supabaseClient) {
+                throw new Error('Supabase client not initialized. Please check your Supabase configuration.');
+            }
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('waitlist')
+                    .insert([
+                        { 
+                            email: email.toLowerCase().trim(),
+                            source: source,
+                            ip_address: null,
+                            user_agent: navigator.userAgent
+                        }
+                    ])
+                    .select();
+                
+                if (error) {
+                    // Check if it's a duplicate email error (PostgreSQL unique constraint)
+                    if (error.code === '23505' || error.message.includes('duplicate') || error.message.includes('unique')) {
+                        return {
+                            success: true,
+                            message: 'You\'re already on the waitlist!',
+                            alreadyExists: true
+                        };
+                    }
+                    throw error;
+                }
+                
+                return {
+                    success: true,
+                    message: 'Thanks! We\'ll notify you when SE7EN is available.',
+                    data: data[0]
+                };
+            } catch (error) {
+                console.error('Supabase error:', error);
+                throw new Error(error.message || 'Something went wrong. Please try again later.');
+            }
+        }
         
         async function handleWaitlist(event) {
             event.preventDefault();
@@ -205,30 +289,84 @@
             submitButton.textContent = 'Joining...';
             
             try {
-                const response = await fetch(`${API_URL}/api/waitlist`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email: email })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    showMessage(data.message, 'success');
+                const result = await addToWaitlist(email, 'header');
+                showMessage(result.message, 'success');
+                if (result.success && !result.alreadyExists) {
                     emailInput.value = '';
-                } else {
-                    showMessage(data.error || 'Something went wrong. Please try again.', 'error');
                 }
             } catch (error) {
-                console.error('Waitlist error:', error);
-                showMessage('Unable to connect. Please check your connection and try again.', 'error');
+                showMessage(error.message || 'Something went wrong. Please try again later.', 'error');
             } finally {
                 // Re-enable button
                 submitButton.disabled = false;
                 submitButton.textContent = 'Join Waitlist';
             }
+        }
+        
+        // Footer waitlist handler
+        async function handleFooterWaitlist(event) {
+            event.preventDefault();
+            const emailInput = document.getElementById('footer-waitlist-email');
+            const submitButton = event.target.querySelector('.footer-waitlist-button');
+            const buttonText = submitButton.querySelector('.footer-button-text');
+            const buttonIcon = submitButton.querySelector('.footer-button-icon');
+            const email = emailInput.value.trim();
+            
+            // Basic validation
+            if (!email || !email.includes('@')) {
+                showFooterMessage('Please enter a valid email address.', 'error');
+                return;
+            }
+            
+            // Disable button and show loading state
+            submitButton.disabled = true;
+            buttonText.textContent = 'Joining...';
+            buttonIcon.textContent = '⏳';
+            
+            try {
+                const result = await addToWaitlist(email, 'footer');
+                showFooterMessage(result.message, 'success');
+                if (result.success && !result.alreadyExists) {
+                    emailInput.value = '';
+                }
+                buttonText.textContent = 'Joined!';
+                buttonIcon.textContent = '✓';
+                
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    buttonText.textContent = 'Join';
+                    buttonIcon.textContent = '→';
+                    submitButton.disabled = false;
+                }, 3000);
+            } catch (error) {
+                showFooterMessage(error.message || 'Something went wrong. Please try again later.', 'error');
+                buttonText.textContent = 'Join';
+                buttonIcon.textContent = '→';
+                submitButton.disabled = false;
+            }
+        }
+        
+        function showFooterMessage(message, type) {
+            // Remove existing message if any
+            const existingMessage = document.querySelector('.footer-waitlist-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            
+            // Create message element
+            const messageEl = document.createElement('div');
+            messageEl.className = `footer-waitlist-message footer-waitlist-message-${type}`;
+            messageEl.textContent = message;
+            
+            // Insert after form
+            const form = document.querySelector('.footer-waitlist-form');
+            form.parentNode.insertBefore(messageEl, form.nextSibling);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                messageEl.style.opacity = '0';
+                setTimeout(() => messageEl.remove(), 300);
+            }, 5000);
         }
         
         function showMessage(message, type) {
@@ -264,8 +402,8 @@
         // Show waitlist popup when App Store button is clicked
         function scrollToWaitlist(event) {
             event.preventDefault();
-            // Force show the popup (even if user already joined)
-            showWaitlistPopup(true);
+            // Force show the popup with app_store_popup source
+            showWaitlistPopup(true, 'app_store_popup');
         }
 
         // Dark and Light Modes Image Animation
@@ -329,17 +467,17 @@
             // Start with first image active
             statsImage1.classList.add('active');
             
-            // Switch images every 3 seconds
-            setInterval(switchStatsImage, 3000);
+            // Switch images every 4 seconds
+            setInterval(switchStatsImage, 4000);
         });
 
         // Waitlist Popup Functionality
         let scrollTimer = null;
         let hasScrolled = false;
         let popupShown = false;
-        const POPUP_DELAY = 15000; // Show after 15 seconds of scrolling
+        const POPUP_DELAY = 20000; // Show after 20 seconds of scrolling
         const MIN_SCROLL_DISTANCE = 400; // Minimum pixels scrolled
-        const TIME_BASED_DELAY = 25000; // Show after 25 seconds regardless
+        const TIME_BASED_DELAY = 30000; // Show after 30 seconds regardless
 
         // Check if user has already joined waitlist
         function hasJoinedWaitlist() {
@@ -351,8 +489,11 @@
             localStorage.setItem('se7en_waitlist_joined', 'true');
         }
 
+        // Track popup source (for analytics)
+        let popupSource = 'popup'; // Default: scroll/time-based popup
+        
         // Show popup with animation
-        function showWaitlistPopup(forceShow = false) {
+        function showWaitlistPopup(forceShow = false, source = 'popup') {
             // If already shown and not forced, don't show again
             if (popupShown && !forceShow) {
                 return;
@@ -362,6 +503,9 @@
             if (hasJoinedWaitlist() && !forceShow) {
                 return;
             }
+            
+            // Store the source for when user submits
+            popupSource = source;
             
             const popup = document.getElementById('waitlist-popup');
             if (popup) {
@@ -420,36 +564,31 @@
             buttonIcon.textContent = '⏳';
             
             try {
-                const response = await fetch(`${API_URL}/api/waitlist`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email: email })
-                });
+                // Use the stored popup source (popup or app_store_popup)
+                const result = await addToWaitlist(email, popupSource);
                 
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    showPopupMessage(data.message, 'success');
+                if (result.success) {
+                    showPopupMessage(result.message, 'success');
                     markWaitlistJoined();
-                    emailInput.value = '';
-                    buttonText.textContent = 'Joined!';
-                    buttonIcon.textContent = '✓';
                     
-                    // Close popup after 2.5 seconds
-                    setTimeout(() => {
-                        closeWaitlistPopup();
-                    }, 2500);
-                } else {
-                    showPopupMessage(data.error || 'Something went wrong. Please try again.', 'error');
-                    buttonText.textContent = 'Join Waitlist';
-                    buttonIcon.textContent = '→';
-                    submitButton.disabled = false;
+                    if (!result.alreadyExists) {
+                        emailInput.value = '';
+                        buttonText.textContent = 'Joined!';
+                        buttonIcon.textContent = '✓';
+                        
+                        // Close popup after 2.5 seconds
+                        setTimeout(() => {
+                            closeWaitlistPopup();
+                        }, 2500);
+                    } else {
+                        buttonText.textContent = 'Join Waitlist';
+                        buttonIcon.textContent = '→';
+                        submitButton.disabled = false;
+                    }
                 }
             } catch (error) {
                 console.error('Waitlist error:', error);
-                showPopupMessage('Unable to connect. Please check your connection and try again.', 'error');
+                showPopupMessage(error.message || 'Something went wrong. Please try again later.', 'error');
                 buttonText.textContent = 'Join Waitlist';
                 buttonIcon.textContent = '→';
                 submitButton.disabled = false;

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import FamilyControls
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
@@ -17,32 +18,51 @@ struct DashboardView: View {
     @State private var showingExtendLimitSheet = false
     @State private var appToExtend: MonitoredApp? = nil
     
+    // Cache health score to avoid recalculating on every scroll
+    @State private var cachedHealthScore: Int = 100
+    @State private var cachedHealthColor: Color = .green
+    
     private var healthScore: Int {
+        // Use cached value, recalculate only when monitored apps change
+        return cachedHealthScore
+    }
+    
+    private var healthColor: Color {
+        return cachedHealthColor
+    }
+    
+    private func updateHealthScore() {
         // Calculate health based on actual app usage
         let totalUsageToday = appState.monitoredApps.reduce(0) { $0 + $1.usedToday }
         let totalLimits = appState.monitoredApps.reduce(0) { $0 + $1.dailyLimit }
         
-        guard totalLimits > 0 else { return 100 }
+        guard totalLimits > 0 else {
+            cachedHealthScore = 100
+            cachedHealthColor = .green
+            return
+        }
         
         let usagePercentage = Double(totalUsageToday) / Double(totalLimits)
         
         // Convert usage percentage to health score (inverse relationship)
+        let score: Int
         switch usagePercentage {
-        case 0...0.5: return 100 // Under 50% usage = perfect health
-        case 0.5...0.7: return 80 // 50-70% usage = good health
-        case 0.7...0.9: return 60 // 70-90% usage = okay health
-        case 0.9...1.1: return 40 // 90-110% usage = poor health
-        default: return 20 // Over 110% usage = very poor health
+        case 0...0.5: score = 100 // Under 50% usage = perfect health
+        case 0.5...0.7: score = 80 // 50-70% usage = good health
+        case 0.7...0.9: score = 60 // 70-90% usage = okay health
+        case 0.9...1.1: score = 40 // 90-110% usage = poor health
+        default: score = 20 // Over 110% usage = very poor health
         }
-    }
-    
-    private var healthColor: Color {
-        switch healthScore {
-        case 0..<25: return .red
-        case 25..<50: return .orange
-        case 50..<75: return .yellow
-        case 75...100: return .green
-        default: return .green
+        
+        cachedHealthScore = score
+        
+        // Update color
+        switch score {
+        case 0..<25: cachedHealthColor = .red
+        case 25..<50: cachedHealthColor = .orange
+        case 50..<75: cachedHealthColor = .yellow
+        case 75...100: cachedHealthColor = .green
+        default: cachedHealthColor = .green
         }
     }
     
@@ -53,9 +73,10 @@ struct DashboardView: View {
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
+                        HStack {
+                            Spacer()
+                            VStack(spacing: 0) {
                             // Header with greeting
                             VStack(alignment: .leading, spacing: 12) {
                             // Time-based greeting
@@ -121,31 +142,20 @@ struct DashboardView: View {
                             .foregroundColor(.textPrimary)
                             .padding(.bottom, 12)
                         
-                        // Health bar (color based on score)
+                        // Health bar (color based on score) - slightly narrower
                         RoundedRectangle(cornerRadius: 6)
                             .fill(healthColor)
                             .frame(height: 6)
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, 32)
                             .padding(.bottom, 10)
                         
-                        // Health label and message
-                        VStack(spacing: 8) {
-                            HStack {
-                                Spacer()
-                                Text("Health")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.textSecondary)
-                                Spacer()
-                            }
-                            
-                            // Health message based on score
-                            if let pet = appState.userPet {
-                                Text(healthMessage(petName: pet.name, score: healthScore))
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(healthColor)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 20)
-                            }
+                        // Health label only
+                        HStack {
+                            Spacer()
+                            Text("Health")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.textSecondary)
+                            Spacer()
                         }
                         .padding(.bottom, 24)
                         
@@ -161,7 +171,7 @@ struct DashboardView: View {
                                 .foregroundColor(.textPrimary)
                                 .padding(.horizontal, 20)
                             
-                            VStack(spacing: 10) {
+                            LazyVStack(spacing: 10) {
                                 ForEach(appState.monitoredApps, id: \.id) { app in
                                     AppUsageCard(
                                         app: app,
@@ -204,6 +214,12 @@ struct DashboardView: View {
                         .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
                         Spacer()
                     }
+                }
+                .onAppear {
+                    updateHealthScore()
+                }
+                .onChange(of: appState.monitoredApps.count) { _ in
+                    updateHealthScore()
                 }
                 
                 // Overlays
@@ -350,23 +366,6 @@ struct DashboardView: View {
         }
     }
     
-    // Helper function to generate health message
-    private func healthMessage(petName: String, score: Int) -> String {
-        switch score {
-        case 100:
-            return "\(petName)'s health is amazing, you're doing a great job today!"
-        case 80...99:
-            return "\(petName) is feeling great! Keep it up!"
-        case 60...79:
-            return "\(petName) is doing well. A little more restraint today!"
-        case 40...59:
-            return "\(petName) isn't feeling great. Try to use your apps less."
-        case 20...39:
-            return "\(petName) is struggling. Please limit your screen time."
-        default:
-            return "\(petName) is very sick. You need to take a break!"
-        }
-    }
     
     // Demo function to simulate credit loss
     private func simulateCreditLoss() {
@@ -469,30 +468,18 @@ struct EmptyAppsView: View {
 struct AddAppSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
-    @StateObject private var appDiscovery = AppDiscoveryService.shared
-    @State private var selectedApp: InstalledApp?
+    @StateObject private var screenTimeService = ScreenTimeService.shared
+    @StateObject private var realAppDiscovery = RealAppDiscoveryService.shared
+    @State private var familySelection = FamilyActivitySelection()
+    @State private var showingFamilyPicker = false
+    @State private var selectedApps: [RealInstalledApp] = []
+    @State private var selectedApp: RealInstalledApp?
     @State private var dailyLimit: Int = 60
     @State private var customLimit: String = ""
     @State private var showingCustomLimit = false
     @State private var showingConfirmation = false
-    @State private var lockDuration: LockDuration = .oneDay
     
-    enum LockDuration: String, CaseIterable {
-        case oneDay = "1 Day"
-        case oneWeek = "1 Week"
-        case custom = "Custom"
-    }
-    
-    // Computed property to avoid complex inline expressions
-    private var monitorableApps: [InstalledApp] {
-        appDiscovery.installedApps.filter { appDiscovery.canMonitorApp($0.bundleID) }
-    }
-    
-    // Helper methods to avoid complex boolean expressions
-    private func isAppSelected(_ app: InstalledApp) -> Bool {
-        return selectedApp?.bundleID == app.bundleID
-    }
-    
+    // Helper methods
     private func isLimitSelected(_ limit: Int) -> Bool {
         return dailyLimit == limit && !showingCustomLimit
     }
@@ -532,7 +519,7 @@ struct AddAppSheet: View {
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.textPrimary)
                     
-                    Text("Choose an app and set a daily time limit")
+                    Text("Choose an app from your device and set a daily time limit")
                         .font(.bodyMedium)
                         .foregroundColor(.textPrimary.opacity(0.7))
                         .multilineTextAlignment(.center)
@@ -549,24 +536,97 @@ struct AddAppSheet: View {
                                 .foregroundColor(.textPrimary)
                                 .padding(.horizontal, 20)
                             
-                            VStack {
-                                if appDiscovery.isLoading {
-                                    ProgressView("Scanning installed apps...")
-                                        .frame(maxWidth: .infinity)
-                                        .padding()
+                            VStack(spacing: 16) {
+                                if !screenTimeService.isAuthorized {
+                                    VStack(spacing: 12) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .font(.system(size: 32))
+                                            .foregroundColor(.orange)
+                                        
+                                        Text("Screen Time authorization required")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.textPrimary)
+                                        
+                                        Text("Please authorize Screen Time access in Settings to add apps")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.textSecondary)
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                } else if selectedApps.isEmpty {
+                                    VStack(spacing: 12) {
+                                        Image(systemName: "apps.iphone")
+                                            .font(.system(size: 32))
+                                            .foregroundColor(.textSecondary.opacity(0.5))
+                                        
+                                        Text("No apps selected")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.textPrimary)
+                                        
+                                        Text("Tap the button below to select apps from your device")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.textSecondary)
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
                                 } else {
+                                    // Show selected apps
                                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
-                                        ForEach(monitorableApps) { app in
-                                            RealAppSelectionCard(
-                                                app: app,
-                                                isSelected: isAppSelected(app)
-                                            ) {
+                                        ForEach(selectedApps) { app in
+                                            Button(action: {
                                                 selectedApp = app
                                                 HapticFeedback.light.trigger()
+                                            }) {
+                                                VStack(spacing: 12) {
+                                                    ZStack {
+                                                        Circle()
+                                                            .fill(Color(app.color).opacity(0.2))
+                                                            .frame(width: 60, height: 60)
+                                                        
+                                                        Image(systemName: app.iconName)
+                                                            .font(.system(size: 24, weight: .medium))
+                                                            .foregroundColor(Color(app.color))
+                                                    }
+                                                    
+                                                    Text(app.displayName)
+                                                        .font(.system(size: 14, weight: .medium))
+                                                        .foregroundColor(.textPrimary)
+                                                        .lineLimit(2)
+                                                        .multilineTextAlignment(.center)
+                                                }
+                                                .padding(12)
+                                                .frame(maxWidth: .infinity)
+                                                .background(selectedApp?.id == app.id ? Color.blue.opacity(0.1) : Color.cardBackground)
+                                                .cornerRadius(12)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .stroke(selectedApp?.id == app.id ? Color.blue : Color.clear, lineWidth: 2)
+                                                )
                                             }
                                         }
                                     }
                                 }
+                                
+                                // Select Apps Button
+                                Button(action: {
+                                    showingFamilyPicker = true
+                                }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: selectedApps.isEmpty ? "plus.circle.fill" : "pencil.circle.fill")
+                                            .font(.system(size: 18, weight: .semibold))
+                                        
+                                        Text(selectedApps.isEmpty ? "Select Apps from Device" : "Change Selection")
+                                            .font(.system(size: 16, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(Color.blue)
+                                    .cornerRadius(12)
+                                }
+                                .disabled(!screenTimeService.isAuthorized)
                             }
                             .padding(.horizontal, 20)
                         }
@@ -668,19 +728,35 @@ struct AddAppSheet: View {
                     }
                 }
             }
-            .onAppear {
-                appDiscovery.discoverInstalledApps()
+            .sheet(isPresented: $showingFamilyPicker) {
+                if screenTimeService.isAuthorized {
+                    FamilyActivityPicker(selection: $familySelection)
+                        .onChange(of: familySelection) { newSelection in
+                            realAppDiscovery.processSelectedApps(newSelection)
+                            // Extract apps from the selection
+                            var apps: [RealInstalledApp] = []
+                            for token in newSelection.applicationTokens {
+                                let bundleID = realAppDiscovery.extractBundleID(from: token)
+                                let displayName = realAppDiscovery.extractDisplayName(from: token) ?? "Unknown App"
+                                let category = AppCategory.category(for: bundleID)
+                                
+                                let app = RealInstalledApp(
+                                    token: token,
+                                    displayName: displayName,
+                                    bundleID: bundleID,
+                                    category: category
+                                )
+                                apps.append(app)
+                            }
+                            selectedApps = apps
+                            // Keep the selection for when we add the app
+                            showingFamilyPicker = false
+                        }
+                }
             }
             .confirmationDialog("Confirm App Monitoring", isPresented: $showingConfirmation) {
-                Button("Add for 1 Day") {
-                    addApp(duration: .oneDay)
-                }
-                Button("Add for 1 Week") {
-                    addApp(duration: .oneWeek)
-                }
-                Button("Custom Duration") {
-                    // For now, default to 1 week - you can expand this later
-                    addApp(duration: .oneWeek)
+                Button("Add App") {
+                    addApp()
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
@@ -689,17 +765,19 @@ struct AddAppSheet: View {
         }
     }
     
-    private func addApp(duration: LockDuration) {
+    private func addApp() {
         guard let app = selectedApp else { return }
         
-        appState.addAppGoal(
-            appName: app.displayName, 
-            bundleID: app.bundleID, 
+        // Use addAppGoalFromFamilySelection which handles tokens properly
+        // The familySelection contains all selected apps, and ScreenTimeService will handle
+        // storing the selection and setting up monitoring for the specific app
+        appState.addAppGoalFromFamilySelection(
+            familySelection,
+            appName: app.displayName,
             dailyLimitMinutes: dailyLimit
         )
         
-        // TODO: Store duration information for future use
-        print("Added \(app.displayName) with \(dailyLimit) minute limit for \(duration.rawValue)")
+        print("✅ Added \(app.displayName) with \(dailyLimit) minute limit")
         
         HapticFeedback.success.trigger()
         dismiss()
@@ -994,43 +1072,48 @@ struct DateHistoryPicker: View {
     }
     
     private func getHealthData(for date: Date) -> (score: Int, color: Color, status: String) {
-        // Calculate health score based on historical data
-        // For now, simulate based on how recent the date is
-        let daysAgo = Calendar.current.dateComponents([.day], from: date, to: Date()).day ?? 0
+        // Calculate health score based on actual pet health data
+        let isToday = Calendar.current.isDateInToday(date)
         
-        let score: Int
-        let color: Color
-        let status: String
-        
-        // Simulate health data - in real app, this would come from CoreData
-        switch daysAgo {
-        case 0: // Today
-            score = 100
-            color = .green
-            status = "Full Health"
-        case 1...2:
-            score = Int.random(in: 80...95)
-            color = .green
-            status = "Great"
-        case 3...7:
-            score = Int.random(in: 60...85)
-            color = .orange
-            status = "Good"
-        case 8...14:
-            score = Int.random(in: 40...70)
-            color = .yellow
-            status = "Okay"
-        case 15...21:
-            score = Int.random(in: 20...50)
-            color = .orange
-            status = "Poor"
-        default:
-            score = Int.random(in: 10...40)
-            color = .red
-            status = "Sick"
+        if isToday {
+            // Use current pet health for today
+            if let pet = appState.userPet {
+                let healthPercentage = appState.calculatePetHealthPercentage()
+                let healthState = pet.healthState
+                
+                let score: Int
+                let color: Color
+                let status: String
+                
+                switch healthState {
+                case .fullHealth:
+                    score = healthPercentage
+                    color = .green
+                    status = "Full Health"
+                case .happy:
+                    score = healthPercentage
+                    color = Color(red: 0.5, green: 0.85, blue: 0.7)
+                    status = "Happy"
+                case .content:
+                    score = healthPercentage
+                    color = .yellow
+                    status = "Content"
+                case .sad:
+                    score = healthPercentage
+                    color = .orange
+                    status = "Sad"
+                case .sick:
+                    score = healthPercentage
+                    color = .red
+                    status = "Sick"
+                }
+                
+                return (score, color, status)
+            }
         }
         
-        return (score, color, status)
+        // For past dates, return 0 for new users (no historical data)
+        return (0, .gray, "No data")
     }
     
 }

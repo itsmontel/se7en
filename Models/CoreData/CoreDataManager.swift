@@ -342,49 +342,41 @@ class CoreDataManager: ObservableObject {
         let weeklyPlan = getOrCreateCurrentWeeklyPlan()
         let today = Calendar.current.startOfDay(for: Date())
         
-        // Check if we've already failed today (only count one failure per day)
-        if let lastFailureDate = weeklyPlan.lastFailureDate {
-            let lastFailureDay = Calendar.current.startOfDay(for: lastFailureDate)
-            if lastFailureDay == today {
-                // Already failed today, don't count again
-                print("⚠️ Already failed today, not counting additional failure")
-                // Still create transaction but don't increment failure count
-                let transaction = CreditTransaction(context: context)
-                transaction.id = UUID()
-                transaction.date = Date()
-                transaction.amount = 0 // No additional deduction
-                transaction.reason = "\(reason) (already failed today)"
-                transaction.transactionType = "deduction"
-                transaction.usageRecord = usageRecord
-                transaction.weeklyPlan = weeklyPlan
-                save()
-                return transaction
-            }
+        // Check if accountability fee has been paid today
+        let accountabilityFeePaidDate = weeklyPlan.accountabilityFeePaidDate.map { Calendar.current.startOfDay(for: $0) }
+        let hasPaidAccountabilityFeeToday = accountabilityFeePaidDate == today
+        
+        // If already paid today, no credit deduction (just block the app)
+        if hasPaidAccountabilityFeeToday {
+            print("💳 Accountability fee already paid today - no credit deduction")
+            let transaction = CreditTransaction(context: context)
+            transaction.id = UUID()
+            transaction.date = Date()
+            transaction.amount = 0 // No deduction
+            transaction.reason = "\(reason) (accountability fee already paid today)"
+            transaction.transactionType = "deduction"
+            transaction.usageRecord = usageRecord
+            transaction.weeklyPlan = weeklyPlan
+            save()
+            return transaction
         }
         
-        // Increment failure count (this is a new failure for today)
-        let currentFailureCount = Int(weeklyPlan.failureCount)
-        let newFailureCount = currentFailureCount + 1
-        weeklyPlan.failureCount = Int32(newFailureCount)
+        // First failure of the day - deduct all credits (user must pay 99 cents or wait)
+        // Set credits to 0 to indicate they need to pay accountability fee
         weeklyPlan.lastFailureDate = Date()
-        
-        // Progressive penalty: 1st failure = 1 credit, 2nd = 2 credits, 3rd = 3 credits, etc.
-        let creditsToDeduct = newFailureCount
+        weeklyPlan.creditsRemaining = 0
         
         // Create transaction
         let transaction = CreditTransaction(context: context)
         transaction.id = UUID()
         transaction.date = Date()
-        transaction.amount = -Int32(creditsToDeduct)
-        transaction.reason = "\(reason) (Failure #\(newFailureCount) - \(creditsToDeduct) credit\(creditsToDeduct == 1 ? "" : "s"))"
+        transaction.amount = -Int32(7) // Deduct all 7 credits
+        transaction.reason = "\(reason) (Daily limit exceeded - pay 99¢ to renew or wait till tomorrow)"
         transaction.transactionType = "deduction"
         transaction.usageRecord = usageRecord
         transaction.weeklyPlan = weeklyPlan
         
-        // Update weekly plan credits
-        weeklyPlan.creditsRemaining = max(0, weeklyPlan.creditsRemaining - Int32(creditsToDeduct))
-        
-        print("💳 Progressive penalty: Failure #\(newFailureCount) = \(creditsToDeduct) credit\(creditsToDeduct == 1 ? "" : "s") deducted")
+        print("💳 Daily limit exceeded: Credits set to 0. User must pay 99¢ to renew for today or wait till tomorrow.")
         
         save()
         return transaction
@@ -398,14 +390,35 @@ class CoreDataManager: ObservableObject {
     }
     
     func getCurrentFailureCount() -> Int {
-        let weeklyPlan = getOrCreateCurrentWeeklyPlan()
-        return Int(weeklyPlan.failureCount)
+        // No longer using progressive failure count
+        // Return 0 as we now use simple daily accountability fee system
+        return 0
     }
     
     func getNextFailurePenalty() -> Int {
-        // Returns how many credits will be deducted on the next failure
-        let currentFailureCount = getCurrentFailureCount()
-        return currentFailureCount + 1
+        // Always 7 credits (99 cents) - simple accountability fee
+        return 7
+    }
+    
+    func payAccountabilityFee() {
+        // When user pays 99 cents, restore credits to 7 for the day
+        let weeklyPlan = getOrCreateCurrentWeeklyPlan()
+        let today = Calendar.current.startOfDay(for: Date())
+        
+        weeklyPlan.creditsRemaining = 7
+        weeklyPlan.accountabilityFeePaidDate = today
+        
+        // Create transaction for accountability fee payment
+        let transaction = CreditTransaction(context: context)
+        transaction.id = UUID()
+        transaction.date = Date()
+        transaction.amount = 7 // Add 7 credits
+        transaction.reason = "Accountability fee paid (99¢) - credits restored for today"
+        transaction.transactionType = "payment"
+        transaction.weeklyPlan = weeklyPlan
+        
+        print("✅ Accountability fee paid - credits restored to 7 for today")
+        save()
     }
     
     func addCredits(amount: Int, reason: String) -> CreditTransaction {

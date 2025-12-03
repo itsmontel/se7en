@@ -530,9 +530,7 @@ class AppState: ObservableObject {
     // MARK: - Week Management
     
     func resetWeek() {
-        // Reset failure count for new week
-        coreDataManager.resetWeeklyFailureCount()
-        
+        // Weekly reset - credits reset to 7 daily at midnight
         Task {
             screenTimeService.performWeeklyReset()
         }
@@ -543,14 +541,15 @@ class AppState: ObservableObject {
         checkAchievements()
     }
     
-    // MARK: - Progressive Penalty System
+    // MARK: - Accountability Fee System
     
     func getCurrentFailureCount() -> Int {
+        // No longer using progressive failure count - always returns 0
         return coreDataManager.getCurrentFailureCount()
     }
     
     func getNextFailurePenalty() -> Int {
-        // Returns how many credits will be deducted on the next failure
+        // Always 7 credits (99 cents) - simple accountability fee
         return coreDataManager.getNextFailurePenalty()
     }
     
@@ -633,7 +632,7 @@ class AppState: ObservableObject {
     
     /// Calculate pet health percentage based on the lowest app's remaining time percentage
     /// - Returns: Health percentage from 0-100
-    private func calculatePetHealthPercentage() -> Int {
+    func calculatePetHealthPercentage() -> Int {
         // If no monitored apps, pet is at full health
         guard !monitoredApps.isEmpty else { return 100 }
         
