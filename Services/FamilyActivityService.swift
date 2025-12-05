@@ -119,91 +119,13 @@ struct FamilyActivityPickerView: View {
 extension ScreenTimeService {
     
     func updateAppSelections(_ selection: FamilyActivitySelection) {
-        print("🔄 Updating app selections with \(selection.applicationTokens.count) apps")
+        print("🔄 Legacy updateAppSelections called with \(selection.applicationTokens.count) apps")
+        print("ℹ️ This method is deprecated - use addAppGoalFromSelection() instead")
         
-        // Store tokens for each selected app
-        for token in selection.applicationTokens {
-            // Since we can't extract bundle ID directly, we'll use the token hash as identifier
-            let identifier = String(token.hashValue)
-            
-            var appSelection = FamilyActivitySelection()
-            appSelection.applicationTokens = Set([token])
-            
-            monitoredAppSelections[identifier] = appSelection
-            
-            print("📱 Stored selection for app token: \(identifier)")
-        }
-        
-        // Set up monitoring for all selected apps
-        setupMonitoringForSelectedApps()
+        // This method is now handled by addAppGoalFromSelection() in ScreenTimeService
+        // which properly stores individual app tokens with real bundle IDs
     }
     
-    private func setupMonitoringForSelectedApps() {
-        guard isAuthorized else {
-            print("❌ Not authorized - cannot set up monitoring")
-            return
-        }
-        
-        print("🔧 Setting up monitoring for \(monitoredAppSelections.count) selected apps")
-        
-        // Create a combined schedule for all apps
-        setupCombinedDeviceActivitySchedule()
-    }
-    
-    private func setupCombinedDeviceActivitySchedule() {
-        // Create daily schedule (reset at midnight)
-        let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: 0, minute: 0),
-            intervalEnd: DateComponents(hour: 23, minute: 59),
-            repeats: true
-        )
-        
-        // Get all monitored application tokens
-        // Tokens from FamilyActivitySelection are compatible with DeviceActivity
-        // We'll use them directly from the selections
-        
-        // Create events for warning and limit thresholds
-        var events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
-        
-        for (identifier, selection) in monitoredAppSelections {
-            // Get the app goal for this selection (if available)
-            let goals = coreDataManager.getActiveAppGoals()
-            let defaultLimit = 60 // Default 60 minutes if no goal found
-            
-            // Find matching goal (this is approximate since we can't match exactly)
-            let goal = goals.first // Use first available goal as fallback
-            let limitMinutes = goal?.dailyLimitMinutes ?? Int32(defaultLimit)
-            
-            // Warning at 80% of limit
-            let warningMinutes = Int(Double(limitMinutes) * 0.8)
-            
-            let warningEvent = DeviceActivityEvent(
-                applications: selection.applicationTokens,
-                threshold: DateComponents(minute: warningMinutes)
-            )
-            
-            let limitEvent = DeviceActivityEvent(
-                applications: selection.applicationTokens,
-                threshold: DateComponents(minute: Int(limitMinutes))
-            )
-            
-            events[.warningEvent(for: identifier)] = warningEvent
-            events[.limitEvent(for: identifier)] = limitEvent
-        }
-        
-        do {
-            // Start monitoring with combined schedule
-            try deviceActivityCenter.startMonitoring(.se7enDaily, during: schedule, events: events)
-            
-            if !activeSchedules.contains(.se7enDaily) {
-                activeSchedules.append(.se7enDaily)
-            }
-            
-            let totalTokens = monitoredAppSelections.values.reduce(0) { $0 + $1.applicationTokens.count }
-            print("✅ Started combined monitoring for \(totalTokens) apps")
-        } catch {
-            print("❌ Failed to start combined monitoring: \(error)")
-        }
-    }
+    // Removed duplicate monitoring setup - now handled by ScreenTimeService.setupMonitoringForApp()
 }
 

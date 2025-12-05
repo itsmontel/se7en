@@ -87,74 +87,57 @@ enum AppCategory: String, CaseIterable, Identifiable {
 }
 
 // Real app data structure using FamilyControls tokens
-struct RealInstalledApp: Identifiable {
+struct RealInstalledApp: Identifiable, Equatable {
     let id = UUID()
     let token: AnyHashable  // Token from FamilyActivitySelection (opaque type)
     let displayName: String
     let bundleID: String
     let category: AppCategory
     
+    // MARK: - Equatable Conformance
+    static func == (lhs: RealInstalledApp, rhs: RealInstalledApp) -> Bool {
+        // Compare based on bundleID and displayName since tokens are opaque
+        return lhs.id == rhs.id &&
+               lhs.bundleID == rhs.bundleID &&
+               lhs.displayName == rhs.displayName &&
+               lhs.category == rhs.category
+    }
+    
     var iconName: String {
-        // Map common apps to SF Symbols for consistent UI
-        let iconMap = [
-            "Instagram": "camera.fill",
-            "Facebook": "f.circle.fill",
-            "X": "x.circle.fill",
-            "Twitter": "x.circle.fill",
-            "TikTok": "music.note.list",
-            "Snapchat": "camera.macro.circle.fill",
-            "YouTube": "play.circle.fill",
-            "Reddit": "r.circle.fill",
-            "WhatsApp": "message.circle.fill",
-            "Telegram": "paperplane.circle.fill",
-            "Discord": "gamecontroller.fill",
-            "Safari": "safari.fill",
-            "Chrome": "globe",
-            "Netflix": "tv.fill",
-            "Spotify": "music.note",
-            "Amazon": "cart.fill",
-            "Uber": "car.fill",
-            "Lyft": "car.2.fill"
-        ]
-        
-        for (appName, iconName) in iconMap {
-            if displayName.lowercased().contains(appName.lowercased()) {
-                return iconName
-            }
+        // Use generic app icon - Screen Time API provides real app data
+        // Category-based icon fallback
+        switch category {
+        case .social: return "person.2.fill"
+        case .entertainment: return "tv.fill"
+        case .productivity: return "briefcase.fill"
+        case .games: return "gamecontroller.fill"
+        case .shopping: return "cart.fill"
+        case .healthFitness: return "heart.fill"
+        case .education: return "book.fill"
+        case .newsReading: return "newspaper.fill"
+        case .photoVideo: return "camera.fill"
+        case .travelLocal: return "map.fill"
+        case .utilities: return "wrench.fill"
+        case .other: return "app.fill"
         }
-        
-        return "app.fill"
     }
     
     var color: UIColor {
-        let colorMap = [
-            "Instagram": UIColor.systemPink,
-            "Facebook": UIColor.systemBlue,
-            "X": UIColor.label,
-            "Twitter": UIColor.systemBlue,
-            "TikTok": UIColor.label,
-            "Snapchat": UIColor.systemYellow,
-            "YouTube": UIColor.systemRed,
-            "Reddit": UIColor.systemOrange,
-            "WhatsApp": UIColor.systemGreen,
-            "Telegram": UIColor.systemBlue,
-            "Discord": UIColor.systemIndigo,
-            "Safari": UIColor.systemBlue,
-            "Chrome": UIColor.systemBlue,
-            "Netflix": UIColor.systemRed,
-            "Spotify": UIColor.systemGreen,
-            "Amazon": UIColor.systemOrange,
-            "Uber": UIColor.label,
-            "Lyft": UIColor.systemPink
-        ]
-        
-        for (appName, color) in colorMap {
-            if displayName.lowercased().contains(appName.lowercased()) {
-                return color
-            }
+        // Use category-based color - Screen Time API provides real app data
+        switch category {
+        case .social: return UIColor.systemBlue
+        case .entertainment: return UIColor.systemRed
+        case .productivity: return UIColor.systemGreen
+        case .games: return UIColor.systemPurple
+        case .shopping: return UIColor.systemOrange
+        case .healthFitness: return UIColor.systemPink
+        case .education: return UIColor.systemIndigo
+        case .newsReading: return UIColor.systemTeal
+        case .photoVideo: return UIColor.systemYellow
+        case .travelLocal: return UIColor.systemCyan
+        case .utilities: return UIColor.systemGray
+        case .other: return UIColor.label
         }
-        
-        return UIColor.systemBlue
     }
 }
 
@@ -165,13 +148,21 @@ class RealAppDiscoveryService: ObservableObject {
     @Published var categorizedApps: [AppCategory: [RealInstalledApp]] = [:]
     @Published var isLoading = false
     
+    // Store the full selection for creating individual app selections
+    @Published var currentSelection: FamilyActivitySelection = FamilyActivitySelection()
+    
+    // Map app display names to their tokens for proper identification
+    private var appTokenMap: [String: AnyHashable] = [:]
+    
     private init() {}
     
     // This will be called after user selects apps using FamilyActivityPicker
     func processSelectedApps(_ selection: FamilyActivitySelection) {
         isLoading = true
+        currentSelection = selection
         
         var apps: [RealInstalledApp] = []
+        var tokenMap: [String: AnyHashable] = [:]
         
         // Process selected application tokens
         for token in selection.applicationTokens {
@@ -179,6 +170,9 @@ class RealAppDiscoveryService: ObservableObject {
             let bundleID = extractBundleID(from: token)
             let displayName = extractDisplayName(from: token) ?? "Unknown App"
             let category = AppCategory.category(for: bundleID)
+            
+            // Store token mapping for this app
+            tokenMap[displayName] = token
             
             let app = RealInstalledApp(
                 token: token,
@@ -188,6 +182,9 @@ class RealAppDiscoveryService: ObservableObject {
             )
             apps.append(app)
         }
+        
+        // Store token map
+        appTokenMap = tokenMap
         
         // Categorize apps
         var categorized: [AppCategory: [RealInstalledApp]] = [:]
@@ -210,6 +207,20 @@ class RealAppDiscoveryService: ObservableObject {
         }
     }
     
+    // Get a FamilyActivitySelection for a specific app by name
+    func getSelectionForApp(_ appName: String) -> FamilyActivitySelection? {
+        guard let token = appTokenMap[appName] else {
+            return nil
+        }
+        
+        // Create a selection with just this app's token
+        var selection = FamilyActivitySelection()
+        // Note: We can't directly add tokens, but we can use the current selection
+        // and filter it. However, since tokens are opaque, we'll use the full selection
+        // and let ScreenTimeService handle individual app monitoring
+        return currentSelection
+    }
+    
     func getApps(for category: AppCategory) -> [RealInstalledApp] {
         return categorizedApps[category] ?? []
     }
@@ -222,26 +233,54 @@ class RealAppDiscoveryService: ObservableObject {
         // The token contains the bundle ID in its description
         // This is a workaround since tokens don't expose bundleID directly
         let description = String(describing: token)
-        // Extract bundle ID from the token description if possible
-        // Format is typically: Token(bundleIdentifier: "com.example.app")
-        if let range = description.range(of: "bundleIdentifier: \"") {
-            let startIndex = range.upperBound
-            if let endRange = description[startIndex...].range(of: "\"") {
-                return String(description[startIndex..<endRange.lowerBound])
+        print("🔍 Extracting bundle ID from token description: \(description.prefix(200))")
+        
+        // Try multiple patterns to extract bundle ID
+        let patterns = [
+            #"bundleIdentifier:\s*"([^"]+)""#,
+            #"bundleID:\s*"([^"]+)""#,
+            #"identifier:\s*"([^"]+)""#,
+            #"(com\.[a-zA-Z0-9\-\.]+[a-zA-Z0-9]+)"#,
+            #"([a-z]+\.[a-z]+\.[a-z0-9]+)"#
+        ]
+        
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: description, range: NSRange(description.startIndex..., in: description)) {
+                
+                let range = match.numberOfRanges > 1 ? match.range(at: 1) : match.range
+                if let swiftRange = Range(range, in: description) {
+                    let bundleID = String(description[swiftRange])
+                    // Validate it looks like a bundle ID
+                    if bundleID.contains(".") && bundleID.count > 3 && !bundleID.contains(" ") {
+                        print("✅ Extracted bundle ID: \(bundleID)")
+                        return bundleID
+                    }
+                }
             }
         }
+        
+        print("⚠️ Failed to extract bundle ID, using fallback")
         return "unknown.app"
     }
     
     func extractDisplayName(from token: AnyHashable) -> String? {
-        // Try to get the display name from the token
-        // This is a simplified version - in production you'd want more robust extraction
+        // Apple's tokens don't expose display names directly
+        // We need to use the token's description or a mapping
+        // For now, try to extract from bundle ID
         let bundleID = extractBundleID(from: token)
+        
+        // If bundle ID extraction failed, return nil (will be handled by caller)
+        guard bundleID != "unknown.app" else {
+            return nil
+        }
         
         // Extract last component of bundle ID as a fallback
         let components = bundleID.split(separator: ".")
         if let last = components.last {
-            return String(last).capitalized
+            // Capitalize properly (e.g., "instagram" -> "Instagram")
+            let name = String(last)
+            return name.prefix(1).uppercased() + name.dropFirst()
         }
         
         return nil

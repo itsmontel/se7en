@@ -29,6 +29,15 @@ struct MainTabView: View {
                 }
                 .tag(0)
             
+            BlockingView()
+                .tabItem {
+                    VStack {
+                        Image(systemName: "hand.raised.fill")
+                        Text("Blocking")
+                    }
+                }
+                .tag(1)
+            
             GoalsView()
                 .tabItem {
                     VStack {
@@ -36,22 +45,13 @@ struct MainTabView: View {
                         Text("Stats")
                     }
                 }
-                .tag(1)
+                .tag(2)
             
             AchievementsView()
                 .tabItem {
                     VStack {
                         Image(systemName: "trophy.fill")
                         Text("Achievements")
-                    }
-                }
-                .tag(2)
-            
-            SubscriptionView()
-                .tabItem {
-                    VStack {
-                        Image(systemName: "creditcard.fill")
-                        Text("Credits")
                     }
                 }
                 .tag(3)

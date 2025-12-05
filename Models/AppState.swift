@@ -9,6 +9,7 @@ import FamilyControls
 extension Notification.Name {
     static let screenTimeDataUpdated = Notification.Name("screenTimeDataUpdated")
     static let appBlocked = Notification.Name("appBlocked")
+    static let appUnblocked = Notification.Name("appUnblocked")
 }
 
 class AppState: ObservableObject {
@@ -80,6 +81,9 @@ class AppState: ObservableObject {
     }
     
     private func loadInitialData() {
+        // Clean up mock apps first (before loading)
+        coreDataManager.cleanupMockApps()
+        
         loadAchievements()
         loadUserProfile()
         loadCurrentWeekData()
@@ -175,6 +179,9 @@ class AppState: ObservableObject {
         // Clean up expired restrictions before loading
         cleanupExpiredRestrictions()
         
+        // Clean up mock apps that don't have Screen Time tokens
+        coreDataManager.cleanupMockApps()
+        
         let goals = coreDataManager.getActiveAppGoals()
         print("📊 Loading \(goals.count) app goals from Core Data")
         
@@ -189,9 +196,17 @@ class AppState: ObservableObject {
         }
         
         // Convert to MonitoredApp format for dashboard compatibility
-        monitoredApps = goals.map { goal in
+        // ONLY include apps that have Screen Time tokens (are actually connected via Screen Time API)
+        let screenTimeService = ScreenTimeService.shared
+        monitoredApps = goals.compactMap { goal in
             let appName = goal.appName ?? "Unknown"
             let bundleID = goal.appBundleID ?? ""
+            
+            // ONLY show apps that have Screen Time tokens (are connected via FamilyActivityPicker)
+            guard screenTimeService.hasSelection(for: bundleID) else {
+                print("⚠️ Skipping \(appName) - no Screen Time token (not connected via Screen Time API)")
+                return nil
+            }
             
             // Get effective daily limit (includes extensions for today)
             let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: bundleID)
@@ -207,7 +222,7 @@ class AppState: ObservableObject {
             )
         }
         
-        print("✅ Loaded \(userGoals.count) user goals and \(monitoredApps.count) monitored apps")
+        print("✅ Loaded \(userGoals.count) user goals and \(monitoredApps.count) monitored apps (only Screen Time connected apps)")
         
         // Convert to AppUsage format for dashboard display
         appUsage = userGoals.map { goal in
@@ -246,17 +261,8 @@ class AppState: ObservableObject {
     }
     
     private func getAppIcon(for appName: String) -> String {
-        let icons: [String: String] = [
-            "Instagram": "camera.circle.fill",
-            "TikTok": "music.note.circle.fill",
-            "X": "bubble.left.circle.fill",
-            "Twitter": "bubble.left.circle.fill",
-            "Facebook": "person.2.circle.fill",
-            "Snapchat": "camera.filters",
-            "YouTube": "play.circle.fill",
-            "Reddit": "text.bubble.fill"
-        ]
-        return icons[appName] ?? "app.circle.fill"
+        // Use generic app icon - Screen Time API provides real app icons
+        return "app.circle.fill"
     }
     
     private func cleanupExpiredRestrictions() {
@@ -284,19 +290,8 @@ class AppState: ObservableObject {
     }
     
     private func getAppColor(for appName: String) -> Color {
-        let colorMap = [
-            "Instagram": Color.pink,
-            "X": Color.black,
-            "Facebook": Color.blue,
-            "TikTok": Color.black,
-            "Snapchat": Color.yellow,
-            "YouTube": Color.red,
-            "Reddit": Color.orange,
-            "WhatsApp": Color.green,
-            "Telegram": Color.blue,
-            "Discord": Color.indigo
-        ]
-        return colorMap[appName] ?? Color.primary
+        // Use generic primary color - Screen Time API provides real app data
+        return Color.primary
     }
     
     private func loadUnlockedAchievements() {
@@ -314,7 +309,8 @@ class AppState: ObservableObject {
     }
     
     func loadAchievements() {
-        achievements = Achievement.mockAchievements
+        // Load real achievements - all achievements are defined, unlock status is checked dynamically
+        achievements = Achievement.allAchievements
     }
     
     // MARK: - Achievement System
@@ -370,14 +366,6 @@ class AppState: ObservableObject {
         // Update onboarding status if this is the first app
         checkOnboardingStatus()
         
-        // Setup monitoring if Screen Time is authorized
-        if isScreenTimeAuthorized {
-            let goals = coreDataManager.getActiveAppGoals()
-            Task {
-                screenTimeService.setupMonitoring(for: goals)
-            }
-        }
-        
         checkAchievements()
     }
     
@@ -385,19 +373,22 @@ class AppState: ObservableObject {
     
     func requestScreenTimeAuthorization() async throws {
         try await screenTimeService.requestAuthorization()
-        
-        // After authorization, set up monitoring for existing goals
-        if screenTimeService.isAuthorized {
-            let goals = coreDataManager.getActiveAppGoals()
-            screenTimeService.setupMonitoring(for: goals)
-        }
     }
     
-    func addAppGoalFromFamilySelection(_ selection: FamilyActivitySelection, appName: String, dailyLimitMinutes: Int) {
+    func addAppGoalFromFamilySelection(_ selection: FamilyActivitySelection, appName: String, dailyLimitMinutes: Int, bundleID: String? = nil) {
         print("🔍 Adding app goal from Family Activity selection: \(appName)")
         
+        // Generate bundle ID if not provided
+        let finalBundleID = bundleID ?? "app.\(appName.lowercased().replacingOccurrences(of: " ", with: "")).\(UUID().uuidString.prefix(8))"
+        print("🔍 Using bundle ID: \(finalBundleID)")
+        
         // Use Screen Time service to handle the selection
-        screenTimeService.addAppGoalFromSelection(selection, appName: appName, dailyLimitMinutes: dailyLimitMinutes)
+        screenTimeService.addAppForMonitoring(
+            selection: selection,
+            appName: appName,
+            bundleID: finalBundleID,
+            dailyLimitMinutes: dailyLimitMinutes
+        )
         
         // Refresh local data
         loadAppGoals()
@@ -413,28 +404,18 @@ class AppState: ObservableObject {
         if let goal = goals.first(where: { $0.id == goalId }) {
             coreDataManager.updateAppGoal(goal, dailyLimitMinutes: dailyLimitMinutes)
             loadAppGoals()
-            
-            // Re-setup monitoring with new limits
-            if isScreenTimeAuthorized {
-                Task {
-                    screenTimeService.setupMonitoring(for: coreDataManager.getActiveAppGoals())
-                }
-            }
         }
     }
     
     func deleteAppGoal(_ goalId: UUID) {
         let goals = coreDataManager.getActiveAppGoals()
         if let goal = goals.first(where: { $0.id == goalId }) {
+            // Remove from Screen Time service
+            if let bundleID = goal.appBundleID {
+                screenTimeService.removeApp(bundleID: bundleID)
+            }
             coreDataManager.deleteAppGoal(goal)
             loadAppGoals()
-            
-            // Re-setup monitoring
-            if isScreenTimeAuthorized {
-                Task {
-                    screenTimeService.setupMonitoring(for: coreDataManager.getActiveAppGoals())
-                }
-            }
         }
     }
     
@@ -573,12 +554,25 @@ class AppState: ObservableObject {
         // Refresh Screen Time usage data if authorized - move to background
         if isScreenTimeAuthorized {
             Task {
+                // Refresh usage for all monitored apps
                 await screenTimeService.refreshAllAppUsage()
                 
                 // Reload app goals after usage refresh on main thread
                 await MainActor.run {
                     self.loadAppGoals()
                 }
+            }
+        }
+    }
+    
+    // Refresh screen time data specifically (for dashboard)
+    func refreshScreenTimeData() {
+        guard isScreenTimeAuthorized else { return }
+        
+        Task {
+            await screenTimeService.refreshAllAppUsage()
+            await MainActor.run {
+                self.loadAppGoals()
             }
         }
     }

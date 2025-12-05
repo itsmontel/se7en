@@ -188,7 +188,41 @@ class CoreDataManager: ObservableObject {
         request.predicate = NSPredicate(format: "isActive == YES")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \AppGoal.appName, ascending: true)]
         
-        return (try? context.fetch(request)) ?? []
+        let allGoals = (try? context.fetch(request)) ?? []
+        
+        // Filter out apps that don't have Screen Time tokens (mock apps)
+        let screenTimeService = ScreenTimeService.shared
+        return allGoals.filter { goal in
+            guard let bundleID = goal.appBundleID else { return false }
+            // Only return apps that have Screen Time tokens
+            return screenTimeService.hasSelection(for: bundleID)
+        }
+    }
+    
+    // Clean up mock apps that don't have Screen Time tokens
+    func cleanupMockApps() {
+        let request: NSFetchRequest<AppGoal> = AppGoal.fetchRequest()
+        request.predicate = NSPredicate(format: "isActive == YES")
+        
+        guard let allGoals = try? context.fetch(request) else { return }
+        
+        let screenTimeService = ScreenTimeService.shared
+        var deletedCount = 0
+        
+        for goal in allGoals {
+            guard let bundleID = goal.appBundleID else { continue }
+            // Delete apps that don't have Screen Time tokens (mock apps)
+            if !screenTimeService.hasSelection(for: bundleID) {
+                print("🗑️ Deleting mock app: \(goal.appName ?? "Unknown")")
+                context.delete(goal)
+                deletedCount += 1
+            }
+        }
+        
+        if deletedCount > 0 {
+            save()
+            print("✅ Deleted \(deletedCount) mock app(s) without Screen Time tokens")
+        }
     }
     
     func updateAppGoal(_ goal: AppGoal, dailyLimitMinutes: Int) {

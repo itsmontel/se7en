@@ -1,7 +1,8 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Monitored App
-struct MonitoredApp: Identifiable {
+struct MonitoredApp: Identifiable, Equatable {
     let id = UUID()
     var name: String
     var icon: String // SF Symbol name
@@ -35,6 +36,41 @@ struct MonitoredApp: Identifiable {
         } else {
             return .success
         }
+    }
+    
+    // Equatable conformance
+    static func == (lhs: MonitoredApp, rhs: MonitoredApp) -> Bool {
+        return lhs.name == rhs.name &&
+               lhs.icon == rhs.icon &&
+               lhs.dailyLimit == rhs.dailyLimit &&
+               lhs.usedToday == rhs.usedToday &&
+               lhs.isEnabled == rhs.isEnabled &&
+               colorComponentsEqual(lhs.color, rhs.color)
+    }
+    
+    // Helper to compare Color values
+    private static func colorComponentsEqual(_ lhs: Color, _ rhs: Color) -> Bool {
+        // Convert colors to UIColor and compare components
+        let lhsUIColor = UIColor(lhs)
+        let rhsUIColor = UIColor(rhs)
+        
+        var lhsRed: CGFloat = 0
+        var lhsGreen: CGFloat = 0
+        var lhsBlue: CGFloat = 0
+        var lhsAlpha: CGFloat = 0
+        
+        var rhsRed: CGFloat = 0
+        var rhsGreen: CGFloat = 0
+        var rhsBlue: CGFloat = 0
+        var rhsAlpha: CGFloat = 0
+        
+        lhsUIColor.getRed(&lhsRed, green: &lhsGreen, blue: &lhsBlue, alpha: &lhsAlpha)
+        rhsUIColor.getRed(&rhsRed, green: &rhsGreen, blue: &rhsBlue, alpha: &rhsAlpha)
+        
+        return abs(lhsRed - rhsRed) < 0.001 &&
+               abs(lhsGreen - rhsGreen) < 0.001 &&
+               abs(lhsBlue - rhsBlue) < 0.001 &&
+               abs(lhsAlpha - rhsAlpha) < 0.001
     }
 }
 
@@ -125,10 +161,6 @@ struct Achievement: Identifiable {
     let rarity: AchievementRarity
     let isUnlocked: (AppState) -> Bool
     
-    static var mockAchievements: [Achievement] {
-        allAchievements
-    }
-    
     static let allAchievements: [Achievement] = [
         // MARK: - Getting Started (Easy)
         Achievement(
@@ -139,7 +171,10 @@ struct Achievement: Identifiable {
             color: .success,
             category: .gettingStarted,
             rarity: .common,
-            isUnlocked: { _ in true } // Always unlocked for demo
+            isUnlocked: { appState in 
+                // Check if user has completed at least one day
+                !appState.dailyHistory.isEmpty || appState.monitoredApps.count > 0
+            }
         ),
         
         Achievement(
@@ -297,7 +332,12 @@ struct Achievement: Identifiable {
             color: .yellow,
             category: .habits,
             rarity: .common,
-            isUnlocked: { _ in true } // Mock unlocked
+            isUnlocked: { appState in
+                // Check if user has checked the app before 8 AM for 7 days
+                // This requires tracking app open times in CoreData
+                // For now, return false - implement when app open tracking is added
+                false
+            }
         ),
         
         Achievement(

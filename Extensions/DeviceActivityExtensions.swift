@@ -7,11 +7,11 @@ extension DeviceActivityName {
 }
 
 extension DeviceActivityEvent.Name {
-    static func warningEvent(for bundleID: String) -> DeviceActivityEvent.Name {
-        DeviceActivityEvent.Name("se7en.warning.\(bundleID)")
+    static func warning(for bundleID: String) -> DeviceActivityEvent.Name {
+        DeviceActivityEvent.Name("warning.\(bundleID)")
     }
     
-    static func limitEvent(for bundleID: String) -> DeviceActivityEvent.Name {
-        DeviceActivityEvent.Name("se7en.limit.\(bundleID)")
+    static func limit(for bundleID: String) -> DeviceActivityEvent.Name {
+        DeviceActivityEvent.Name("limit.\(bundleID)")
     }
 }

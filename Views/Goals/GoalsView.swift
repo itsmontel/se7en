@@ -171,14 +171,6 @@ struct GoalsView: View {
                         // Coach Insights (moved to bottom, showing all insights)
                         GoalRecommendationsCard(recommendations: recommendations)
                         .padding(.horizontal, 20)
-                        
-                        // Monitored Apps
-                        VStack(spacing: 12) {
-                            ForEach(appState.monitoredApps) { app in
-                                GoalCard(app: binding(for: app))
-                            }
-                        }
-                        .padding(.horizontal, 20)
                         .padding(.bottom, 32)
                         }
                         .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
@@ -493,11 +485,21 @@ struct WeeklyHealthReport: View {
         
         // For today, use actual data
         if isToday {
+            // For new users with no apps or no usage, return 0
+            guard !appState.monitoredApps.isEmpty else {
+                return (0, .sick)
+            }
+            
             let totalUsage = appState.monitoredApps.reduce(0) { $0 + $1.usedToday }
             let totalLimits = appState.monitoredApps.reduce(0) { $0 + $1.dailyLimit }
             
             guard totalLimits > 0 else {
-                return (100, .fullHealth)
+                return (0, .sick)
+            }
+            
+            // If no usage yet today, return 0 (not 100)
+            guard totalUsage > 0 else {
+                return (0, .sick)
             }
             
             let usagePercentage = Double(totalUsage) / Double(totalLimits)
@@ -525,9 +527,9 @@ struct WeeklyHealthReport: View {
             return (score, mood)
         }
         
-        // For past days, return 0 for new users (no historical data)
-        // In the future, this could be populated from CoreData if we track daily health
-        return (0, .content)
+        // For past days, return 0 if no actual data exists
+        // In the future, this could load from CoreData if historical data is stored
+        return (0, .sick)
     }
     
     var body: some View {
@@ -643,8 +645,9 @@ struct AppLaunchesReport: View {
         }
     }
     
-    // Get app launches per app for a specific date
-    private func getAppLaunches(for app: MonitoredApp, on date: Date) -> Int {
+    // Get TOTAL app launches for a specific date (all apps combined)
+    // Returns 0 until real Screen Time API data is available
+    private func getTotalLaunches(for date: Date) -> Int {
         let calendar = Calendar.current
         let isToday = calendar.isDateInToday(date)
         let isFuture = date > Date()
@@ -653,32 +656,11 @@ struct AppLaunchesReport: View {
             return 0
         }
         
-        if isToday {
-            // For today, estimate based on app usage - more usage = more launches
-            // Rough estimate: 2 minutes per launch
-            return max(1, app.usedToday / 2)
-        }
-        
-        // For past days, simulate based on app usage pattern
-        // More active apps have more launches
-        let baseLaunches = max(1, app.usedToday / 3)
-        let daysAgo = calendar.dateComponents([.day], from: date, to: Date()).day ?? 0
-        return max(1, baseLaunches - (daysAgo * 2))
+        // NO MOCK DATA - Return 0 until DeviceActivityReport provides real launch data
+        // In the future, this will use Screen Time API to get actual app launch counts
+        return 0
     }
     
-    // Get total launches for a day (sum of all apps)
-    private func getTotalLaunches(for date: Date) -> Int {
-        appState.monitoredApps.reduce(0) { total, app in
-            total + getAppLaunches(for: app, on: date)
-        }
-    }
-    
-    // Get total launches for an app across the week
-    private func getTotalLaunchesForApp(_ app: MonitoredApp) -> Int {
-        weekDays.reduce(0) { total, date in
-            total + getAppLaunches(for: app, on: date)
-        }
-    }
     
     // Get weekly usage (in minutes) for an app
     private func getWeeklyUsage(for app: MonitoredApp) -> Int {
@@ -694,16 +676,12 @@ struct AppLaunchesReport: View {
             }
             
             if isToday {
-                // Today's usage
+                // Today's usage - use real data
                 totalMinutes += app.usedToday
             } else {
-                // For past days, estimate based on today's usage pattern
-                // More active apps have more usage, with some variation
-                let baseUsage = app.usedToday
-                let daysAgo = calendar.dateComponents([.day], from: date, to: Date()).day ?? 0
-                // Simulate slightly decreasing usage as days get older
-                let estimatedUsage = max(0, baseUsage - (daysAgo * 2))
-                totalMinutes += estimatedUsage
+                // For past days, return 0 (no historical usage data available)
+                // In the future, this could load from CoreData if historical usage is stored
+                // For now, only count today's usage
             }
         }
         
@@ -712,11 +690,12 @@ struct AppLaunchesReport: View {
     
     // Get top 5 apps by weekly usage (hours and minutes)
     private var topApps: [(name: String, weeklyUsageMinutes: Int, icon: String, color: Color)] {
-        // Calculate total weekly usage per app
+        // Calculate total weekly usage per app - only include apps with actual usage
         let sortedApps = appState.monitoredApps
             .map { app in
                 (name: app.name, weeklyUsageMinutes: getWeeklyUsage(for: app), icon: app.icon, color: app.color)
             }
+            .filter { $0.weeklyUsageMinutes > 0 } // Only show apps with actual usage
             .sorted { $0.weeklyUsageMinutes > $1.weeklyUsageMinutes }
             .prefix(5)
         
@@ -724,12 +703,8 @@ struct AppLaunchesReport: View {
     }
     
     private var maxLaunches: Int {
-        var maxLaunch = 0
-        for app in appState.monitoredApps {
-            for date in weekDays {
-                let launches = getAppLaunches(for: app, on: date)
-                maxLaunch = max(maxLaunch, launches)
-            }
+        let maxLaunch = weekDays.reduce(0) { maxTotal, date in
+            max(maxTotal, getTotalLaunches(for: date))
         }
         return max(maxLaunch, 50) // Minimum scale of 50
     }
@@ -740,53 +715,44 @@ struct AppLaunchesReport: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.textPrimary)
             
-            // Show launches per app per day
-            VStack(spacing: 12) {
-                ForEach(appState.monitoredApps.prefix(5), id: \.id) { app in
+            // Show TOTAL launches per day (Monday-Sunday) - all apps combined
                     VStack(alignment: .leading, spacing: 12) {
-                        // App header
-                        HStack(spacing: 8) {
-                            ZStack {
-                                Circle()
-                                    .fill(app.color.opacity(0.2))
-                                    .frame(width: 32, height: 32)
-                                
-                                Image(systemName: app.icon)
+                // Header showing total for week
+                HStack {
+                    Text("Total Launches This Week")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(app.color)
-                            }
-                            
-                            Text(app.name)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.textPrimary)
+                        .foregroundColor(.textSecondary)
                             
                             Spacer()
                             
-                            // Total for week
-                            Text("\(getTotalLaunchesForApp(app))")
-                                .font(.system(size: 14, weight: .bold))
+                    let weekTotal = weekDays.reduce(0) { total, date in
+                        total + getTotalLaunches(for: date)
+                    }
+                    Text("\(weekTotal)")
+                        .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(.success)
                         }
+                .padding(.horizontal, 12)
                         
-                        // Daily launches bars
+                // Daily launches bars - showing TOTAL launches per day
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
+                    HStack(spacing: 12) {
                                 ForEach(weekDays, id: \.self) { date in
-                                    let launches = getAppLaunches(for: app, on: date)
+                            let totalLaunches = getTotalLaunches(for: date)
                                     let dayName = dayAbbreviation(for: date)
                                     let isToday = Calendar.current.isDateInToday(date)
                                     let isFuture = date > Date()
                                     
-                                    VStack(spacing: 6) {
+                            VStack(spacing: 8) {
                                         // Day label
                                         Text(dayName)
-                                            .font(.system(size: 10, weight: .medium))
-                                            .foregroundColor(isFuture ? .textSecondary.opacity(0.5) : .textSecondary)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(isFuture ? .textSecondary.opacity(0.5) : (isToday ? .primary : .textSecondary))
                                         
-                                        // Bar
-                                        if !isFuture && launches > 0 {
+                                // Bar showing total launches for the day
+                                if !isFuture {
                                             VStack(spacing: 4) {
-                                                RoundedRectangle(cornerRadius: 4)
+                                        RoundedRectangle(cornerRadius: 6)
                                                     .fill(
                                                         LinearGradient(
                                                             colors: isToday ? [Color.success, Color.success.opacity(0.8)] : [Color.success.opacity(0.7), Color.success.opacity(0.5)],
@@ -794,35 +760,32 @@ struct AppLaunchesReport: View {
                                                             endPoint: .bottom
                                                         )
                                                     )
-                                                    .frame(width: 24, height: CGFloat(min(60, max(8, launches * 2))))
+                                            .frame(width: 40, height: CGFloat(min(120, max(12, totalLaunches * 2))))
                                                 
-                                                Text("\(launches)")
-                                                    .font(.system(size: 9, weight: .bold))
+                                        Text("\(totalLaunches)")
+                                            .font(.system(size: 11, weight: .bold))
                                                     .foregroundColor(isToday ? .success : .textSecondary)
                                             }
                                         } else {
                                             VStack(spacing: 4) {
-                                                RoundedRectangle(cornerRadius: 4)
+                                        RoundedRectangle(cornerRadius: 6)
                                                     .fill(Color.gray.opacity(0.1))
-                                                    .frame(width: 24, height: 8)
+                                            .frame(width: 40, height: 12)
                                                 
                                                 Text("-")
-                                                    .font(.system(size: 9, weight: .medium))
+                                            .font(.system(size: 11, weight: .medium))
                                                     .foregroundColor(.textSecondary.opacity(0.3))
                                             }
                                         }
                                     }
                                 }
                             }
-                            .padding(.horizontal, 4)
+                    .padding(.horizontal, 12)
                         }
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
+            .padding(.vertical, 12)
                     .background(Color.cardBackground.opacity(0.5))
                     .cornerRadius(12)
-                }
-            }
             
             Divider()
                 .padding(.vertical, 8)

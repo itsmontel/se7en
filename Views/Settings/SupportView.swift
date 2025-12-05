@@ -143,7 +143,7 @@ struct SupportView: View {
     }
     
     private func sendMessage() {
-        // Simulate sending message
+        // Show success message (in production, this would send to backend)
         withAnimation(.spring()) {
             showSuccessMessage = true
         }

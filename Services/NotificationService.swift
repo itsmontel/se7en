@@ -40,6 +40,23 @@ class NotificationService: ObservableObject {
         }
     }
     
+    func sendAppUnblockedNotification(appName: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "✅ App Unblocked"
+        content.body = "\(appName) has been unblocked. You can use it now!"
+        content.sound = .default
+        content.categoryIdentifier = "APP_UNBLOCKED"
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(identifier: "app_unblocked_\(appName)_\(Date().timeIntervalSince1970)", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule app unblocked notification: \(error)")
+            }
+        }
+    }
+    
     func sendCreditUsedForUnblockNotification(appName: String, creditsRemaining: Int) {
         let content = UNMutableNotificationContent()
         content.title = "💳 Credit Used"

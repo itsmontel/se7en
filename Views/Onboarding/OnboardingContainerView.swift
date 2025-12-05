@@ -181,16 +181,8 @@ struct OnboardingContainerView: View {
     }
     
     private func completeOnboarding() {
-        // Save selected apps and limits
-        for (appName, limit) in appLimits {
-            if selectedApps.contains(appName) {
-                // Get bundle ID for the app
-                let bundleID = "com.example.\(appName.lowercased())" // Placeholder
-                appState.addAppGoal(appName: appName, bundleID: bundleID, dailyLimitMinutes: limit)
-            }
-        }
-        
-        // Complete onboarding and persist
+        // Apps are already saved by SetGoalsView with real bundle IDs from FamilyActivityPicker
+        // Just complete onboarding and persist
         appState.completeOnboarding()
         HapticFeedback.success.trigger()
     }

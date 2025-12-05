@@ -52,6 +52,18 @@ struct SettingsView: View {
                                 }
                             }
                             
+                            // Credits
+                            SettingsGroup(title: "Credits") {
+                                NavigationLink(destination: SubscriptionView()) {
+                                    SettingRowContent(
+                                        icon: "creditcard.fill",
+                                        color: .blue,
+                                        title: "Manage Credits",
+                                        subtitle: "\(appState.currentCredits)/7 credits remaining"
+                                    )
+                                }
+                            }
+                            
                             // Preferences
                             SettingsGroup(title: "Preferences") {
                                 SettingToggle(

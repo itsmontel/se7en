@@ -63,6 +63,7 @@
 		1055 /* Views/Onboarding/OnboardingBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2054 /* Views/Onboarding/OnboardingBackButton.swift */; };
 		1056 /* Views/Dashboard/PetHealthCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2052 /* Views/Dashboard/PetHealthCard.swift */; };
 		1057 /* Views/Onboarding/OnboardingHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2055 /* Views/Onboarding/OnboardingHeader.swift */; };
+		1058 /* Views/Blocking/BlockingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4002 /* Views/Blocking/BlockingView.swift */; };
 		1078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3026 /* Assets.xcassets */; };
 		1079 /* dogintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3027 /* dogintro.mp4 */; };
 		1080 /* catintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3028 /* catintro.mp4 */; };
@@ -147,6 +148,7 @@
 		3034 /* Components/StreakCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakCelebrationView.swift; sourceTree = "<group>"; };
 		3037 /* Components/AchievementCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementCelebrationView.swift; sourceTree = "<group>"; };
 		4000 /* Views/Dashboard/ExtendLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/ExtendLimitSheet.swift; sourceTree = "<group>"; };
+		4002 /* Views/Blocking/BlockingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Blocking/BlockingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -241,6 +243,13 @@
 			);
 			sourceTree = "<group>";
 		};
+		109 = {
+			isa = PBXGroup;
+			children = (
+				4002 /* Views/Blocking/BlockingView.swift */,
+			);
+			sourceTree = "<group>";
+		};
 		199 = {
 			isa = PBXGroup;
 			children = (
@@ -309,6 +318,7 @@
 				106,
 				107,
 				108,
+				109,
 			);
 			sourceTree = "<group>";
 		};
@@ -479,6 +489,7 @@
 				3035 /* Components/StreakCelebrationView.swift in Sources */,
 				3036 /* Components/AchievementCelebrationView.swift in Sources */,
 				1030 /* Views/Achievements/AchievementsView.swift in Sources */,
+				1058 /* Views/Blocking/BlockingView.swift in Sources */,
 				1031 /* Views/Settings/FAQView.swift in Sources */,
 				1032 /* Views/Settings/SupportView.swift in Sources */,
 				1033 /* Views/Settings/PrivacyPolicyView.swift in Sources */,

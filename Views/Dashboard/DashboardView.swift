@@ -18,51 +18,172 @@ struct DashboardView: View {
     @State private var showingExtendLimitSheet = false
     @State private var appToExtend: MonitoredApp? = nil
     
-    // Cache health score to avoid recalculating on every scroll
-    @State private var cachedHealthScore: Int = 100
-    @State private var cachedHealthColor: Color = .green
-    
     private var healthScore: Int {
-        // Use cached value, recalculate only when monitored apps change
-        return cachedHealthScore
-    }
-    
-    private var healthColor: Color {
-        return cachedHealthColor
-    }
-    
-    private func updateHealthScore() {
         // Calculate health based on actual app usage
+        // For new users with no apps or no usage, return 100 (start at full health)
+        guard !appState.monitoredApps.isEmpty else { return 100 }
+        
         let totalUsageToday = appState.monitoredApps.reduce(0) { $0 + $1.usedToday }
         let totalLimits = appState.monitoredApps.reduce(0) { $0 + $1.dailyLimit }
         
-        guard totalLimits > 0 else {
-            cachedHealthScore = 100
-            cachedHealthColor = .green
-            return
-        }
+        guard totalLimits > 0 else { return 100 }
+        
+        // If no usage yet today, return 100 (start at full health)
+        guard totalUsageToday > 0 else { return 100 }
         
         let usagePercentage = Double(totalUsageToday) / Double(totalLimits)
         
         // Convert usage percentage to health score (inverse relationship)
-        let score: Int
         switch usagePercentage {
-        case 0...0.5: score = 100 // Under 50% usage = perfect health
-        case 0.5...0.7: score = 80 // 50-70% usage = good health
-        case 0.7...0.9: score = 60 // 70-90% usage = okay health
-        case 0.9...1.1: score = 40 // 90-110% usage = poor health
-        default: score = 20 // Over 110% usage = very poor health
+        case 0...0.5: return 100 // Under 50% usage = perfect health
+        case 0.5...0.7: return 80 // 50-70% usage = good health
+        case 0.7...0.9: return 60 // 70-90% usage = okay health
+        case 0.9...1.1: return 40 // 90-110% usage = poor health
+        default: return 20 // Over 110% usage = very poor health
         }
+    }
+    
+    @State private var totalScreenTimeMinutes: Int = 0
+    @State private var appsUsedToday: Int = 0
+    @State private var topAppToday: TopAppData?
+    @State private var isLoadingScreenTime = false
+    @State private var screenTimeError: String?
+    
+    // Calculate total screen time today (all apps combined)
+    private var totalScreenTimeToday: Int {
+        totalScreenTimeMinutes
+    }
+    
+    // Load comprehensive screen time data from Screen Time API
+    private func loadScreenTimeData() {
+        guard !isLoadingScreenTime else { return }
         
-        cachedHealthScore = score
+        isLoadingScreenTime = true
+        screenTimeError = nil
         
-        // Update color
-        switch score {
-        case 0..<25: cachedHealthColor = .red
-        case 25..<50: cachedHealthColor = .orange
-        case 50..<75: cachedHealthColor = .yellow
-        case 75...100: cachedHealthColor = .green
-        default: cachedHealthColor = .green
+        Task {
+            let screenTimeService = ScreenTimeService.shared
+            
+            print("🔍 Loading Screen Time data from API...")
+            print("📊 Authorization status: \(screenTimeService.isAuthorized)")
+            
+            // Check authorization first
+            guard screenTimeService.isAuthorized else {
+                await MainActor.run {
+                    self.totalScreenTimeMinutes = 0
+                    self.appsUsedToday = 0
+                    self.topAppToday = nil
+                    self.isLoadingScreenTime = false
+                    self.screenTimeError = "Screen Time not authorized. Please enable Screen Time access in Settings."
+                }
+                return
+            }
+            
+            // Check if we have any monitored apps
+            let goals = CoreDataManager.shared.getActiveAppGoals()
+            let connectedGoals = goals.filter { goal in
+                guard let bundleID = goal.appBundleID else { return false }
+                return screenTimeService.hasSelection(for: bundleID)
+            }
+            
+            print("📊 Total goals: \(goals.count), Connected goals: \(connectedGoals.count)")
+            
+            if connectedGoals.isEmpty {
+                await MainActor.run {
+                    self.totalScreenTimeMinutes = 0
+                    self.appsUsedToday = 0
+                    self.topAppToday = nil
+                    self.isLoadingScreenTime = false
+                    self.screenTimeError = "No apps are being monitored yet. Add apps in the Blocking section."
+                }
+                return
+            }
+            
+            // Get total screen time and apps used from ScreenTimeService
+            let (totalMinutes, appsUsed) = await screenTimeService.getTotalScreenTimeToday()
+            
+            // Get top app
+            let topAppResult = await screenTimeService.getTopAppToday()
+            
+            // Convert top app result to TopAppData if available
+            var topAppData: TopAppData? = nil
+            if let topApp = topAppResult {
+                if let goal = connectedGoals.first(where: { $0.appBundleID == topApp.bundleID }) {
+                    topAppData = TopAppData(
+                        name: topApp.name,
+                        bundleID: topApp.bundleID,
+                        minutesUsed: topApp.minutes,
+                        dailyLimit: Int(goal.dailyLimitMinutes)
+                    )
+                }
+            }
+            
+            await MainActor.run {
+                self.totalScreenTimeMinutes = totalMinutes
+                self.appsUsedToday = appsUsed
+                self.topAppToday = topAppData
+                self.isLoadingScreenTime = false
+                
+                // Only show error if we have connected apps but no usage yet
+                // This is normal - usage data appears when DeviceActivityMonitor fires events
+                if totalMinutes == 0 && appsUsed == 0 && !connectedGoals.isEmpty {
+                    self.screenTimeError = "Usage data will appear as you use monitored apps. DeviceActivityMonitor tracks usage when thresholds are reached."
+                } else {
+                    self.screenTimeError = nil
+                }
+                
+                print("✅ Loaded Screen Time data: \(totalMinutes) minutes, \(appsUsed) apps")
+                if let top = topAppData {
+                    print("📱 Top app: \(top.name) - \(top.minutesUsed) minutes")
+                }
+            }
+        }
+    }
+    
+    // Format screen time as "Xh Ym"
+    private func formatScreenTime(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let mins = minutes % 60
+        
+        if hours > 0 && mins > 0 {
+            return "\(hours)h \(mins)m"
+        } else if hours > 0 {
+            return "\(hours)h"
+        } else {
+            return "\(mins)m"
+        }
+    }
+    
+    // Get top 10 apps by usage today - ONLY apps connected via Screen Time API
+    private var topDistractions: [MonitoredApp] {
+        let coreDataManager = CoreDataManager.shared
+        let goals = coreDataManager.getActiveAppGoals()
+        
+        return appState.monitoredApps
+            .filter { app in
+                // Only include apps that have Screen Time tokens (are actually connected)
+                // Find the goal for this app
+                if let goal = goals.first(where: { $0.appName == app.name }),
+                   let bundleID = goal.appBundleID {
+                    // Check if app has a token selection (is connected via Screen Time API)
+                    // Access via internal property - apps must be connected via FamilyActivityPicker
+                    let screenTimeService = ScreenTimeService.shared
+                    return screenTimeService.hasSelection(for: bundleID)
+                }
+                return false
+            }
+            .sorted { $0.usedToday > $1.usedToday }
+            .prefix(10)
+            .map { $0 }
+    }
+    
+    private var healthColor: Color {
+        switch healthScore {
+        case 0..<25: return .red
+        case 25..<50: return .orange
+        case 50..<75: return .yellow
+        case 75...100: return .green
+        default: return .green
         }
     }
     
@@ -73,153 +194,19 @@ struct DashboardView: View {
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        HStack {
-                            Spacer()
-                            VStack(spacing: 0) {
-                            // Header with greeting
-                            VStack(alignment: .leading, spacing: 12) {
-                            // Time-based greeting
-                            Text(timeBasedGreeting(userName: appState.userName))
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundColor(.textPrimary)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 12)
-                        .padding(.bottom, 16)
-                        
-                        // Pet name and credits on same line
-                        HStack(alignment: .center) {
-                            // Pet name (actual name, not type)
-                            if let pet = appState.userPet {
-                                Text(pet.name)
-                                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                                    .foregroundColor(.textPrimary)
-                            }
-                            
-                            Spacer()
-                            
-                            // Circular credits display
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [Color.blue, Color.purple]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 64, height: 64)
-                                
-                                VStack(spacing: 2) {
-                                    Text("\(appState.currentCredits)")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundColor(.white)
-                                    
-                                    Text("credits")
-                                        .font(.system(size: 9, weight: .medium))
-                                        .foregroundColor(.white.opacity(0.9))
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-                        
-                        // Large pet illustration
-                        if appState.userPet != nil {
-                            let petImageName = "\(appState.userPet!.type.folderName.lowercased())fullhealth"
-                            Image(petImageName)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(height: 200)
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 24)
-                        }
-                        
-                        // Health score number (correlated with actual health)
-                        Text("\(healthScore)")
-                            .font(.system(size: 48, weight: .bold, design: .rounded))
-                            .foregroundColor(.textPrimary)
-                            .padding(.bottom, 12)
-                        
-                        // Health bar (color based on score) - slightly narrower
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(healthColor)
-                            .frame(height: 6)
-                            .padding(.horizontal, 32)
-                            .padding(.bottom, 10)
-                        
-                        // Health label only
-                        HStack {
-                            Spacer()
-                            Text("Health")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.textSecondary)
-                            Spacer()
-                        }
-                        .padding(.bottom, 24)
-                        
-                        // Divider
-                        Divider()
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 24)
-                        
-                        // App Usage
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("App Usage")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.textPrimary)
-                                .padding(.horizontal, 20)
-                            
-                            LazyVStack(spacing: 10) {
-                                ForEach(appState.monitoredApps, id: \.id) { app in
-                                    AppUsageCard(
-                                        app: app,
-                                        creditsRemaining: appState.currentCredits,
-                                        hasPaidAccountabilityFeeToday: appState.hasPaidAccountabilityFeeToday,
-                                        onUnblock: { handleUnblockApp(app) },
-                                        onExtend: { 
-                                            appToExtend = app
-                                            showingExtendLimitSheet = true
-                                        }
-                                    )
-                                    .padding(.horizontal, 20)
-                                }
-                                
-                                // Add App Button
-                                Button(action: {
-                                    showingAddAppSheet = true
-                                }) {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "plus.circle.fill")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(.blue)
-                                        
-                                        Text("Add App")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.blue)
-                                        
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 16)
-                                    .background(Color.blue.opacity(0.1))
-                                    .cornerRadius(12)
-                                }
-                                .padding(.horizontal, 20)
-                            }
-                        }
-                        .padding(.bottom, 24)
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 0) {
+                            headerSection
+                            petAndCreditsSection
+                            petImageSection
+                            healthSection
+                            screenTimeSection
+                            topDistractionsSection
                         }
                         .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
                         Spacer()
                     }
-                }
-                .onAppear {
-                    updateHealthScore()
-                }
-                .onChange(of: appState.monitoredApps.count) { _ in
-                    updateHealthScore()
                 }
                 
                 // Overlays
@@ -335,6 +322,406 @@ struct DashboardView: View {
         }
     }
     
+    // MARK: - View Sections
+    
+    private var headerSection: some View {
+                            VStack(alignment: .leading, spacing: 12) {
+                            Text(timeBasedGreeting(userName: appState.userName))
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundColor(.textPrimary)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                        .padding(.bottom, 16)
+    }
+                        
+    private var petAndCreditsSection: some View {
+                        HStack(alignment: .center) {
+                            if let pet = appState.userPet {
+                                Text(pet.name)
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .foregroundColor(.textPrimary)
+                            }
+                            
+                            Spacer()
+                            
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [Color.blue, Color.purple]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 64, height: 64)
+                                
+                                VStack(spacing: 2) {
+                                    Text("\(appState.currentCredits)")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(.white)
+                                    
+                                    Text("credits")
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+    }
+    
+    private var petImageSection: some View {
+        Group {
+            if let pet = appState.userPet {
+                let petImageName = "\(pet.type.folderName.lowercased())fullhealth"
+                            Image(petImageName)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(height: 200)
+                                .padding(.horizontal, 24)
+                                .padding(.bottom, 24)
+            }
+        }
+                        }
+                        
+    private var healthSection: some View {
+        VStack(spacing: 0) {
+                        Text("\(healthScore)")
+                            .font(.system(size: 48, weight: .bold, design: .rounded))
+                            .foregroundColor(.textPrimary)
+                            .padding(.bottom, 12)
+                        
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(healthColor)
+                            .frame(height: 6)
+                            .padding(.horizontal, 40)
+                            .padding(.bottom, 10)
+                        
+                        Text("Health")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                            .padding(.bottom, 24)
+                        
+                        Divider()
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 24)
+        }
+    }
+                        
+    private var screenTimeSection: some View {
+        VStack(spacing: 16) {
+            // Today's Screen Time Card
+                        VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                            Text("Today's Screen Time")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.textPrimary)
+                    
+                    Spacer()
+                    
+                    // Screen Time API Status
+                    HStack(spacing: 6) {
+                        let goals = CoreDataManager.shared.getActiveAppGoals()
+                        let connectedCount = goals.filter { goal in
+                            guard let bundleID = goal.appBundleID else { return false }
+                            return ScreenTimeService.shared.hasSelection(for: bundleID)
+                        }.count
+                        
+                        let statusColor: Color = {
+                            if !ScreenTimeService.shared.isAuthorized {
+                                return .red
+                            } else if connectedCount == 0 {
+                                return .orange
+                            } else {
+                                return .green
+                            }
+                        }()
+                        
+                        let statusText: String = {
+                            if !ScreenTimeService.shared.isAuthorized {
+                                return "Not Authorized"
+                            } else if connectedCount == 0 {
+                                return "No Apps"
+                            } else {
+                                return "Connected (\(connectedCount))"
+                            }
+                        }()
+                        
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 6, height: 6)
+                        
+                        Text(statusText)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                    }
+                }
+                                .padding(.horizontal, 20)
+                            
+                if isLoadingScreenTime {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Loading Screen Time data...")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                } else if let error = screenTimeError {
+                    // Show error or informational message
+                    let isError = error.contains("not authorized") || error.contains("Failed")
+                    
+                    VStack(spacing: 8) {
+                        Image(systemName: isError ? "exclamationmark.triangle.fill" : "info.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(isError ? .orange : .blue)
+                        
+                        Text(error)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                        
+                        if isError {
+                            Button("Retry") {
+                                loadScreenTimeData()
+                            }
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.blue)
+                            .padding(.top, 4)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                } else {
+                    // Show actual usage data
+                    HStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(formatScreenTime(totalScreenTimeToday))
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(.textPrimary)
+                            
+                            Text("Total time")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.textSecondary)
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("\(appsUsedToday)")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(.textPrimary)
+                            
+                            Text(appsUsedToday == 1 ? "app" : "apps")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.textSecondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .padding(.horizontal, 24)
+                }
+            }
+            .background(Color.cardBackground)
+            .cornerRadius(16)
+            .padding(.horizontal, 20)
+            
+            // Top App Today Card
+            if let topApp = topAppToday, topApp.minutesUsed > 0 {
+                topAppCard(topApp)
+            } else if !isLoadingScreenTime && screenTimeError == nil {
+                VStack(spacing: 8) {
+                    Image(systemName: "apps.iphone")
+                        .font(.system(size: 24, weight: .light))
+                        .foregroundColor(.textSecondary.opacity(0.5))
+                    
+                    Text("No app usage data yet")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.textSecondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            .background(Color.cardBackground)
+                            .cornerRadius(16)
+                            .padding(.horizontal, 20)
+            }
+                        }
+                        .padding(.bottom, 24)
+        .onAppear {
+            loadScreenTimeData()
+            appState.refreshScreenTimeData()
+        }
+        .onChange(of: appState.monitoredApps) { _ in
+            loadScreenTimeData()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .screenTimeDataUpdated)) { _ in
+            loadScreenTimeData()
+        }
+    }
+    
+    private func topAppCard(_ topApp: TopAppData) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Most Used App Today")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+                
+                if topApp.dailyLimit > 0 {
+                    Text("Limit: \(formatScreenTime(topApp.dailyLimit))")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            HStack(spacing: 16) {
+                // App Icon (generic since we can't easily get real icons)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(topApp.statusColor.opacity(0.1))
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Image(systemName: "app.fill")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(topApp.statusColor)
+                    )
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(topApp.name)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.textPrimary)
+                        .lineLimit(1)
+                    
+                    Text("\(formatScreenTime(topApp.minutesUsed)) used today")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(topApp.statusText)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(topApp.statusColor)
+                    
+                    if topApp.dailyLimit > 0 {
+                        Text("\(Int(topApp.progressPercentage * 100))%")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(topApp.statusColor)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            // Progress bar for app with limit
+            if topApp.dailyLimit > 0 {
+                ProgressView(value: min(1.0, topApp.progressPercentage))
+                    .progressViewStyle(LinearProgressViewStyle(tint: topApp.statusColor))
+                    .frame(height: 4)
+                    .padding(.horizontal, 20)
+            }
+        }
+        .padding(.vertical, 16)
+        .background(Color.cardBackground)
+        .cornerRadius(16)
+        .padding(.horizontal, 20)
+    }
+    
+    private var topDistractionsSection: some View {
+        Group {
+                        if !topDistractions.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Top Distractions")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.textPrimary)
+                                    .padding(.horizontal, 20)
+                                
+                                VStack(spacing: 8) {
+                                    ForEach(Array(topDistractions.enumerated()), id: \.element.id) { index, app in
+                            distractionRow(app: app, index: index)
+                        }
+                    }
+                    .padding(.vertical, 12)
+                    .background(Color.cardBackground)
+                    .cornerRadius(16)
+                    .padding(.horizontal, 20)
+                }
+                .padding(.bottom, 24)
+            }
+        }
+    }
+    
+    private func distractionRow(app: MonitoredApp, index: Int) -> some View {
+        VStack(spacing: 0) {
+                                        HStack(spacing: 12) {
+                                            Text("\(index + 1)")
+                                                .font(.system(size: 16, weight: .bold))
+                                                .foregroundColor(.textSecondary)
+                                                .frame(width: 24)
+                                            
+                                            Image(systemName: app.icon)
+                                                .font(.system(size: 20))
+                                                .foregroundColor(app.color)
+                                                .frame(width: 32)
+                                            
+                                            Text(app.name)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(.textPrimary)
+                                            
+                                            Spacer()
+                                            
+                                            Text(formatScreenTime(app.usedToday))
+                                                .font(.system(size: 15, weight: .semibold))
+                                                .foregroundColor(.textPrimary)
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+                                        .background(Color.cardBackground)
+                                        .cornerRadius(12)
+                                        
+                                        if index < topDistractions.count - 1 {
+                                            Divider()
+                                                .padding(.horizontal, 16)
+                                        }
+                                    }
+                                }
+    
+    // MARK: - Supporting Data Models
+    
+    struct TopAppData {
+        let name: String
+        let bundleID: String
+        let minutesUsed: Int
+        let dailyLimit: Int
+        
+        var progressPercentage: Double {
+            guard dailyLimit > 0 else { return 0 }
+            return Double(minutesUsed) / Double(dailyLimit)
+                }
+                
+        var isOverLimit: Bool {
+            dailyLimit > 0 && minutesUsed >= dailyLimit
+        }
+        
+        var statusColor: Color {
+            if dailyLimit == 0 { return .blue }
+            if isOverLimit { return .red }
+            if progressPercentage >= 0.8 { return .orange }
+            return .green
+        }
+        
+        var statusText: String {
+            if dailyLimit == 0 { return "No limit set" }
+            if isOverLimit { return "Over limit" }
+            if progressPercentage >= 0.8 { return "Almost there" }
+            return "On track"
+        }
+    }
+    
     // Helper function to generate time-based greeting
     private func timeBasedGreeting(userName: String) -> String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -363,16 +750,6 @@ struct DashboardView: View {
             return "\(hours)h"
         } else {
             return "\(mins)m"
-        }
-    }
-    
-    
-    // Demo function to simulate credit loss
-    private func simulateCreditLoss() {
-        creditsLostInAlert = 1
-        appState.deductCredit(for: "Demo App", reason: "Simulation")
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            showingCreditLossAlert = true
         }
     }
     
@@ -416,10 +793,6 @@ struct DashboardView: View {
     private func showBlockedAppModal(appName: String, bundleID: String) {
         blockedAppName = appName
         blockedAppBundleID = bundleID
-        // Ensure credits are set to 7 to show "Unblock App" button
-        if appState.credits < 7 {
-            appState.addCredits(amount: 7 - appState.credits, reason: "Test - Set to 7 credits")
-        }
         withAnimation {
             showingBlockedAppModal = true
         }
@@ -1112,7 +1485,8 @@ struct DateHistoryPicker: View {
             }
         }
         
-        // For past dates, return 0 for new users (no historical data)
+        // For past dates, we don't have historical health data
+        // Return "No data" indication
         return (0, .gray, "No data")
     }
     
