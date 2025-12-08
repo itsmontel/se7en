@@ -9,7 +9,8 @@ import DeviceActivity
 
 // MARK: - Family Activity Service
 
-class FamilyActivityService: ObservableObject {
+@MainActor
+final class FamilyActivityService: ObservableObject {
     static let shared = FamilyActivityService()
     
     @Published var selection = FamilyActivitySelection()

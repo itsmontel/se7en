@@ -199,7 +199,7 @@ struct OnboardingProgressBar: View {
 struct OnboardingBackground: View {
     var body: some View {
         ZStack {
-            Color(.systemBackground)
+            Color.appBackground
                 .ignoresSafeArea()
             
             // Subtle gradient overlay for depth

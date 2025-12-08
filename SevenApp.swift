@@ -28,6 +28,15 @@ struct SE7ENApp: App {
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                     // Sync data when app returns from background
                     appState.syncDataFromBackground()
+                    
+                    // Refresh Screen Time monitoring and data
+                    print("📱 App entered foreground - refreshing Screen Time data")
+                    ScreenTimeService.shared.refreshAllMonitoring()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                    // Also refresh when app becomes active (covers first launch)
+                    print("📱 App became active - refreshing Screen Time data")
+                    ScreenTimeService.shared.refreshAllMonitoring()
                 }
         }
     }

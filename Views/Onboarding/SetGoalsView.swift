@@ -15,6 +15,8 @@ struct SetGoalsView: View {
     @State private var familySelection = FamilyActivitySelection()
     @StateObject private var realAppDiscovery = RealAppDiscoveryService.shared
     @StateObject private var screenTimeService = ScreenTimeService.shared
+    @StateObject private var familyActivityService = FamilyActivityService.shared
+    @State private var hasAutoLoadedApps = false
     
     private var petImageName: String {
         if let pet = appState.userPet {
@@ -23,10 +25,21 @@ struct SetGoalsView: View {
         return "dogfullhealth"
     }
     
+    // Get the current selection
+    private var currentSelection: FamilyActivitySelection {
+        if !familyActivityService.selection.applicationTokens.isEmpty || !familyActivityService.selection.categoryTokens.isEmpty {
+            return familyActivityService.selection
+        } else if let allApps = screenTimeService.allAppsSelection {
+            return allApps
+        } else {
+            return familySelection
+        }
+    }
+    
     var body: some View {
         ZStack {
             // Light tint background
-            Color(.systemBackground)
+            Color.appBackground
                 .overlay(
                     LinearGradient(
                         colors: [
@@ -57,7 +70,7 @@ struct SetGoalsView: View {
                     
                     // Title and subtitle
                     VStack(spacing: 16) {
-                        Text("Select Your Brainrot Apps")
+                        Text("Your Selected Apps")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
@@ -66,7 +79,7 @@ struct SetGoalsView: View {
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                         
-                        Text("Choose which apps you want to limit or block")
+                        Text(hasAutoLoadedApps ? "Apps selected from Screen Time authorization" : "Choose which apps you want to limit or block")
                             .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -82,7 +95,7 @@ struct SetGoalsView: View {
                         if realAppDiscovery.isLoading {
                             ProgressView("Loading apps...")
                                 .frame(maxWidth: .infinity)
-                        } else if realAppDiscovery.categorizedApps.isEmpty {
+                        } else if currentSelection.applicationTokens.isEmpty && currentSelection.categoryTokens.isEmpty {
                             VStack(spacing: 16) {
                                 Image(systemName: "apps.iphone")
                                     .font(.system(size: 48, weight: .light))
@@ -101,69 +114,23 @@ struct SetGoalsView: View {
                             }
                             .frame(minHeight: 120)
                         } else {
-                            // Show selected apps
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Selected Apps: \(realAppDiscovery.selectedApps.count)")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.textPrimary)
-                                
-                                VStack(spacing: 8) {
-                                    ForEach(Array(realAppDiscovery.getAllCategories()), id: \.self) { category in
-                                        let appsInCategory = realAppDiscovery.getApps(for: category)
-                                        if !appsInCategory.isEmpty {
-                                            VStack(alignment: .leading, spacing: 8) {
-                                                Text(category.rawValue)
-                                                    .font(.system(size: 14, weight: .semibold))
-                                                    .foregroundColor(.textSecondary)
-                                                
-                                                HStack(spacing: 8) {
-                                                    ForEach(appsInCategory, id: \.id) { app in
-                                                        VStack(spacing: 4) {
-                                                            ZStack {
-                                                                Circle()
-                                                                    .fill(Color(app.color).opacity(0.2))
-                                                                    .frame(width: 44, height: 44)
-                                                                
-                                                                Image(systemName: app.iconName)
-                                                                    .font(.system(size: 18, weight: .medium))
-                                                                    .foregroundColor(Color(app.color))
-                                                            }
-                                                            
-                                                            Text(app.displayName)
-                                                                .font(.system(size: 10, weight: .medium))
-                                                                .foregroundColor(.textPrimary)
-                                                                .lineLimit(2)
-                                                                .multilineTextAlignment(.center)
-                                                        }
-                                                        .frame(maxWidth: .infinity)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(12)
-                                .background(Color.cardBackground)
-                                .cornerRadius(12)
-                            }
+                            // Show selected apps using Label tokens
+                            selectedAppsDisplay(selection: currentSelection)
                         }
                         
                         // Select/Update apps button
                         Button(action: {
-                            // Only show picker if Screen Time is already authorized
-                            // Authorization should have been done in previous step
                             if screenTimeService.isAuthorized {
                                 showingFamilyPicker = true
                             } else {
-                                // If not authorized, show error or redirect
                                 print("⚠️ Screen Time not authorized - cannot show app picker")
                             }
                         }) {
                             HStack(spacing: 12) {
-                                Image(systemName: realAppDiscovery.selectedApps.isEmpty ? "plus.circle.fill" : "pencil.circle.fill")
+                                Image(systemName: currentSelection.applicationTokens.isEmpty && currentSelection.categoryTokens.isEmpty ? "plus.circle.fill" : "pencil.circle.fill")
                                     .font(.system(size: 18, weight: .semibold))
                                 
-                                Text(realAppDiscovery.selectedApps.isEmpty ? "Select Apps from Device" : "Update App Selection")
+                                Text(currentSelection.applicationTokens.isEmpty && currentSelection.categoryTokens.isEmpty ? "Select Apps from Device" : "Update App Selection")
                                     .font(.system(size: 16, weight: .semibold))
                                     .textCase(.none)
                             }
@@ -221,16 +188,37 @@ struct SetGoalsView: View {
             }
         }
         .sheet(isPresented: $showingFamilyPicker) {
-            // Only show picker if authorized
             if screenTimeService.isAuthorized {
-                FamilyActivityPicker(selection: $familySelection)
-                    .onChange(of: familySelection) { newSelection in
-                        realAppDiscovery.processSelectedApps(newSelection)
+                FamilyActivityPickerWrapper(
+                    selection: $familySelection,
+                    onDone: {
+                        realAppDiscovery.processSelectedApps(familySelection)
+                        screenTimeService.allAppsSelection = familySelection
                         showingFamilyPicker = false
-                    }
+                    },
+                    onSkip: {
+                        showingFamilyPicker = false
+                    },
+                    isOnboarding: true
+                )
             }
         }
         .onAppear {
+            // Automatically load apps from Screen Time authorization if available
+            if !hasAutoLoadedApps {
+                if !familyActivityService.selection.applicationTokens.isEmpty || !familyActivityService.selection.categoryTokens.isEmpty {
+                    realAppDiscovery.processSelectedApps(familyActivityService.selection)
+                    screenTimeService.allAppsSelection = familyActivityService.selection
+                    hasAutoLoadedApps = true
+                    print("✅ Auto-loaded \(familyActivityService.selection.applicationTokens.count) apps and \(familyActivityService.selection.categoryTokens.count) categories")
+                } else if let allApps = screenTimeService.allAppsSelection,
+                          (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
+                    realAppDiscovery.processSelectedApps(allApps)
+                    hasAutoLoadedApps = true
+                    print("✅ Auto-loaded \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories from allAppsSelection")
+                }
+            }
+            
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
                 titleAnimation = true
             }
@@ -245,7 +233,91 @@ struct SetGoalsView: View {
         }
     }
     
+    // Display selected apps using Label tokens - no ApplicationToken type references
+    @ViewBuilder
+    private func selectedAppsDisplay(selection: FamilyActivitySelection) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            let appCount = selection.applicationTokens.count
+            let categoryCount = selection.categoryTokens.count
+            
+            if appCount > 0 || categoryCount > 0 {
+                // Show better message when only categories are selected
+                if categoryCount > 0 && appCount == 0 {
+                    // Estimate apps in categories (typically 10-20 apps per category)
+                    let estimatedApps = categoryCount * 15
+                    Text("Selected: \(categoryCount) categor\(categoryCount == 1 ? "y" : "ies") (tracking ~\(estimatedApps) apps)")
+                        .font(.headline)
+                        .foregroundColor(.textPrimary)
+                } else if appCount > 0 && categoryCount > 0 {
+                    Text("Selected: \(appCount) app\(appCount == 1 ? "" : "s"), \(categoryCount) categor\(categoryCount == 1 ? "y" : "ies")")
+                        .font(.headline)
+                        .foregroundColor(.textPrimary)
+                } else {
+                    Text("Selected: \(appCount) app\(appCount == 1 ? "" : "s")")
+                        .font(.headline)
+                        .foregroundColor(.textPrimary)
+                }
+            }
+            
+            if !selection.applicationTokens.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        // Use tokens directly in ForEach - Label accepts ApplicationToken without explicit typing
+                        ForEach(Array(selection.applicationTokens), id: \.self) { token in
+                            // Label works directly with tokens from FamilyActivitySelection.applicationTokens
+                            Label(token)
+                                .labelStyle(.titleAndIcon)
+                                .font(.system(size: 14, weight: .medium))
+                                .padding(10)
+                                .background(Color(.systemGray6))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+            }
+            
+            if !selection.categoryTokens.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Categories:")
+                        .font(.subheadline)
+                        .foregroundColor(.textSecondary)
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(Array(selection.categoryTokens), id: \.self) { categoryToken in
+                                HStack(spacing: 8) {
+                                    Image(systemName: "square.grid.2x2.fill")
+                                        .font(.system(size: 16, weight: .medium))
+                                    Text("Category")
+                                        .font(.system(size: 14, weight: .medium))
+                                }
+                                .padding(10)
+                                .background(Color(.systemGray5))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.cardBackground)
+        .cornerRadius(12)
+    }
+    
     private func saveSelectedApps() {
+        let selection = currentSelection
+        
+        // Ensure allAppsSelection is set for dashboard
+        screenTimeService.allAppsSelection = selection
+        
+        // Process apps if not already processed
+        if realAppDiscovery.categorizedApps.isEmpty && !selection.applicationTokens.isEmpty {
+            realAppDiscovery.processSelectedApps(selection)
+        }
+        
         // Save selected apps to AppState and establish limits
         for app in realAppDiscovery.categorizedApps.values.flatMap({ $0 }) {
             selectedApps.insert(app.displayName)
@@ -253,7 +325,7 @@ struct SetGoalsView: View {
                 appLimits[app.displayName] = 60 // Default 60 minute limit
             }
             
-            // Also add to AppState for tracking
+            // Add to AppState with Screen Time integration
             appState.addAppGoal(
                 appName: app.displayName,
                 bundleID: app.bundleID,

@@ -151,6 +151,7 @@ enum OnboardingStep: Int, CaseIterable {
 }
 
 // MARK: - Achievement
+@MainActor
 struct Achievement: Identifiable {
     let id: String
     let title: String

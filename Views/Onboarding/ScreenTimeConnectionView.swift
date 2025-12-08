@@ -1,5 +1,6 @@
 import SwiftUI
 import FamilyControls
+import Combine
 
 struct ScreenTimeConnectionView: View {
     @EnvironmentObject var appState: AppState
@@ -64,7 +65,7 @@ struct ScreenTimeConnectionView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, 24)
                         
-                        Text("Your data is completely private and never leaves your device.")
+                        Text("Select ALL apps to track your screen time. This is required for the app to work properly.")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -76,8 +77,27 @@ struct ScreenTimeConnectionView: View {
                 
                 // Action Buttons
                 VStack(spacing: 16) {
+                    // Show message if authorization is not approved
+                    if screenTimeService.authorizationStatus != .approved {
+                        VStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.orange)
+                            
+                            Text("Screen Time access is required to see your daily screen time and top apps")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 24)
+                        }
+                        .padding(.bottom, 8)
+                    }
+                    
                     if screenTimeService.isAuthorized {
-                        // Already authorized
+                        // Check if apps are already selected
+                        if let allApps = screenTimeService.allAppsSelection,
+                           (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
+                            // Already have apps selected - can continue
                         Button(action: {
                             HapticFeedback.light.trigger()
                             onContinue()
@@ -92,6 +112,24 @@ struct ScreenTimeConnectionView: View {
                             .frame(height: 56)
                             .background(Color.green)
                             .cornerRadius(16)
+                            }
+                        } else {
+                            // Authorized but no apps selected - show picker
+                            Button(action: {
+                                HapticFeedback.light.trigger()
+                                showFamilyPicker = true
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "apps.iphone")
+                                    Text("Select Apps")
+                                }
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(Color.blue)
+                                .cornerRadius(16)
+                            }
                         }
                     } else {
                         // Request authorization
@@ -115,31 +153,107 @@ struct ScreenTimeConnectionView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 48)
             }
-            .sheet(isPresented: $showFamilyPicker) {
-                NavigationView {
-                    FamilyActivityPickerView(
-                        selection: $familyActivityService.selection,
-                        isPresented: $showFamilyPicker
-                    )
-                    .navigationTitle("Select Apps to Monitor")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Skip") {
-                                showFamilyPicker = false
-                                onContinue() // Continue even if skipped
+            .onAppear {
+                // Request authorization when view appears (if not already authorized)
+                if !screenTimeService.isAuthorized {
+                    Task {
+                        do {
+                            await screenTimeService.requestAuthorization()
+                            // After authorization, show picker
+                            if screenTimeService.isAuthorized {
+                                await MainActor.run {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                        showFamilyPicker = true
+                                    }
+                                }
                             }
+                        } catch {
+                            print("❌ Failed to request authorization: \(error)")
                         }
-                        
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showFamilyPicker = false
-                                onContinue() // Continue to next step
-                            }
-                            .fontWeight(.semibold)
+                    }
+                } else {
+                    // Already authorized - check if we need to show picker
+                    if screenTimeService.allAppsSelection == nil ||
+                       (screenTimeService.allAppsSelection?.applicationTokens.isEmpty ?? true &&
+                        screenTimeService.allAppsSelection?.categoryTokens.isEmpty ?? true) {
+                        // No apps selected yet - show picker automatically
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showFamilyPicker = true
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showFamilyPicker) {
+                // Use a wrapper view to properly handle the picker with buttons
+                // Require selecting ALL apps - no skip option during onboarding
+                FamilyActivityPickerWrapper(
+                        selection: $familyActivityService.selection,
+                    onDone: {
+                        print("🎯 onDone called with \(familyActivityService.selection.applicationTokens.count) apps")
+                        
+                        // Require at least some apps OR categories selected
+                        // Categories are actually preferred as they auto-include all apps in those categories
+                        guard !familyActivityService.selection.applicationTokens.isEmpty || !familyActivityService.selection.categoryTokens.isEmpty else {
+                            print("⚠️ No apps or categories selected, keeping picker open")
+                            return
+                        }
+                        
+                        print("🔄 Processing selection:")
+                        print("   Apps: \(familyActivityService.selection.applicationTokens.count)")
+                        print("   Categories: \(familyActivityService.selection.categoryTokens.count)")
+                        
+                        // Categories are better - they automatically include all apps in those categories
+                        if !familyActivityService.selection.categoryTokens.isEmpty {
+                            print("✅ Using category-based selection - this will track ALL apps in selected categories")
+                        }
+                        
+                        // Ensure we're on main thread for UI updates
+                        DispatchQueue.main.async {
+                            // Save selection to allAppsSelection for dashboard FIRST
+                            screenTimeService.allAppsSelection = familyActivityService.selection
+                            let totalItems = familyActivityService.selection.applicationTokens.count + familyActivityService.selection.categoryTokens.count
+                            print("💾 Saved allAppsSelection with \(familyActivityService.selection.applicationTokens.count) apps and \(familyActivityService.selection.categoryTokens.count) categories")
+                            
+                            // Verify it was saved
+                            if let saved = screenTimeService.allAppsSelection {
+                                print("✅ Verification: allAppsSelection now has \(saved.applicationTokens.count) apps and \(saved.categoryTokens.count) categories")
+                            } else {
+                                print("❌ ERROR: allAppsSelection is still nil after saving!")
+                            }
+                            
+                            // Process the apps using RealAppDiscoveryService
+                            let realAppDiscovery = RealAppDiscoveryService.shared
+                            realAppDiscovery.processSelectedApps(familyActivityService.selection)
+                            print("🔄 Processed apps with RealAppDiscoveryService")
+                            
+                            // Close picker
+                                showFamilyPicker = false
+                            
+                            // Force immediate update of usage from reports in background
+                            Task {
+                                await screenTimeService.updateUsageFromReport()
+                                print("📊 Updated usage from reports")
+                                
+                                // Post notification to refresh dashboard
+                                await MainActor.run {
+                                    NotificationCenter.default.post(name: .screenTimeDataUpdated, object: nil)
+                                }
+                            }
+                            
+                            print("✅ Completed app selection processing, continuing...")
+                            
+                            // Continue to next step after a brief delay to ensure save completes
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                onContinue()
+                            }
+                        }
+                    },
+                    onSkip: {
+                        // Don't allow skip during onboarding - require selection
+                        print("⚠️ Skip not allowed during onboarding")
+                    },
+                    isOnboarding: true
+                )
             }
         }
     }
@@ -153,7 +267,7 @@ struct ScreenTimeConnectionView: View {
                 _ = await NotificationService.shared.requestNotificationPermission()
                 
                 // Then request Screen Time authorization
-                try await screenTimeService.requestAuthorization()
+                await screenTimeService.requestAuthorization()
                 
                 await MainActor.run {
                     isRequesting = false
@@ -161,7 +275,9 @@ struct ScreenTimeConnectionView: View {
                         HapticFeedback.success.trigger()
                         
                         // Show family picker after successful authorization
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        // Give a bit more time for authorization to fully complete
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            print("🔐 Authorization complete, showing picker")
                             showFamilyPicker = true
                         }
                     }

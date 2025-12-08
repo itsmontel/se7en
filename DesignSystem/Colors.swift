@@ -30,7 +30,8 @@ extension Color {
             if traitCollection.userInterfaceStyle == .dark {
                 return UIColor(red: 0.18, green: 0.18, blue: 0.19, alpha: 1.0) // Slightly darker charcoal color for dark mode
             } else {
-                return UIColor.systemGroupedBackground
+                // Stronger yellow tint: #FFFAE6 (RGB: 255, 250, 230)
+                return UIColor(red: 1.0, green: 0.98, blue: 0.9, alpha: 1.0)
             }
         })
     }
@@ -40,7 +41,8 @@ extension Color {
             if traitCollection.userInterfaceStyle == .dark {
                 return UIColor(red: 0.22, green: 0.22, blue: 0.23, alpha: 1.0) // Slightly darker charcoal for cards
             } else {
-                return UIColor.secondarySystemBackground
+                // Light yellow tint for cards: #FFFCF0 (RGB: 255, 252, 240)
+                return UIColor(red: 1.0, green: 0.988, blue: 0.941, alpha: 1.0)
             }
         })
     }

@@ -1,9 +1,18 @@
 import SwiftUI
 import UIKit
 import FamilyControls
+import DeviceActivity
+
+// Define the report context (must match extension)
+// These contexts are used by the main app to reference reports defined in the extension
+extension DeviceActivityReport.Context {
+    static let totalActivity = Self("Total Activity")
+    static let todayOverview = Self("todayOverview")
+}
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
+    private let screenTimeService = ScreenTimeService.shared
     @State private var showingCreditLossAlert = false
     @State private var showingSuccessToast = false
     @State private var creditsLostInAlert = 0
@@ -17,6 +26,10 @@ struct DashboardView: View {
     @State private var blockedAppBundleID: String? = nil
     @State private var showingExtendLimitSheet = false
     @State private var appToExtend: MonitoredApp? = nil
+    @State private var showingSelectAllApps = false
+    @State private var allAppsSelection = FamilyActivitySelection()
+    @State private var topDistractionTokens: [String: AnyHashable] = [:] // Store tokens by bundleID (as AnyHashable to avoid ApplicationToken type)
+    @State private var topAppToken: AnyHashable? = nil // Store token for top app
     
     private var healthScore: Int {
         // Calculate health based on actual app usage
@@ -49,6 +62,12 @@ struct DashboardView: View {
     @State private var isLoadingScreenTime = false
     @State private var screenTimeError: String?
     
+    // Debug: show what the shared container currently holds
+    @State private var debugSharedUsage: Int = 0
+    @State private var debugSharedApps: Int = 0
+    @State private var debugLastUpdated: String = ""
+    
+    
     // Calculate total screen time today (all apps combined)
     private var totalScreenTimeToday: Int {
         totalScreenTimeMinutes
@@ -58,12 +77,54 @@ struct DashboardView: View {
     private func loadScreenTimeData() {
         guard !isLoadingScreenTime else { return }
         
+        // Check synchronously if we have allAppsSelection before showing loading state
+        // This prevents flickering of "Select All Apps" button
+        let hasAllApps = screenTimeService.allAppsSelection != nil && 
+                        (!(screenTimeService.allAppsSelection?.applicationTokens.isEmpty ?? true) || 
+                         !(screenTimeService.allAppsSelection?.categoryTokens.isEmpty ?? true))
+        
+        print("🔍 DashboardView.loadScreenTimeData: hasAllApps = \(hasAllApps)")
+        if let allApps = screenTimeService.allAppsSelection {
+            print("📱 allAppsSelection has \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories")
+        } else {
+            print("⚠️ allAppsSelection is nil")
+        }
+        
+        let goals = CoreDataManager.shared.getActiveAppGoals()
+        let connectedGoals = goals.filter { goal in
+            guard let bundleID = goal.appBundleID else { return false }
+            return screenTimeService.hasSelection(for: bundleID)
+        }
+        
+        // If no all apps selection, check if onboarding was completed
+        // If onboarding was completed, allAppsSelection should exist
+        // Only show prompt if onboarding wasn't completed yet
+        if !hasAllApps && connectedGoals.isEmpty {
+            // Check if onboarding was completed
+            let isOnboardingComplete = !appState.isOnboarding
+            
+            if isOnboardingComplete {
+                // Onboarding was completed but allAppsSelection is missing - this shouldn't happen
+                // Try to load it or show a different message
+                print("⚠️ Onboarding completed but allAppsSelection is missing")
+            }
+            
+            // Only show "Select All Apps" prompt if still in onboarding
+            // Otherwise, just show loading/empty state
+            self.totalScreenTimeMinutes = 0
+            self.appsUsedToday = 0
+            self.topAppToday = nil
+            self.isLoadingScreenTime = false
+            // Don't show error if onboarding is complete - just show empty state
+            self.screenTimeError = isOnboardingComplete ? nil : "Select all apps to view your total screen time"
+            return
+        }
+        
+        // Only show loading if we have apps to load data for
         isLoadingScreenTime = true
         screenTimeError = nil
         
         Task {
-            let screenTimeService = ScreenTimeService.shared
-            
             print("🔍 Loading Screen Time data from API...")
             print("📊 Authorization status: \(screenTimeService.isAuthorized)")
             
@@ -79,55 +140,85 @@ struct DashboardView: View {
                 return
             }
             
-            // Check if we have any monitored apps
-            let goals = CoreDataManager.shared.getActiveAppGoals()
-            let connectedGoals = goals.filter { goal in
-                guard let bundleID = goal.appBundleID else { return false }
-                return screenTimeService.hasSelection(for: bundleID)
+            print("📊 All apps selection: \(hasAllApps ? "Yes" : "No"), Monitored apps: \(connectedGoals.count)")
+            
+            // First, ensure allAppsSelection is properly set up with goals and records
+            if hasAllApps, let allApps = screenTimeService.allAppsSelection {
+                print("📱 Ensuring all apps in selection have goals and records...")
+                // This will be handled by updateUsageFromReport, but we can also ensure setup here
             }
             
-            print("📊 Total goals: \(goals.count), Connected goals: \(connectedGoals.count)")
+            // First, try to fetch latest usage data from reports
+            // This will create goals/records for all apps if needed
+            await screenTimeService.updateUsageFromReport()
             
-            if connectedGoals.isEmpty {
-                await MainActor.run {
-                    self.totalScreenTimeMinutes = 0
-                    self.appsUsedToday = 0
-                    self.topAppToday = nil
-                    self.isLoadingScreenTime = false
-                    self.screenTimeError = "No apps are being monitored yet. Add apps in the Blocking section."
-                }
-                return
+            // Small delay to ensure data is saved
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+            
+            // Try to read from shared container (updated by DeviceActivityReport extension)
+            let sharedUsage = readUsageFromSharedContainer()
+            let sharedAppsCount = readAppsCountFromSharedContainer()
+            if sharedUsage > 0 {
+                print("📊 Found usage in shared container: \(sharedUsage) minutes, \(sharedAppsCount) apps")
+            }
+            
+            // Update debug info for shared container
+            let lastUpdated = readSharedLastUpdated()
+            await MainActor.run {
+                debugSharedUsage = sharedUsage
+                debugSharedApps = sharedAppsCount
+                debugLastUpdated = lastUpdated
             }
             
             // Get total screen time and apps used from ScreenTimeService
-            let (totalMinutes, appsUsed) = await screenTimeService.getTotalScreenTimeToday()
+            // This will use allAppsSelection if available, otherwise monitored apps
+            var (totalMinutes, appsUsed) = await screenTimeService.getTotalScreenTimeToday()
+            
+            // Use shared container data if our tracked data is 0
+            if totalMinutes == 0 && sharedUsage > 0 {
+                totalMinutes = sharedUsage
+                print("📊 Using shared container usage: \(totalMinutes) minutes")
+            }
+            
+            // Use shared container apps count if our tracked count is 0
+            if appsUsed == 0 && sharedAppsCount > 0 {
+                appsUsed = sharedAppsCount
+                print("📊 Using shared container apps count: \(appsUsed)")
+            }
+            
+            print("📊 After update: Total minutes: \(totalMinutes), Apps used: \(appsUsed)")
             
             // Get top app
             let topAppResult = await screenTimeService.getTopAppToday()
             
             // Convert top app result to TopAppData if available
             var topAppData: TopAppData? = nil
+            var topToken: AnyHashable? = nil
             if let topApp = topAppResult {
-                if let goal = connectedGoals.first(where: { $0.appBundleID == topApp.bundleID }) {
-                    topAppData = TopAppData(
-                        name: topApp.name,
-                        bundleID: topApp.bundleID,
-                        minutesUsed: topApp.minutes,
-                        dailyLimit: Int(goal.dailyLimitMinutes)
-                    )
-                }
+                // Try to find goal for limit, but don't require it
+                let goal = connectedGoals.first(where: { $0.appBundleID == topApp.bundleID })
+                topAppData = TopAppData(
+                    name: topApp.name,
+                    bundleID: topApp.bundleID,
+                    minutesUsed: topApp.minutes,
+                    dailyLimit: goal != nil ? Int(goal!.dailyLimitMinutes) : 0
+                )
+                
+                // Token will be found on-demand in topAppCard
+                topToken = nil
             }
             
             await MainActor.run {
                 self.totalScreenTimeMinutes = totalMinutes
                 self.appsUsedToday = appsUsed
                 self.topAppToday = topAppData
+                self.topAppToken = topToken
                 self.isLoadingScreenTime = false
                 
-                // Only show error if we have connected apps but no usage yet
-                // This is normal - usage data appears when DeviceActivityMonitor fires events
+                // Only show informational message if we have connected apps but no usage yet
+                // Usage records are initialized immediately, so 0 means no usage yet (which is normal)
                 if totalMinutes == 0 && appsUsed == 0 && !connectedGoals.isEmpty {
-                    self.screenTimeError = "Usage data will appear as you use monitored apps. DeviceActivityMonitor tracks usage when thresholds are reached."
+                    self.screenTimeError = nil // Don't show error - 0 usage is normal at start of day
                 } else {
                     self.screenTimeError = nil
                 }
@@ -139,6 +230,61 @@ struct DashboardView: View {
             }
         }
     }
+    
+    // MARK: - Shared Container Reading
+    
+    /// Read usage data from the shared container (populated by DeviceActivityReport extension)
+    private func readUsageFromSharedContainer() -> Int {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return 0
+        }
+        
+        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+        let lastUpdated = sharedDefaults.double(forKey: "last_updated")
+        
+        if lastUpdated > 0 {
+            let lastUpdateDate = Date(timeIntervalSince1970: lastUpdated)
+            let timeSinceUpdate = Date().timeIntervalSince(lastUpdateDate)
+            print("📊 Shared container last updated: \(Int(timeSinceUpdate)) seconds ago")
+        }
+        
+        if totalUsage > 0 {
+            print("📊 Found total_usage in shared container: \(totalUsage) minutes")
+        }
+        
+        return totalUsage
+    }
+    
+    /// Read apps count from the shared container
+    private func readAppsCountFromSharedContainer() -> Int {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return 0
+        }
+        
+        let appsCount = sharedDefaults.integer(forKey: "apps_count")
+        if appsCount > 0 {
+            print("📊 Found apps_count in shared container: \(appsCount)")
+        }
+        return appsCount
+    }
+    
+    /// Read last updated timestamp from the shared container for debugging
+    private func readSharedLastUpdated() -> String {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return "n/a"
+        }
+        let lastUpdated = sharedDefaults.double(forKey: "last_updated")
+        guard lastUpdated > 0 else { return "n/a" }
+        let date = Date(timeIntervalSince1970: lastUpdated)
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .medium
+        return formatter.string(from: date)
+    }
+    
     
     // Format screen time as "Xh Ym"
     private func formatScreenTime(_ minutes: Int) -> String {
@@ -154,27 +300,191 @@ struct DashboardView: View {
         }
     }
     
-    // Get top 10 apps by usage today - ONLY apps connected via Screen Time API
+    // Get top 10 apps by usage today - ONLY apps from onboarding selection (allAppsSelection)
     private var topDistractions: [MonitoredApp] {
+        // First, try to read from shared container (filtered by report extension)
+        if let topAppsFromShared = readTopAppsFromSharedContainer(), !topAppsFromShared.isEmpty {
+            return topAppsFromShared
+        }
+        
+        // Fallback: Only show apps from onboarding selection (allAppsSelection)
+        // Users must select all apps during onboarding for the app to work
+        guard let allApps = screenTimeService.allAppsSelection,
+              !allApps.applicationTokens.isEmpty else {
+            return []
+        }
+        
+        return getTopAppsFromAllApps(allApps)
+    }
+    
+    /// Read top apps from shared container (filtered by report extension, excludes placeholder apps)
+    private func readTopAppsFromSharedContainer() -> [MonitoredApp]? {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return nil
+        }
+        
+        guard let topAppsPayload = sharedDefaults.array(forKey: "top_apps") as? [[String: Any]] else {
+            return nil
+        }
+        
+        let realAppDiscovery = RealAppDiscoveryService.shared
+        var topApps: [MonitoredApp] = []
+        
+        for appData in topAppsPayload {
+            guard let name = appData["name"] as? String,
+                  let minutes = appData["minutes"] as? Int else {
+                continue
+            }
+            
+            // Filter out placeholder names (should already be filtered by extension, but double-check)
+            if isPlaceholderAppName(name) {
+                continue
+            }
+            
+            // Find token for this app name
+            var token: AnyHashable? = nil
+            if let allApps = screenTimeService.allAppsSelection {
+                for appToken in allApps.applicationTokens {
+                    let tokenName = realAppDiscovery.extractDisplayName(from: appToken)
+                    if tokenName == name {
+                        token = appToken as AnyHashable
+                        break
+                    }
+                }
+            }
+            
+            // We don't need the real bundle ID here; fallback to unknown (avoids token casting issues)
+            let bundleID = "unknown.app"
+            let category = AppCategory.category(for: bundleID)
+            
+            topApps.append(MonitoredApp(
+                name: name,
+                icon: category.icon,
+                dailyLimit: 0,
+                usedToday: minutes,
+                color: Color(category.color),
+                isEnabled: false
+            ))
+        }
+        
+        return topApps.isEmpty ? nil : topApps
+    }
+    
+    /// Check if an app name is a placeholder (e.g., "app 902388", "Unknown")
+    private func isPlaceholderAppName(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if trimmed == "unknown" || trimmed.isEmpty {
+            return true
+        }
+        
+        // Match patterns like "app 902388" or "app902388"
+        if let regex = try? NSRegularExpression(pattern: #"^app\s*\d{2,}$"#, options: [.caseInsensitive]) {
+            let range = NSRange(location: 0, length: name.utf16.count)
+            if regex.firstMatch(in: name, options: [], range: range) != nil {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    // Helper function to find token for a bundleID - used throughout DashboardView
+    private func findTokenForBundleID(_ bundleID: String) -> AnyHashable? {
+        guard let allApps = screenTimeService.allAppsSelection else {
+            return nil
+        }
+        let realAppDiscovery = RealAppDiscoveryService.shared
+        for token in allApps.applicationTokens {
+            let tokenBundleID = realAppDiscovery.extractBundleID(from: token)
+            if tokenBundleID == bundleID {
+                return token as AnyHashable
+            }
+        }
+        return nil
+    }
+    
+    // Helper function to find token for an app
+    private func findTokenForApp(_ app: MonitoredApp) -> AnyHashable? {
         let coreDataManager = CoreDataManager.shared
         let goals = coreDataManager.getActiveAppGoals()
+        guard let bundleID = goals.first(where: { $0.appName == app.name })?.appBundleID else {
+            return nil
+        }
+        return findTokenForBundleID(bundleID)
+    }
+    
+    private func getTopAppsFromAllApps(_ selection: FamilyActivitySelection) -> [MonitoredApp] {
+        let realAppDiscovery = RealAppDiscoveryService.shared
+        var appsWithUsage: [(name: String, minutes: Int, icon: String, color: Color, bundleID: String, token: AnyHashable?)] = []
         
-        return appState.monitoredApps
-            .filter { app in
-                // Only include apps that have Screen Time tokens (are actually connected)
-                // Find the goal for this app
-                if let goal = goals.first(where: { $0.appName == app.name }),
-                   let bundleID = goal.appBundleID {
-                    // Check if app has a token selection (is connected via Screen Time API)
-                    // Access via internal property - apps must be connected via FamilyActivityPicker
-                    let screenTimeService = ScreenTimeService.shared
-                    return screenTimeService.hasSelection(for: bundleID)
-                }
-                return false
+        // Handle individual app tokens
+        for token in selection.applicationTokens {
+            let bundleID = realAppDiscovery.extractBundleID(from: token)
+            
+            // Skip if bundle ID extraction failed
+            guard bundleID != "unknown.app" else { continue }
+            
+            let appName = realAppDiscovery.extractDisplayName(from: token)
+            
+            // Filter out placeholder app names
+            if isPlaceholderAppName(appName) {
+                continue
             }
-            .sorted { $0.usedToday > $1.usedToday }
+            
+            let usage = screenTimeService.getUsageMinutes(for: bundleID)
+            
+            // Only include apps with usage > 0 (don't show 0-minute apps)
+            guard usage > 0 else { continue }
+            
+            let category = AppCategory.category(for: bundleID)
+            appsWithUsage.append((
+                name: appName,
+                minutes: usage,
+                icon: category.icon,
+                color: Color(category.color),
+                bundleID: bundleID,
+                token: token as AnyHashable
+            ))
+        }
+        
+        // Handle category tokens - when only categories are selected, we can't show individual apps
+        // DeviceActivityReport doesn't provide individual app breakdown for categories
+        // For now, return empty list when only categories are selected (will show total usage in main card)
+        // Individual app breakdown requires applicationTokens
+        if !selection.categoryTokens.isEmpty && selection.applicationTokens.isEmpty {
+            // Can't show individual apps when only categories are selected
+            // The total usage will still be shown in the main dashboard card
+            print("📊 Categories selected but no individual apps available for top distractions")
+        }
+        
+        // Sort by usage and take top 10
+        let topApps = appsWithUsage
+            .sorted { $0.minutes > $1.minutes }
             .prefix(10)
-            .map { $0 }
+        
+        // Store tokens for later use in UI
+        Task { @MainActor in
+            var tokenDict: [String: AnyHashable] = [:]
+            for app in topApps {
+                if let token = app.token {
+                    tokenDict[app.bundleID] = token
+                }
+            }
+            topDistractionTokens = tokenDict
+        }
+        
+        // Convert to MonitoredApp format
+        return topApps.map { app in
+            MonitoredApp(
+                name: app.name,
+                icon: app.icon,
+                dailyLimit: 0, // No limit for all apps view
+                usedToday: app.minutes,
+                color: app.color,
+                isEnabled: false // Not actively monitored
+            )
+        }
     }
     
     private var healthColor: Color {
@@ -298,6 +608,10 @@ struct DashboardView: View {
                         }
                         .foregroundColor(.textPrimary)
                         .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.appBackground)
+                        .cornerRadius(8)
+                        .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(Color.cardBackground.opacity(0.8))
                         .cornerRadius(16)
@@ -312,12 +626,43 @@ struct DashboardView: View {
                 CategoryAppSelectionView()
                     .environmentObject(appState)
             }
+            .sheet(isPresented: $showingSelectAllApps) {
+                SelectAllAppsView(selection: $allAppsSelection)
+                    .environmentObject(appState)
+            }
             .sheet(isPresented: $showingDatePicker) {
                 DateHistoryPicker(
                     selectedDate: $selectedDate,
                     isPresented: $showingDatePicker,
                     appState: appState
                 )
+            }
+            .onAppear {
+                // Load immediately when view appears
+                print("📱 DashboardView.onAppear: Starting data load")
+                
+                // Ensure Screen Time is authorized; request if not
+                if !screenTimeService.isAuthorized {
+                    Task {
+                        await screenTimeService.requestAuthorization()
+                    }
+                }
+                
+                // Refresh monitoring when app opens to ensure it's active
+                screenTimeService.refreshAllMonitoring()
+                
+                loadScreenTimeData()
+                appState.refreshScreenTimeData()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                // Refresh monitoring and data when app enters foreground
+                print("📱 App entered foreground - refreshing monitoring")
+                screenTimeService.refreshAllMonitoring()
+                loadScreenTimeData()
+            }
+            .onChange(of: screenTimeService.allAppsSelection) { _ in
+                // Refresh when allAppsSelection changes (e.g., after onboarding)
+                loadScreenTimeData()
             }
         }
     }
@@ -469,11 +814,39 @@ struct DashboardView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
+                } else if let error = screenTimeError, error.contains("Select all apps") {
+                    // Show "Select All Apps" button when no all apps selection exists
+                    VStack(spacing: 12) {
+                        Text("View All Your Apps")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.textPrimary)
+                        
+                        Text("Select all your apps to see total screen time and top distractions")
+                            .font(.system(size: 14))
+                            .foregroundColor(.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                        
+                        Button(action: {
+                            showingSelectAllApps = true
+                        }) {
+                            Text("Select All Apps")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(Color.blue)
+                                .cornerRadius(12)
+                        }
+                        .padding(.top, 8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
                 } else if let error = screenTimeError {
                     // Show error or informational message
                     let isError = error.contains("not authorized") || error.contains("Failed")
-                    
-                    VStack(spacing: 8) {
+                            
+                            VStack(spacing: 8) {
                         Image(systemName: isError ? "exclamationmark.triangle.fill" : "info.circle.fill")
                             .font(.system(size: 20))
                             .foregroundColor(isError ? .orange : .blue)
@@ -497,37 +870,69 @@ struct DashboardView: View {
                     .padding(.vertical, 20)
                 } else {
                     // Show actual usage data
-                    HStack(spacing: 20) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(formatScreenTime(totalScreenTimeToday))
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundColor(.textPrimary)
-                            
-                            Text("Total time")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.textSecondary)
+                    VStack(spacing: 16) {
+                        // Show DeviceActivityReport for today's overview
+                        // This displays the TodayOverviewView with total time, apps used, and top 10 apps
+                        if screenTimeService.isAuthorized {
+                            todayOverviewReportView
+                            hiddenTotalActivityReportView
                         }
                         
-                        Spacer()
-                        
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("\(appsUsedToday)")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundColor(.textPrimary)
-                            
-                            Text(appsUsedToday == 1 ? "app" : "apps")
-                                .font(.system(size: 12, weight: .medium))
+                        // Debug: show shared container values
+                        VStack(spacing: 6) {
+                            Text("Debug – Shared Container")
+                                .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.textSecondary)
+                            Text("total_usage: \(debugSharedUsage) min | apps_count: \(debugSharedApps)")
+                                .font(.system(size: 12))
+                                .foregroundColor(.textSecondary)
+                            Text("last_updated: \(debugLastUpdated)")
+                                .font(.system(size: 12))
+                                .foregroundColor(.textSecondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.cardBackground.opacity(0.6))
+                        .cornerRadius(10)
+                        
+                        // Show our tracked data
+                        HStack(spacing: 20) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(formatScreenTime(totalScreenTimeToday))
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .foregroundColor(.textPrimary)
+                                
+                                Text("Tracked time")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.textSecondary)
+                            }
+                            
+                            Spacer()
+                            
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text("\(appsUsedToday)")
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .foregroundColor(.textPrimary)
+                                
+                                Text(appsUsedToday == 1 ? "app" : "apps")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.textSecondary)
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                    .padding(.horizontal, 24)
+                    .padding(.vertical, 24)
+                    .padding(.horizontal, 28)
                 }
             }
-            .background(Color.cardBackground)
+            .background(Color.appBackground)
             .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.cardBackground, lineWidth: 1)
+            )
             .padding(.horizontal, 20)
+            .padding(.vertical, 4)
             
             // Top App Today Card
             if let topApp = topAppToday, topApp.minutesUsed > 0 {
@@ -550,16 +955,42 @@ struct DashboardView: View {
             }
                         }
                         .padding(.bottom, 24)
-        .onAppear {
-            loadScreenTimeData()
-            appState.refreshScreenTimeData()
-        }
-        .onChange(of: appState.monitoredApps) { _ in
-            loadScreenTimeData()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .screenTimeDataUpdated)) { _ in
-            loadScreenTimeData()
-        }
+    }
+                        
+    // MARK: - DeviceActivityReport Helpers
+    
+    @ViewBuilder
+    private var todayOverviewReportView: some View {
+        let dateInterval = Calendar.current.dateInterval(of: .day, for: .now) ?? DateInterval(start: Date(), end: Date())
+        let filter = DeviceActivityFilter(
+            segment: .daily(during: dateInterval),
+            users: .all,
+            devices: .all
+        )
+        
+        DeviceActivityReport(.todayOverview, filter: filter)
+            .frame(maxWidth: .infinity)
+            .background(Color.cardBackground)
+            .cornerRadius(12)
+            .padding(.horizontal, 20)
+    }
+    
+    @ViewBuilder
+    private var hiddenTotalActivityReportView: some View {
+        let dateInterval = DateInterval(
+            start: Calendar.current.startOfDay(for: Date()),
+            end: Date()
+        )
+        let filter = DeviceActivityFilter(
+            segment: .daily(during: dateInterval),
+            users: .all,
+            devices: .all
+        )
+        
+        DeviceActivityReport(.totalActivity, filter: filter)
+            .frame(width: 1, height: 1)
+            .opacity(0)
+            .allowsHitTesting(false)
     }
     
     private func topAppCard(_ topApp: TopAppData) -> some View {
@@ -580,15 +1011,37 @@ struct DashboardView: View {
             .padding(.horizontal, 20)
             
             HStack(spacing: 16) {
-                // App Icon (generic since we can't easily get real icons)
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(topApp.statusColor.opacity(0.1))
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Image(systemName: "app.fill")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundColor(topApp.statusColor)
-                    )
+                // App Icon - use Label directly with token
+                if let allApps = screenTimeService.allAppsSelection {
+                    let realAppDiscovery = RealAppDiscoveryService.shared
+                    if let matchingToken = allApps.applicationTokens.first(where: { token in
+                        let tokenBundleID = realAppDiscovery.extractBundleID(from: token)
+                        return tokenBundleID == topApp.bundleID
+                    }) {
+                        Label(matchingToken)
+                            .labelStyle(.titleAndIcon)
+                            .font(.system(size: 20))
+                            .frame(width: 50, height: 50)
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(topApp.statusColor.opacity(0.1))
+                            .frame(width: 50, height: 50)
+                            .overlay(
+                                Image(systemName: "app.fill")
+                                    .font(.system(size: 24, weight: .medium))
+                                    .foregroundColor(topApp.statusColor)
+                            )
+                    }
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(topApp.statusColor.opacity(0.1))
+                        .frame(width: 50, height: 50)
+                        .overlay(
+                            Image(systemName: "app.fill")
+                                .font(.system(size: 24, weight: .medium))
+                                .foregroundColor(topApp.statusColor)
+                        )
+                }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(topApp.name)
@@ -646,8 +1099,12 @@ struct DashboardView: View {
                         }
                     }
                     .padding(.vertical, 12)
-                    .background(Color.cardBackground)
+                    .background(Color.appBackground)
                     .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.cardBackground, lineWidth: 1)
+                    )
                     .padding(.horizontal, 20)
                 }
                 .padding(.bottom, 24)
@@ -656,18 +1113,43 @@ struct DashboardView: View {
     }
     
     private func distractionRow(app: MonitoredApp, index: Int) -> some View {
-        VStack(spacing: 0) {
+        // Find token directly from allAppsSelection
+        let coreDataManager = CoreDataManager.shared
+        let goals = coreDataManager.getActiveAppGoals()
+        let bundleID = goals.first(where: { $0.appName == app.name })?.appBundleID
+        
+        return VStack(spacing: 0) {
                                         HStack(spacing: 12) {
                                             Text("\(index + 1)")
                                                 .font(.system(size: 16, weight: .bold))
                                                 .foregroundColor(.textSecondary)
                                                 .frame(width: 24)
                                             
+                // Use Label directly with token if available, otherwise fallback to icon
+                if let bundleID = bundleID,
+                   let allApps = screenTimeService.allAppsSelection {
+                    let realAppDiscovery = RealAppDiscoveryService.shared
+                    if let matchingToken = allApps.applicationTokens.first(where: { token in
+                        let tokenBundleID = realAppDiscovery.extractBundleID(from: token)
+                        return tokenBundleID == bundleID
+                    }) {
+                        Label(matchingToken)
+                            .labelStyle(.titleAndIcon)
+                            .font(.system(size: 20))
+                            .frame(width: 32, height: 32)
+                    } else {
                                             Image(systemName: app.icon)
                                                 .font(.system(size: 20))
                                                 .foregroundColor(app.color)
                                                 .frame(width: 32)
-                                            
+                    }
+                } else {
+                    Image(systemName: app.icon)
+                        .font(.system(size: 20))
+                        .foregroundColor(app.color)
+                        .frame(width: 32)
+                }
+                
                                             Text(app.name)
                                                 .font(.system(size: 16, weight: .medium))
                                                 .foregroundColor(.textPrimary)
@@ -842,11 +1324,9 @@ struct AddAppSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
     @StateObject private var screenTimeService = ScreenTimeService.shared
-    @StateObject private var realAppDiscovery = RealAppDiscoveryService.shared
     @State private var familySelection = FamilyActivitySelection()
     @State private var showingFamilyPicker = false
-    @State private var selectedApps: [RealInstalledApp] = []
-    @State private var selectedApp: RealInstalledApp?
+    @State private var selectedToken: AnyHashable?
     @State private var dailyLimit: Int = 60
     @State private var customLimit: String = ""
     @State private var showingCustomLimit = false
@@ -868,20 +1348,76 @@ struct AddAppSheet: View {
     
     // Computed property for confirmation message
     private var confirmationMessage: String {
-        let appName = selectedApp?.displayName ?? ""
+        // Get app name from token if available, otherwise use generic name
+        let appName = selectedToken != nil ? "Selected App" : ""
         return "Are you sure you want to monitor \(appName)? This setting cannot be changed today once set."
     }
     
     // Computed property for add button text
     private var addButtonText: String {
-        if let app = selectedApp {
-            return "Add \(app.displayName)"
+        if selectedToken != nil {
+            return "Add Selected App"
         } else {
             return "Select an App"
         }
     }
     
     let limitOptions = [30, 60, 90, 120, 180]
+    
+    // Helper view for token label - use Label(token) for real app icons
+    @ViewBuilder
+    private func tokenLabelView(token: AnyHashable) -> some View {
+        // Try to cast token back to use with Label
+        // Tokens from FamilyActivitySelection.applicationTokens work directly with Label
+        if let allApps = screenTimeService.allAppsSelection {
+            let realAppDiscovery = RealAppDiscoveryService.shared
+            // Find matching token in selection
+            if let matchingToken = allApps.applicationTokens.first(where: { t in
+                let tokenBundleID = realAppDiscovery.extractBundleID(from: t)
+                let storedBundleID = realAppDiscovery.extractBundleID(from: token)
+                return tokenBundleID == storedBundleID
+            }) {
+                Label(matchingToken)
+                    .labelStyle(.titleAndIcon)
+                    .font(.system(size: 20, weight: .medium))
+            } else {
+                Image(systemName: "app.fill")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.blue)
+            }
+        } else {
+            Image(systemName: "app.fill")
+                .font(.system(size: 24, weight: .medium))
+                .foregroundColor(.blue)
+        }
+    }
+    
+    // Helper view for app token button to avoid type-checking timeout
+    @ViewBuilder
+    private func appTokenButton(token: AnyHashable) -> some View {
+        let isSelected = selectedToken?.hashValue == token.hashValue
+        let backgroundColor = isSelected ? Color.blue.opacity(0.1) : Color.cardBackground
+        let strokeColor = isSelected ? Color.blue : Color.clear
+        
+        Button(action: {
+            selectedToken = token
+            HapticFeedback.light.trigger()
+        }) {
+            VStack(spacing: 12) {
+                // Use token directly - tokens from FamilyActivitySelection are ApplicationToken
+                // Cast to AnyHashable first, then back to ApplicationToken for Label
+                tokenLabelView(token: token)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity)
+            .background(backgroundColor)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(strokeColor, lineWidth: 2)
+            )
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -927,70 +1463,38 @@ struct AddAppSheet: View {
                                     }
                                     .padding()
                                     .frame(maxWidth: .infinity)
-                                } else if selectedApps.isEmpty {
+                                } else if selectedToken == nil {
                                     VStack(spacing: 12) {
                                         Image(systemName: "apps.iphone")
                                             .font(.system(size: 32))
                                             .foregroundColor(.textSecondary.opacity(0.5))
                                         
-                                        Text("No apps selected")
+                                        Text("No app selected")
                                             .font(.system(size: 16, weight: .semibold))
                                             .foregroundColor(.textPrimary)
                                         
-                                        Text("Tap the button below to select apps from your device")
+                                        Text("Tap the button below to select an app from your device")
                                             .font(.system(size: 14))
                                             .foregroundColor(.textSecondary)
                                             .multilineTextAlignment(.center)
                                     }
                                     .padding()
                                     .frame(maxWidth: .infinity)
-                                } else {
-                                    // Show selected apps
-                                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
-                                        ForEach(selectedApps) { app in
-                                            Button(action: {
-                                                selectedApp = app
-                                                HapticFeedback.light.trigger()
-                                            }) {
-                                                VStack(spacing: 12) {
-                                                    ZStack {
-                                                        Circle()
-                                                            .fill(Color(app.color).opacity(0.2))
-                                                            .frame(width: 60, height: 60)
-                                                        
-                                                        Image(systemName: app.iconName)
-                                                            .font(.system(size: 24, weight: .medium))
-                                                            .foregroundColor(Color(app.color))
-                                                    }
-                                                    
-                                                    Text(app.displayName)
-                                                        .font(.system(size: 14, weight: .medium))
-                                                        .foregroundColor(.textPrimary)
-                                                        .lineLimit(2)
-                                                        .multilineTextAlignment(.center)
-                                                }
-                                                .padding(12)
-                                                .frame(maxWidth: .infinity)
-                                                .background(selectedApp?.id == app.id ? Color.blue.opacity(0.1) : Color.cardBackground)
-                                                .cornerRadius(12)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .stroke(selectedApp?.id == app.id ? Color.blue : Color.clear, lineWidth: 2)
-                                                )
-                                            }
-                                        }
-                                    }
+                                } else if let token = selectedToken {
+                                    // Show single selected app
+                                    appTokenButton(token: token)
+                                        .padding(.horizontal, 20)
                                 }
                                 
-                                // Select Apps Button
+                                // Select App Button
                                 Button(action: {
                                     showingFamilyPicker = true
                                 }) {
                                     HStack(spacing: 12) {
-                                        Image(systemName: selectedApps.isEmpty ? "plus.circle.fill" : "pencil.circle.fill")
+                                        Image(systemName: selectedToken == nil ? "plus.circle.fill" : "pencil.circle.fill")
                                             .font(.system(size: 18, weight: .semibold))
                                         
-                                        Text(selectedApps.isEmpty ? "Select Apps from Device" : "Change Selection")
+                                        Text(selectedToken == nil ? "Select App from Device" : "Change Selection")
                                             .font(.system(size: 16, weight: .semibold))
                                     }
                                     .foregroundColor(.white)
@@ -1005,7 +1509,7 @@ struct AddAppSheet: View {
                         }
                         
                         // Time Limit Selection
-                        if selectedApp != nil {
+                        if selectedToken != nil {
                             VStack(alignment: .leading, spacing: 16) {
                                 Text("Daily Time Limit")
                                     .font(.h4)
@@ -1071,7 +1575,7 @@ struct AddAppSheet: View {
                 }
                 
                 // Add Button
-                if selectedApp != nil {
+                if selectedToken != nil {
                     VStack {
                         Button(action: { showingConfirmation = true }) {
                             HStack(spacing: 12) {
@@ -1105,25 +1609,12 @@ struct AddAppSheet: View {
                 if screenTimeService.isAuthorized {
                     FamilyActivityPicker(selection: $familySelection)
                         .onChange(of: familySelection) { newSelection in
-                            realAppDiscovery.processSelectedApps(newSelection)
-                            // Extract apps from the selection
-                            var apps: [RealInstalledApp] = []
-                            for token in newSelection.applicationTokens {
-                                let bundleID = realAppDiscovery.extractBundleID(from: token)
-                                let displayName = realAppDiscovery.extractDisplayName(from: token) ?? "Unknown App"
-                                let category = AppCategory.category(for: bundleID)
-                                
-                                let app = RealInstalledApp(
-                                    token: token,
-                                    displayName: displayName,
-                                    bundleID: bundleID,
-                                    category: category
-                                )
-                                apps.append(app)
-                            }
-                            selectedApps = apps
-                            // Keep the selection for when we add the app
+                            // Only take the FIRST app from selection (single app only)
+                            if let firstToken = newSelection.applicationTokens.first {
+                                selectedToken = firstToken as AnyHashable
+                                // Close picker immediately after selecting one app
                             showingFamilyPicker = false
+                            }
                         }
                 }
             }
@@ -1139,18 +1630,43 @@ struct AddAppSheet: View {
     }
     
     private func addApp() {
-        guard let app = selectedApp else { return }
+        guard let token = selectedToken else { return }
+        
+        // Create a selection with just this token
+        // Find the matching token in familySelection (the one just selected)
+        var appSelection = FamilyActivitySelection()
+        for existingToken in familySelection.applicationTokens {
+            if existingToken.hashValue == token.hashValue {
+                appSelection.applicationTokens = [existingToken]
+                break
+            }
+        }
+        
+        // If not found in familySelection, try allAppsSelection as fallback
+        if appSelection.applicationTokens.isEmpty,
+           let currentSelection = screenTimeService.allAppsSelection {
+            for existingToken in currentSelection.applicationTokens {
+                if existingToken.hashValue == token.hashValue {
+                    appSelection.applicationTokens = [existingToken]
+                    break
+                }
+            }
+        }
+        
+        // Extract bundle ID only for Core Data storage (not for display)
+        let realAppDiscovery = RealAppDiscoveryService.shared
+        let bundleID = realAppDiscovery.extractBundleID(from: token)
+        let displayName = realAppDiscovery.extractDisplayName(from: token)
         
         // Use addAppGoalFromFamilySelection which handles tokens properly
-        // The familySelection contains all selected apps, and ScreenTimeService will handle
-        // storing the selection and setting up monitoring for the specific app
         appState.addAppGoalFromFamilySelection(
-            familySelection,
-            appName: app.displayName,
-            dailyLimitMinutes: dailyLimit
+            appSelection,
+            appName: displayName,
+            dailyLimitMinutes: dailyLimit,
+            bundleID: bundleID
         )
         
-        print("✅ Added \(app.displayName) with \(dailyLimit) minute limit")
+        print("✅ Added app with \(dailyLimit) minute limit")
         
         HapticFeedback.success.trigger()
         dismiss()
@@ -1288,6 +1804,9 @@ struct CompactStreakView: View {
             }
         }
         .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.appBackground)
+        .cornerRadius(8)
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 12)

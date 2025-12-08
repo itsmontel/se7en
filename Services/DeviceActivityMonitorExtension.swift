@@ -12,13 +12,18 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         print("🟢 Device activity interval started: \(activity)")
         
         // Reset daily tracking when interval starts (midnight)
-        ScreenTimeService.shared.unblockAllApps()
+        Task { @MainActor in
+            ScreenTimeService.shared.unblockAllApps()
+        }
     }
     
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
         print("🔴 Device activity interval ended: \(activity)")
-        CoreDataManager.shared.save()
+        // Ensure Core Data save happens on main thread
+        DispatchQueue.main.async {
+            CoreDataManager.shared.save()
+        }
     }
     
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
@@ -28,11 +33,14 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         print("⚠️ Event threshold reached: \(eventString)")
         
         // Extract bundle ID from event name
-        // Format: "warning.bundleID" or "limit.bundleID"
+        // Format: "warning.bundleID", "limit.bundleID", or "update.bundleID"
         if let bundleID = extractBundleID(from: eventString) {
-            if eventString.contains("warning") {
+            if eventString.contains("update") {
+                // Handle update events first (most frequent)
+                handleUpdate(for: bundleID)
+            } else if eventString.contains("warning") {
                 handleWarning(for: bundleID)
-            } else if eventString.contains("limit") {
+        } else if eventString.contains("limit") {
                 handleLimit(for: bundleID)
             }
         }
@@ -57,18 +65,31 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
             // Skip the first part (warning/limit) and join the rest
             let bundleComponents = parts.dropFirst()
             let bundleID = bundleComponents.joined(separator: ".")
-            return bundleID.isEmpty ? nil : bundleID
-        }
+        return bundleID.isEmpty ? nil : bundleID
+    }
         return nil
     }
     
     private func handleWarning(for bundleID: String) {
         print("🟡 Warning for: \(bundleID)")
-        ScreenTimeService.shared.handleWarning(for: bundleID)
+        Task { @MainActor in
+            ScreenTimeService.shared.handleWarning(for: bundleID)
+        }
     }
     
     private func handleLimit(for bundleID: String) {
         print("🔴 Limit reached for: \(bundleID)")
-        ScreenTimeService.shared.handleLimitReached(for: bundleID)
+        Task { @MainActor in
+            ScreenTimeService.shared.handleLimitReached(for: bundleID)
+        }
+    }
+    
+    private func handleUpdate(for bundleID: String) {
+        print("🔄 Update event for: \(bundleID)")
+        // Update usage based on the threshold that was reached
+        // The threshold is 10 minutes, so update usage to that amount
+        Task { @MainActor in
+            ScreenTimeService.shared.handleUsageUpdate(for: bundleID)
+        }
     }
 }

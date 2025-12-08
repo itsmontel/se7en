@@ -222,7 +222,7 @@ struct DifferentiatorCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color(.systemBackground))
+                .fill(Color.appBackground)
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         )
         .scaleEffect(animate ? 1.0 : 0.95)

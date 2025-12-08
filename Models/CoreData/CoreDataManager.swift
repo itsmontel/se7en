@@ -1,6 +1,7 @@
 import CoreData
 import Foundation
 
+@MainActor
 class CoreDataManager: ObservableObject {
     static let shared = CoreDataManager()
     

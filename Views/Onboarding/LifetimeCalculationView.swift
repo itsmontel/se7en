@@ -36,7 +36,7 @@ struct LifetimeCalculationView: View {
     var body: some View {
         ZStack {
             // Dramatic background that gets darker
-            Color(.systemBackground)
+            Color.appBackground
                 .overlay(
                     Color.black.opacity(backgroundIntensity * 0.1)
                 )

@@ -7,7 +7,8 @@ import Combine
 // MARK: - Screen Time Service
 // Clean implementation for Screen Time API integration
 
-class ScreenTimeService: ObservableObject {
+@MainActor
+final class ScreenTimeService: ObservableObject {
     static let shared = ScreenTimeService()
     
     // MARK: - Properties
@@ -26,6 +27,40 @@ class ScreenTimeService: ObservableObject {
     // Key: bundle ID or app identifier, Value: FamilyActivitySelection for that app
     private var appSelections: [String: FamilyActivitySelection] = [:]
     
+    // Selection of ALL apps for dashboard usage tracking (not monitoring)
+    var allAppsSelection: FamilyActivitySelection? {
+        get {
+            if _allAppsSelection == nil {
+                _allAppsSelection = loadAllAppsSelection()
+                if let loaded = _allAppsSelection {
+                    print("📂 Loaded allAppsSelection with \(loaded.applicationTokens.count) apps and \(loaded.categoryTokens.count) categories from storage")
+                } else {
+                    print("📂 No allAppsSelection found in storage")
+                }
+            }
+            return _allAppsSelection
+        }
+        set {
+            let appCount = newValue?.applicationTokens.count ?? 0
+            let categoryCount = newValue?.categoryTokens.count ?? 0
+            print("💾 Setting allAppsSelection with \(appCount) apps and \(categoryCount) categories")
+            _allAppsSelection = newValue
+            if let selection = newValue {
+                saveAllAppsSelection(selection)
+                print("💾 allAppsSelection setter: Saved \(selection.applicationTokens.count) apps and \(selection.categoryTokens.count) categories")
+                
+                // Immediately process the selection to create goals and records
+                Task {
+                    await updateUsageFromAllAppsSelection(selection)
+                    print("🔄 allAppsSelection setter: Processed selection")
+                }
+            } else {
+                print("⚠️ allAppsSelection set to nil")
+            }
+        }
+    }
+    private var _allAppsSelection: FamilyActivitySelection?
+    
     // MARK: - Initialization
     
     private init() {
@@ -37,25 +72,47 @@ class ScreenTimeService: ObservableObject {
         authCenter.$authorizationStatus
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
+                let wasAuthorized = self?.isAuthorized ?? false
                 self?.authorizationStatus = status
                 self?.isAuthorized = status == .approved
-                print("📱 Screen Time authorization status: \(status)")
+                
+                print("📱 Screen Time authorization status changed: \(status)")
+                print("📱 Was authorized: \(wasAuthorized), Now authorized: \(status == .approved)")
+                
+                // If we just became authorized, set up monitoring
+                if !wasAuthorized && status == .approved {
+                    print("🎉 Just became authorized - setting up monitoring")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self?.refreshAllMonitoring()
+                    }
+                }
             }
             .store(in: &cancellables)
         
         // Load saved selections on init
         loadSavedSelections()
+        
+        // Load all apps selection
+        _allAppsSelection = loadAllAppsSelection()
+        
+        // Initialize usage records for all monitored apps (deferred to avoid initialization order issues)
+        // This ensures we have records even before threshold events fire
+        DispatchQueue.main.async {
+            DeviceActivityReportService.shared.initializeUsageRecords()
+        }
     }
     
     // MARK: - Authorization
     
-    func requestAuthorization() async throws {
-        print("🔐 Requesting Screen Time authorization...")
-        try await authCenter.requestAuthorization(for: .individual)
-        
-        await MainActor.run {
-            self.isAuthorized = authCenter.authorizationStatus == .approved
-            print("🔐 Authorization result: \(self.isAuthorized ? "Approved" : "Denied")")
+    func requestAuthorization() async {
+        do {
+            print("🔐 Requesting Screen Time authorization...")
+            try await authCenter.requestAuthorization(for: .individual)
+            isAuthorized = authCenter.authorizationStatus == .approved
+            print("🔐 Authorization result: \(isAuthorized ? "Approved" : "Denied")")
+        } catch {
+            isAuthorized = false
+            print("❌ Screen Time auth failed:", error)
         }
     }
     
@@ -105,6 +162,19 @@ class ScreenTimeService: ObservableObject {
         // Set up monitoring
         setupMonitoring(for: appGoal, selection: selection)
         
+        // Initialize usage record immediately (so we track from the start)
+        let today = Calendar.current.startOfDay(for: Date())
+        if coreDataManager.getTodaysUsageRecord(for: bundleID) == nil {
+            _ = coreDataManager.createUsageRecord(
+                for: appGoal,
+                date: today,
+                actualUsageMinutes: 0,
+                didExceedLimit: false
+            )
+            coreDataManager.save()
+            print("📊 Initialized usage record for \(appName)")
+    }
+    
         // Verify storage
         if hasSelection(for: bundleID) {
             print("✅ App added successfully: \(appName)")
@@ -138,6 +208,11 @@ class ScreenTimeService: ObservableObject {
     
     // MARK: - Monitoring Setup
     
+    /// Helper to create activity name from bundle ID
+    private func makeActivityName(for bundleID: String) -> DeviceActivityName {
+        return DeviceActivityName("se7en.\(bundleID.replacingOccurrences(of: ".", with: "_"))")
+    }
+    
     private func setupMonitoring(for goal: AppGoal, selection: FamilyActivitySelection) {
         guard let bundleID = goal.appBundleID else { return }
         
@@ -158,16 +233,18 @@ class ScreenTimeService: ObservableObject {
         // Create events
         let warningEvent = DeviceActivityEvent(
             applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
             threshold: DateComponents(minute: warningMinutes)
         )
         
         let limitEvent = DeviceActivityEvent(
             applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
             threshold: DateComponents(minute: limitMinutes)
         )
         
         // Unique activity name for this app
-        let activityName = DeviceActivityName("se7en.\(bundleID.replacingOccurrences(of: ".", with: "_"))")
+        let activityName = makeActivityName(for: bundleID)
         
         let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
             DeviceActivityEvent.Name("warning.\(bundleID)"): warningEvent,
@@ -188,8 +265,70 @@ class ScreenTimeService: ObservableObject {
         }
     }
     
+    /// Set up monitoring with frequent thresholds for usage tracking
+    /// This fires events every 10 minutes to update usage data
+    private func setupMonitoringWithFrequentUpdates(for goal: AppGoal, selection: FamilyActivitySelection) {
+        guard let bundleID = goal.appBundleID else { return }
+        
+        // Use frequent thresholds: every 10 minutes
+        // This will fire events regularly to update usage
+        let updateInterval = 10 // minutes
+        let highLimit = 1440 // 24 hours (won't block)
+        
+        // Unique activity name for this app
+        let activityName = makeActivityName(for: bundleID)
+        
+        print("🔧 Setting up frequent monitoring for \(goal.appName ?? "Unknown"):")
+        print("   Bundle ID: \(bundleID)")
+        print("   Tokens: \(selection.applicationTokens.count)")
+        print("   Activity Name: \(activityName)")
+        print("   Schedule: Daily from midnight to 11:59 PM")
+        print("   Update interval: \(updateInterval) minutes")
+        print("   High limit: \(highLimit) minutes (won't block)")
+        
+        // Create schedule (midnight to midnight)
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: 0, minute: 0),
+            intervalEnd: DateComponents(hour: 23, minute: 59),
+            repeats: true
+        )
+        
+        // Create frequent update events (every 10 minutes)
+        // These will fire regularly to update usage
+        let updateEvent = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            threshold: DateComponents(minute: updateInterval)
+        )
+        
+        // Also set a high limit event (won't block, just for tracking)
+        let limitEvent = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            threshold: DateComponents(minute: highLimit)
+        )
+        
+        let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
+            DeviceActivityEvent.Name("update.\(bundleID)"): updateEvent,
+            DeviceActivityEvent.Name("limit.\(bundleID)"): limitEvent
+        ]
+        
+        do {
+            try deviceActivityCenter.startMonitoring(activityName, during: schedule, events: events)
+            print("✅ Started frequent monitoring for \(goal.appName ?? bundleID)")
+            print("   Activity Name: \(activityName)")
+            print("   Update threshold: \(updateInterval) minutes")
+            print("   Events configured: update.\(bundleID), limit.\(bundleID)")
+            print("   Monitoring should fire events every \(updateInterval) minutes")
+        } catch {
+            print("❌ Failed to start frequent monitoring for \(bundleID): \(error)")
+            print("   Error details: \(error.localizedDescription)")
+            print("   This will prevent usage tracking from working!")
+        }
+    }
+    
     private func stopMonitoring(for bundleID: String) {
-        let activityName = DeviceActivityName("se7en.\(bundleID.replacingOccurrences(of: ".", with: "_"))")
+        let activityName = makeActivityName(for: bundleID)
         deviceActivityCenter.stopMonitoring([activityName])
         print("🛑 Stopped monitoring for \(bundleID)")
     }
@@ -203,58 +342,373 @@ class ScreenTimeService: ObservableObject {
     }
     
     // MARK: - App Blocking
+    // IMPORTANT: Use tokens directly from FamilyActivitySelection - don't rely on bundle IDs
     
     func blockApp(_ bundleID: String) {
-        guard let selection = appSelections[bundleID] else {
-            print("❌ No selection found for blocking: \(bundleID)")
+        // First try to get selection by bundle ID (for individual apps)
+        if let selection = appSelections[bundleID] {
+            // Block specific apps from this selection using tokens
+            var blockedApps = settingsStore.shield.applications ?? Set()
+            for token in selection.applicationTokens {
+                blockedApps.insert(token)
+            }
+            settingsStore.shield.applications = blockedApps.isEmpty ? nil : blockedApps
+            
+            // Also block categories if present
+            if !selection.categoryTokens.isEmpty {
+                settingsStore.shield.applicationCategories = .specific(selection.categoryTokens)
+            }
+            
+            print("🚫 Blocked app: \(bundleID) (apps: \(selection.applicationTokens.count), categories: \(selection.categoryTokens.count))")
             return
         }
         
-        // Convert tokens for ManagedSettings
-        var blockedApps = settingsStore.shield.applications ?? Set()
-        for token in selection.applicationTokens {
-            blockedApps.insert(token)
+        // Fallback: If bundle ID lookup fails, use allAppsSelection
+        // This handles cases where we have categories or can't extract bundle IDs
+        if let allApps = allAppsSelection {
+            var blockedApps = settingsStore.shield.applications ?? Set()
+            
+            // Block all application tokens
+            for token in allApps.applicationTokens {
+                blockedApps.insert(token)
+            }
+            settingsStore.shield.applications = blockedApps.isEmpty ? nil : blockedApps
+            
+            // Block all category tokens
+            if !allApps.categoryTokens.isEmpty {
+                settingsStore.shield.applicationCategories = .specific(allApps.categoryTokens)
+            }
+            
+            print("🚫 Blocked using allAppsSelection (apps: \(allApps.applicationTokens.count), categories: \(allApps.categoryTokens.count))")
+        } else {
+            print("❌ No selection found for blocking: \(bundleID)")
         }
-        settingsStore.shield.applications = blockedApps
-        
-        print("🚫 Blocked app: \(bundleID)")
     }
     
     func unblockApp(_ bundleID: String) {
-        guard let selection = appSelections[bundleID] else { return }
-        
-        var blockedApps = settingsStore.shield.applications ?? Set()
-        for token in selection.applicationTokens {
-            blockedApps.remove(token)
+        // First try to get selection by bundle ID
+        if let selection = appSelections[bundleID] {
+            var blockedApps = settingsStore.shield.applications ?? Set()
+            for token in selection.applicationTokens {
+                blockedApps.remove(token)
+            }
+            settingsStore.shield.applications = blockedApps.isEmpty ? nil : blockedApps
+            
+            // Note: We can't selectively unblock categories, so we clear all if needed
+            // This is a limitation of the API - categories are all-or-nothing
+            print("✅ Unblocked app: \(bundleID)")
+            return
         }
-        settingsStore.shield.applications = blockedApps
         
-        print("✅ Unblocked app: \(bundleID)")
+        // Fallback: If bundle ID lookup fails, we can't selectively unblock
+        // This is a limitation when using categories or when bundle ID extraction fails
+        print("⚠️ Cannot unblock \(bundleID) - selection not found. Use unblockAllApps()")
+    }
+    
+    /// Block using tokens directly from a FamilyActivitySelection (recommended approach)
+    /// This doesn't require bundle IDs and works with both apps and categories
+    func blockWithSelection(_ selection: FamilyActivitySelection) {
+        // Block application tokens
+        if !selection.applicationTokens.isEmpty {
+            var blockedApps = settingsStore.shield.applications ?? Set()
+            for token in selection.applicationTokens {
+                blockedApps.insert(token)
+            }
+            settingsStore.shield.applications = blockedApps
+        }
+        
+        // Block category tokens
+        if !selection.categoryTokens.isEmpty {
+            settingsStore.shield.applicationCategories = .specific(selection.categoryTokens)
+        }
+        
+        print("🚫 Blocked with selection (apps: \(selection.applicationTokens.count), categories: \(selection.categoryTokens.count))")
+    }
+    
+    /// Unblock using tokens directly from a FamilyActivitySelection
+    func unblockWithSelection(_ selection: FamilyActivitySelection) {
+        // Unblock application tokens
+        if !selection.applicationTokens.isEmpty {
+            var blockedApps = settingsStore.shield.applications ?? Set()
+            for token in selection.applicationTokens {
+                blockedApps.remove(token)
+            }
+            settingsStore.shield.applications = blockedApps.isEmpty ? nil : blockedApps
+        }
+        
+        // Note: Category unblocking is all-or-nothing - we can't selectively unblock
+        // If you need to unblock categories, you'll need to clear all and re-apply
+        print("✅ Unblocked with selection")
+    }
+    
+    /// Block all apps/categories from allAppsSelection
+    /// This is the recommended approach when using FamilyActivityPicker
+    func blockAllSelectedApps() {
+        guard let selection = allAppsSelection else {
+            print("⚠️ No allAppsSelection to block")
+            return
+        }
+        
+        // Block application tokens
+        if !selection.applicationTokens.isEmpty {
+            settingsStore.shield.applications = selection.applicationTokens
+            print("🚫 Blocked \(selection.applicationTokens.count) apps")
+        }
+        
+        // Block category tokens
+        if !selection.categoryTokens.isEmpty {
+            settingsStore.shield.applicationCategories = .specific(selection.categoryTokens)
+            print("🚫 Blocked \(selection.categoryTokens.count) categories")
+        }
     }
     
     func unblockAllApps() {
         settingsStore.shield.applications = nil
-        print("✅ Unblocked all apps")
+        settingsStore.shield.applicationCategories = nil
+        print("✅ Unblocked all apps and categories")
     }
     
     // MARK: - Usage Tracking
     
     /// Get usage minutes for a specific app
-    /// First tries to get from Core Data (updated by DeviceActivityMonitor events)
-    /// Falls back to checking if app has been used today
+    /// First tries to get from Core Data (updated by DeviceActivityMonitor events or reports)
+    /// Creates a record if it doesn't exist to ensure we track usage from the start
     func getUsageMinutes(for bundleID: String) -> Int {
-        // Get usage from Core Data (updated by DeviceActivityMonitor)
+        // Get usage from Core Data (updated by DeviceActivityMonitor or reports)
         if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
             return Int(record.actualUsageMinutes)
         }
         
-        // If no record exists, check if app is being monitored
-        // Usage will be 0 until DeviceActivityMonitor fires an event
+        // If no record exists, create one to start tracking
+        // This ensures we have a record even before threshold events fire
+        let goals = coreDataManager.getActiveAppGoals()
+        if let goal = goals.first(where: { $0.appBundleID == bundleID }) {
+            let today = Calendar.current.startOfDay(for: Date())
+            _ = coreDataManager.createUsageRecord(
+                for: goal,
+                date: today,
+                actualUsageMinutes: 0,
+                didExceedLimit: false
+            )
+            coreDataManager.save()
+        }
+        
         return 0
     }
     
-    /// Get total screen time today across all monitored apps
+    /// Fetch usage data from DeviceActivityReport for a specific app
+    /// This attempts to get real-time usage data
+    func fetchUsageFromReport(for bundleID: String) async -> Int {
+        guard let selection = appSelections[bundleID] else {
+        return 0
+    }
+    
+        // Get the activity name for this app
+        let activityName = makeActivityName(for: bundleID)
+        
+        // Try to fetch usage from report service
+        let usage = await DeviceActivityReportService.shared.fetchUsageForApp(
+            bundleID: bundleID,
+            activityName: activityName,
+            selection: selection
+        )
+        
+        // Update the usage record if we got data
+        // Ensure Core Data operations happen on main thread
+        if usage > 0 {
+            await MainActor.run {
+                DeviceActivityReportService.shared.updateUsageRecord(bundleID: bundleID, minutes: usage)
+            }
+    }
+    
+        return usage
+    }
+    
+    /// Update usage data from reports for all apps (allAppsSelection or monitored apps)
+    /// This should be called periodically to refresh usage data
+    func updateUsageFromReport() async {
+        print("🔄 updateUsageFromReport: Starting...")
+        
+        // First, try to update from all apps selection (either apps OR categories)
+        if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
+            let itemCount = allApps.applicationTokens.count + allApps.categoryTokens.count
+            print("📱 Updating from allAppsSelection with \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories")
+            await updateUsageFromAllAppsSelection(allApps)
+        } else {
+            print("⚠️ No allAppsSelection found, falling back to monitored apps")
+        }
+        
+        // Also update monitored apps (they may have different limits/tracking)
+        let goals = coreDataManager.getActiveAppGoals()
+        print("📊 Updating \(goals.count) monitored app goals")
+        
+        for goal in goals {
+            guard let bundleID = goal.appBundleID,
+                  hasSelection(for: bundleID) else {
+                continue
+            }
+            
+            // Fetch usage from report
+            let usage = await fetchUsageFromReport(for: bundleID)
+            
+            if usage > 0 {
+                updateUsage(for: bundleID, minutes: usage)
+                print("📊 Fetched and updated usage for \(goal.appName ?? bundleID): \(usage) minutes")
+            }
+        }
+        
+        // Post notification to update UI
+        await MainActor.run {
+            NotificationCenter.default.post(
+                name: .screenTimeDataUpdated,
+                object: nil
+            )
+    }
+    
+        print("✅ updateUsageFromReport: Completed")
+    }
+    
+    /// Update usage data from all apps selection
+    private func updateUsageFromAllAppsSelection(_ selection: FamilyActivitySelection) async {
+        let realAppDiscovery = RealAppDiscoveryService.shared
+        
+        print("🔄 updateUsageFromAllAppsSelection: Processing \(selection.applicationTokens.count) apps and \(selection.categoryTokens.count) categories")
+        
+        // Handle category-based selection (preferred method)
+        if !selection.categoryTokens.isEmpty {
+            print("📱 Processing category-based selection with \(selection.categoryTokens.count) categories")
+            
+            // For categories, we set up a single monitoring activity that includes all categories
+            // DeviceActivityReport will automatically handle all apps in those categories
+            let categoryGoalName = "All Categories Tracking"
+            let categoryBundleID = "com.se7en.allcategories"
+            
+            // Check if we already have a goal for category tracking
+            let goals = coreDataManager.getActiveAppGoals()
+            var categoryGoal = goals.first(where: { $0.appBundleID == categoryBundleID })
+            
+            // Create a goal for category-based tracking if it doesn't exist
+            if categoryGoal == nil {
+                categoryGoal = coreDataManager.createAppGoal(
+                    appName: categoryGoalName,
+                    bundleID: categoryBundleID,
+                    dailyLimitMinutes: 0 // No limit, just tracking
+                )
+                print("📱 Created category tracking goal")
+            }
+            
+            // Store the full selection (with categories) for this tracking goal
+            if !hasSelection(for: categoryBundleID), let goal = categoryGoal {
+                saveSelection(selection, forBundleID: categoryBundleID)
+                appSelections[categoryBundleID] = selection
+                print("💾 Stored category selection for tracking")
+            }
+            
+            // Set up monitoring with the full selection (includes categories)
+            if let goal = categoryGoal, let storedSelection = appSelections[categoryBundleID] {
+                let trackingLimit = 1440 // 24 hours (won't block)
+                
+                // Update goal limit if needed
+                if goal.dailyLimitMinutes == 0 {
+                    coreDataManager.updateAppGoal(goal, dailyLimitMinutes: trackingLimit)
+                }
+                
+                // Set up monitoring with frequent thresholds for category-based tracking
+                setupMonitoringWithFrequentUpdates(for: goal, selection: storedSelection)
+                print("📊 Set up category-based monitoring for \(selection.categoryTokens.count) categories")
+            }
+            
+            // Note: We can't extract individual apps from categories in DeviceActivityReport
+            // The extension only provides total usage. Individual app breakdown requires applicationTokens
+            // For now, we'll track total usage and show categories in the UI
+            print("✅ Category-based selection processed - DeviceActivityReport will handle usage tracking")
+            print("📊 Note: Individual app breakdown not available when only categories are selected")
+            coreDataManager.save()
+            return
+        }
+        
+        // Handle individual app-based selection (fallback)
+        print("📱 Processing individual app-based selection with \(selection.applicationTokens.count) apps")
+        for token in selection.applicationTokens {
+            let bundleID = realAppDiscovery.extractBundleID(from: token)
+        
+            // Ensure we have a goal and usage record for this app
+            let goals = coreDataManager.getActiveAppGoals()
+            var goal = goals.first(where: { $0.appBundleID == bundleID })
+            
+            // Create goal if it doesn't exist (for tracking all apps)
+            if goal == nil {
+                let appName = realAppDiscovery.extractDisplayName(from: token)
+                goal = coreDataManager.createAppGoal(
+                    appName: appName,
+                    bundleID: bundleID,
+                    dailyLimitMinutes: 0 // No limit, just tracking
+                )
+                print("📱 Created tracking goal for: \(appName) (\(bundleID))")
+            }
+            
+            // Ensure we have a selection stored for this app (needed for fetching usage)
+            if !hasSelection(for: bundleID), let goal = goal {
+                // Store the selection for this app
+                // Create a selection with just this token
+                var appSelection = FamilyActivitySelection()
+                appSelection.applicationTokens = [token]
+                saveSelection(appSelection, forBundleID: bundleID)
+                appSelections[bundleID] = appSelection
+            }
+            
+            // Ensure usage record exists
+            if coreDataManager.getTodaysUsageRecord(for: bundleID) == nil, let goal = goal {
+                let today = Calendar.current.startOfDay(for: Date())
+            _ = coreDataManager.createUsageRecord(
+                for: goal,
+                date: today,
+                    actualUsageMinutes: 0,
+                    didExceedLimit: false
+                )
+                coreDataManager.save()
+                print("📊 Created usage record for: \(bundleID)")
+            }
+            
+            // Set up monitoring with a daily schedule (required for DeviceActivityReport)
+            // Use frequent thresholds (every 10 minutes) to get regular usage updates
+            // This ensures we get usage data without blocking apps
+            if let appSelection = appSelections[bundleID], let goal = goal {
+                // Always set up frequent monitoring for all apps in allAppsSelection
+                // This ensures we get regular usage updates
+                let trackingLimit = 1440 // 24 hours (won't block)
+                
+                // Update goal limit if it's 0 (tracking only)
+                if goal.dailyLimitMinutes == 0 {
+                    coreDataManager.updateAppGoal(goal, dailyLimitMinutes: trackingLimit)
+                }
+                
+                // Set up monitoring with frequent thresholds
+                setupMonitoringWithFrequentUpdates(for: goal, selection: appSelection)
+                print("📊 Set up frequent monitoring for \(bundleID) (10min update intervals)")
+            }
+            
+            // Try to fetch usage from report if we have a selection
+            if hasSelection(for: bundleID), let goal = goal {
+                let fetchedUsage = await fetchUsageFromReport(for: bundleID)
+                if fetchedUsage > 0 {
+                    updateUsage(for: bundleID, minutes: fetchedUsage)
+                    print("📊 Fetched and updated usage for \(goal.appName ?? bundleID): \(fetchedUsage) minutes")
+                }
+            }
+        }
+        
+        coreDataManager.save()
+    }
+    
+    /// Get total screen time today across all apps (from allAppsSelection) or monitored apps
     func getTotalScreenTimeToday() async -> (totalMinutes: Int, appsUsed: Int) {
+        // First try to get from all apps selection (either apps OR categories)
+        if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
+            return await getAllAppsUsageToday(from: allApps)
+        }
+        
+        // Fallback to monitored apps
         let goals = coreDataManager.getActiveAppGoals()
         var totalMinutes = 0
         var appsUsed = 0
@@ -266,17 +720,134 @@ class ScreenTimeService: ObservableObject {
             }
             
             let usage = getUsageMinutes(for: bundleID)
-            if usage > 0 {
-                totalMinutes += usage
-                appsUsed += 1
-            }
+            // Count ALL apps being tracked (even if usage is 0)
+            // This shows the user that monitoring is active
+            totalMinutes += usage
+            appsUsed += 1  // Count all apps, not just ones with usage
         }
         
         return (totalMinutes, appsUsed)
     }
     
-    /// Get the app with the most usage today
+    /// Get total screen time from all apps selection
+    private func getAllAppsUsageToday(from selection: FamilyActivitySelection) async -> (totalMinutes: Int, appsUsed: Int) {
+        var totalMinutes = 0
+        var appsUsed = 0
+        
+        print("📊 Getting usage from selection with \(selection.applicationTokens.count) apps and \(selection.categoryTokens.count) categories")
+        
+        // If we have categories, use those (they include all apps in the categories)
+        // Categories are better than individual apps as they auto-track all apps
+        if !selection.categoryTokens.isEmpty {
+            print("📱 Using category-based tracking - will count all apps used today")
+            // For category-based selection, we'll get usage from DeviceActivityReport
+            // which handles categories automatically
+            return await getCategoryUsageToday(from: selection)
+        }
+        
+        // Fall back to individual app tracking
+        let realAppDiscovery = RealAppDiscoveryService.shared
+        
+        // First, ensure all apps have goals and records
+        for token in selection.applicationTokens {
+            let bundleID = realAppDiscovery.extractBundleID(from: token)
+            
+            // Ensure goal exists
+            let goals = coreDataManager.getActiveAppGoals()
+            if goals.first(where: { $0.appBundleID == bundleID }) == nil {
+                let appName = realAppDiscovery.extractDisplayName(from: token)
+                _ = coreDataManager.createAppGoal(
+            appName: appName,
+                    bundleID: bundleID,
+                    dailyLimitMinutes: 0
+                )
+            }
+            
+            // Ensure selection is stored
+            if !hasSelection(for: bundleID) {
+                var appSelection = FamilyActivitySelection()
+                appSelection.applicationTokens = [token]
+                saveSelection(appSelection, forBundleID: bundleID)
+                appSelections[bundleID] = appSelection
+        }
+    }
+        coreDataManager.save()
+        
+        // Now get usage for each app
+        for token in selection.applicationTokens {
+            let bundleID = realAppDiscovery.extractBundleID(from: token)
+            
+            // Get usage for this app (will create record if needed)
+            let usage = getUsageMinutes(for: bundleID)
+            
+            // Count ALL apps being tracked (even if usage is 0)
+            // This shows the user that monitoring is active
+            totalMinutes += usage
+            appsUsed += 1  // Count all apps, not just ones with usage
+        }
+        
+        print("📊 getAllAppsUsageToday: \(totalMinutes) minutes across \(appsUsed) apps (from \(selection.applicationTokens.count) total apps)")
+        
+        return (totalMinutes, appsUsed)
+    }
+    
+    /// Get usage for category-based selections
+    private func getCategoryUsageToday(from selection: FamilyActivitySelection) async -> (totalMinutes: Int, appsUsed: Int) {
+        print("📊 Getting category-based usage for \(selection.categoryTokens.count) categories...")
+        
+        // Try to read from shared container first (from DeviceActivityReport extension)
+        let appGroupID = "group.com.se7en.app"
+        
+        // Access UserDefaults on main thread to avoid CFPrefsPlistSource errors
+        return await MainActor.run {
+            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+                print("❌ Failed to access shared container for category usage")
+                // Fallback to estimate
+                let estimatedApps = selection.categoryTokens.count * 15
+                return (0, estimatedApps)
+            }
+            
+            // Read total usage directly
+            let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+            
+            // Get apps count - either from shared container or estimate
+            var appsCount = sharedDefaults.integer(forKey: "apps_count")
+            
+            // If no apps count, estimate based on categories
+            if appsCount == 0 {
+                // Each category typically has 10-20 apps, estimate conservatively
+                appsCount = selection.categoryTokens.count * 15
+            }
+            
+            if totalUsage > 0 || appsCount > 0 {
+                print("📊 Found category usage from extension: \(totalUsage) minutes, \(appsCount) apps")
+                return (totalUsage, appsCount)
+            }
+            
+            // Fallback: estimate based on categories selected
+            let estimatedApps = selection.categoryTokens.count * 15
+            print("📊 Category fallback: Estimated \(estimatedApps) apps from \(selection.categoryTokens.count) categories")
+            return (0, estimatedApps)
+        }
+        
+        // Fallback: estimate based on categories selected
+        // Each category typically has 10-20 apps, so estimate conservatively
+        let estimatedApps = selection.categoryTokens.count * 15
+        print("📊 Category fallback: Estimated \(estimatedApps) apps from \(selection.categoryTokens.count) categories")
+        print("📊 Note: DeviceActivityReport will provide real usage data when available")
+        
+        // Return estimated count with 0 usage (will be updated by DeviceActivityReport)
+        return (0, estimatedApps)
+    }
+    
+    /// Get the app with the most usage today (from allAppsSelection or monitored apps)
     func getTopAppToday() async -> (name: String, bundleID: String, minutes: Int)? {
+        // First try to get from all apps selection (either apps OR categories)
+        if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
+            return await getTopAppFromAllApps(from: allApps)
+        }
+        
+        // Fallback to monitored apps
         let goals = coreDataManager.getActiveAppGoals()
         var topApp: (name: String, bundleID: String, minutes: Int)?
         var maxUsage = 0
@@ -295,6 +866,30 @@ class ScreenTimeService: ObservableObject {
             }
         }
         
+        return topApp
+    }
+    
+    /// Get top app from all apps selection
+    private func getTopAppFromAllApps(from selection: FamilyActivitySelection) async -> (name: String, bundleID: String, minutes: Int)? {
+        var topApp: (name: String, bundleID: String, minutes: Int)?
+        var maxUsage = 0
+        
+        let realAppDiscovery = RealAppDiscoveryService.shared
+        
+        for token in selection.applicationTokens {
+            let bundleID = realAppDiscovery.extractBundleID(from: token)
+            
+            // Get app name
+            let appName = realAppDiscovery.extractDisplayName(from: token)
+            
+            // Get usage for this app
+            let usage = getUsageMinutes(for: bundleID)
+            if usage > maxUsage {
+                maxUsage = usage
+                topApp = (name: appName, bundleID: bundleID, minutes: usage)
+        }
+    }
+    
         return topApp
     }
     
@@ -322,6 +917,41 @@ class ScreenTimeService: ObservableObject {
     // MARK: - Persistence
     
     private let selectionsKey = "se7en.appSelections"
+    private let allAppsSelectionKey = "se7en.allAppsSelection"
+    
+    func saveAllAppsSelection(_ selection: FamilyActivitySelection) {
+        do {
+            let data = try PropertyListEncoder().encode(selection)
+            UserDefaults.standard.set(data, forKey: allAppsSelectionKey)
+            // Force UserDefaults to sync immediately for critical onboarding data
+            UserDefaults.standard.synchronize()
+            print("💾 Saved all apps selection with \(selection.applicationTokens.count) apps and \(selection.categoryTokens.count) categories to UserDefaults")
+            
+            // Verify the save by immediately reading it back
+            if let verification = loadAllAppsSelection() {
+                print("✅ Verification: Successfully saved and loaded \(verification.applicationTokens.count) apps and \(verification.categoryTokens.count) categories")
+            } else {
+                print("❌ ERROR: Failed to verify save - could not load back the selection!")
+            }
+        } catch {
+            print("❌ Failed to save all apps selection: \(error)")
+        }
+    }
+    
+    func loadAllAppsSelection() -> FamilyActivitySelection? {
+        guard let data = UserDefaults.standard.data(forKey: allAppsSelectionKey) else {
+            return nil
+        }
+        
+        do {
+            let selection = try PropertyListDecoder().decode(FamilyActivitySelection.self, from: data)
+            print("📂 Loaded all apps selection with \(selection.applicationTokens.count) apps")
+            return selection
+        } catch {
+            print("❌ Failed to load all apps selection: \(error)")
+            return nil
+        }
+    }
     
     private func saveSelection(_ selection: FamilyActivitySelection, forBundleID bundleID: String) {
         // Save to UserDefaults (selection can be encoded)
@@ -333,7 +963,7 @@ class ScreenTimeService: ObservableObject {
             print("💾 Saved selection for: \(bundleID)")
         } catch {
             print("❌ Failed to save selection: \(error)")
-        }
+            }
     }
     
     private func removeSelection(forBundleID bundleID: String) {
@@ -389,50 +1019,112 @@ class ScreenTimeService: ObservableObject {
     // MARK: - Handle Limit Events
     
     func handleWarning(for bundleID: String) {
-        let goals = coreDataManager.getActiveAppGoals()
-        guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else { return }
+        // Ensure Core Data access happens on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let goals = self.coreDataManager.getActiveAppGoals()
+            guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else { return }
         
-        let appName = goal.appName ?? "App"
-        let limitMinutes = Int(goal.dailyLimitMinutes)
-        let remainingMinutes = Int(Double(limitMinutes) * 0.2)
+            let appName = goal.appName ?? "App"
+            let limitMinutes = Int(goal.dailyLimitMinutes)
+            let remainingMinutes = Int(Double(limitMinutes) * 0.2)
+            
+            NotificationService.shared.sendLimitWarningNotification(
+                appName: appName,
+                timeRemaining: remainingMinutes
+            )
         
-        NotificationService.shared.sendLimitWarningNotification(
-            appName: appName,
-            timeRemaining: remainingMinutes
-        )
+            // Update usage to 80% of limit
+            self.updateUsage(for: bundleID, minutes: Int(Double(limitMinutes) * 0.8))
         
-        // Update usage to 80% of limit
-        updateUsage(for: bundleID, minutes: Int(Double(limitMinutes) * 0.8))
-        
-        print("⚠️ Warning sent for \(appName)")
+            // Also update via report service for consistency
+            DeviceActivityReportService.shared.updateUsageRecord(
+                bundleID: bundleID,
+                minutes: Int(Double(limitMinutes) * 0.8)
+            )
+            
+            print("⚠️ Warning sent for \(appName)")
+        }
     }
     
     func handleLimitReached(for bundleID: String) {
-        let goals = coreDataManager.getActiveAppGoals()
-        guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else { return }
+        // Ensure Core Data access happens on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let goals = self.coreDataManager.getActiveAppGoals()
+            guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else { return }
+            
+            let appName = goal.appName ?? "App"
+            let limitMinutes = Int(goal.dailyLimitMinutes)
+            
+            // Block the app using tokens directly (blockApp handles all fallback logic)
+            self.blockApp(bundleID)
+            
+            // Update usage
+            self.updateUsage(for: bundleID, minutes: limitMinutes)
+            
+            // Also update via report service for consistency
+            DeviceActivityReportService.shared.updateUsageRecord(
+                bundleID: bundleID,
+                minutes: limitMinutes
+            )
         
-        let appName = goal.appName ?? "App"
-        let limitMinutes = Int(goal.dailyLimitMinutes)
-        
-        // Block the app
-        blockApp(bundleID)
-        
-        // Update usage
-        updateUsage(for: bundleID, minutes: limitMinutes)
-        
-        // Send notification
+            // Send notification
         NotificationService.shared.sendAppBlockedNotification(appName: appName)
         
-        // Post notification for UI
-        DispatchQueue.main.async {
+            // Post notification for UI
             NotificationCenter.default.post(
                 name: .appBlocked,
                 object: nil,
                 userInfo: ["appName": appName, "bundleID": bundleID]
             )
-        }
         
-        print("🚫 Limit reached - blocked \(appName)")
+            print("🚫 Limit reached - blocked \(appName)")
+        }
+    }
+    
+    func handleUsageUpdate(for bundleID: String) {
+        // Handle frequent update events (every 10 minutes)
+        // The threshold that was reached is 10 minutes, so update usage to that
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let goals = self.coreDataManager.getActiveAppGoals()
+            guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else { return }
+            
+            // The update threshold is 10 minutes
+            // This means the app has been used for at least 10 minutes since last update
+            // Update usage to reflect this
+            let updateThreshold = 10 // minutes
+            let currentUsage = self.getUsageMinutes(for: bundleID)
+        
+            // Use the maximum of current usage or the threshold
+            // This ensures we don't go backwards, but also captures the threshold amount
+            let newUsage = max(currentUsage, updateThreshold)
+            
+            // If this is the first update, set to threshold amount
+            // Otherwise, increment by threshold (since event fires every 10 min)
+            let finalUsage = currentUsage == 0 ? updateThreshold : currentUsage + updateThreshold
+            
+            // Update usage record
+            self.updateUsage(for: bundleID, minutes: finalUsage)
+            
+            // Also update via report service for consistency
+            DeviceActivityReportService.shared.updateUsageRecord(
+                bundleID: bundleID,
+                minutes: finalUsage
+            )
+            
+            print("🔄 Updated usage for \(goal.appName ?? bundleID): \(finalUsage) minutes")
+            
+            // Post notification to update UI
+            NotificationCenter.default.post(
+                name: .screenTimeDataUpdated,
+                object: nil
+            )
+        }
     }
     
     // MARK: - Additional Methods (for compatibility)
@@ -476,7 +1168,7 @@ class ScreenTimeService: ObservableObject {
         coreDataManager.save()
         print("📅 Weekly reset completed")
     }
-    
+        
     /// Refresh all app usage data
     func refreshAllAppUsage() async {
         let goals = coreDataManager.getActiveAppGoals()
@@ -537,4 +1229,122 @@ class ScreenTimeService: ObservableObject {
         
         return true
     }
+    
+    // MARK: - App Lifecycle Monitoring Refresh
+    
+    /// Refresh all monitoring setups when app opens
+    /// This ensures monitoring is active and usage data can be tracked
+    func refreshAllMonitoring() {
+        print("🔄 Refreshing all monitoring setups...")
+        print("📱 Authorization status: \(authorizationStatus)")
+        print("📱 Is authorized: \(isAuthorized)")
+        
+        guard isAuthorized else {
+            print("⚠️ Cannot refresh monitoring - not authorized")
+            print("   Current status: \(authorizationStatus)")
+            return
+        }
+        
+        // Process pending events from Monitor Extension
+        processPendingMonitorEvents()
+        
+        // Re-setup monitoring for all apps/categories in allAppsSelection
+        if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
+            Task {
+                let itemCount = allApps.applicationTokens.count + allApps.categoryTokens.count
+                print("📱 Refreshing monitoring for \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories in allAppsSelection")
+                await updateUsageFromAllAppsSelection(allApps)
+                print("✅ Refreshed monitoring for all apps")
+                
+                // Also trigger usage update
+                await updateUsageFromReport()
+                
+                // Notify UI to refresh
+                await MainActor.run {
+                    NotificationCenter.default.post(
+                        name: .screenTimeDataUpdated,
+                        object: nil
+                    )
+                }
+            }
+        }
+        
+        // Also refresh monitored apps (they may have different limits/tracking)
+        let goals = coreDataManager.getActiveAppGoals()
+        for goal in goals {
+            guard let bundleID = goal.appBundleID,
+                  let selection = appSelections[bundleID] else {
+                continue
+            }
+            
+            // Re-setup monitoring to ensure it's active
+            // Use frequent updates for better tracking
+            if goal.dailyLimitMinutes == 0 || goal.dailyLimitMinutes >= 1440 {
+                // Tracking only or high limit - use frequent updates
+                setupMonitoringWithFrequentUpdates(for: goal, selection: selection)
+        } else {
+                // Has a limit - use normal monitoring
+                setupMonitoring(for: goal, selection: selection)
+            }
+        }
+        
+        print("✅ Monitoring refresh completed")
+    }
+    
+    // MARK: - Monitor Extension Event Processing
+    
+    /// Process pending events from the Monitor Extension (via shared container)
+    private func processPendingMonitorEvents() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID),
+              var events = sharedDefaults.array(forKey: "pendingEvents") as? [[String: String]],
+              !events.isEmpty else {
+            return
+        }
+        
+        print("📥 Processing \(events.count) pending events from Monitor Extension")
+        
+        // Process all events
+        for event in events {
+            guard let type = event["type"],
+                  let bundleID = event["bundleID"] else {
+                continue
+            }
+            
+            switch type {
+            case "update":
+                // Update usage by 10 minutes (the threshold interval)
+                let currentUsage = getUsageMinutes(for: bundleID)
+                let newUsage = currentUsage + 10
+                updateUsage(for: bundleID, minutes: newUsage)
+                print("📊 Processed update event: \(bundleID) = \(newUsage) minutes")
+                
+            case "warning":
+                handleWarning(for: bundleID)
+                print("⚠️ Processed warning event: \(bundleID)")
+                
+            case "limit":
+                handleLimitReached(for: bundleID)
+                print("🚫 Processed limit event: \(bundleID)")
+                
+            default:
+                print("⚠️ Unknown event type: \(type)")
+            }
+        }
+        
+        // Clear processed events
+        sharedDefaults.set([], forKey: "pendingEvents")
+        print("✅ Processed all pending events")
+        
+        // Also read usage data directly from shared container
+        // Read total_usage and apps_count directly
+        if let totalUsage = sharedDefaults.object(forKey: "total_usage") as? Int, totalUsage > 0 {
+            print("📊 Found total usage in shared container: \(totalUsage) minutes")
+        }
+        
+        if let appsCount = sharedDefaults.object(forKey: "apps_count") as? Int, appsCount > 0 {
+            print("📊 Found apps count in shared container: \(appsCount) apps")
+        }
+    }
+    
 }

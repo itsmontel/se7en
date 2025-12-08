@@ -12,6 +12,7 @@ extension Notification.Name {
     static let appUnblocked = Notification.Name("appUnblocked")
 }
 
+@MainActor
 class AppState: ObservableObject {
     @Published var isOnboarding = true
     @Published var credits = 7
@@ -371,8 +372,8 @@ class AppState: ObservableObject {
     
     // MARK: - Screen Time Integration
     
-    func requestScreenTimeAuthorization() async throws {
-        try await screenTimeService.requestAuthorization()
+    func requestScreenTimeAuthorization() async {
+        await screenTimeService.requestAuthorization()
     }
     
     func addAppGoalFromFamilySelection(_ selection: FamilyActivitySelection, appName: String, dailyLimitMinutes: Int, bundleID: String? = nil) {
@@ -582,6 +583,9 @@ class AppState: ObservableObject {
         // Reload all data to ensure it's up to date
         loadUserPreferences()
         refreshData()
+        
+        // Refresh screen time data
+        refreshScreenTimeData()
     }
     
     

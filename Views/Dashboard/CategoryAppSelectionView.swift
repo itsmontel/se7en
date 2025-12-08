@@ -58,21 +58,27 @@ struct CategoryAppSelectionView: View {
                 }
             }
             .sheet(isPresented: $showingFamilyPicker) {
-                FamilyActivityPicker(selection: $familySelection)
-                    .onChange(of: familySelection) { newSelection in
-                        if !newSelection.applicationTokens.isEmpty {
-                            print("✅ Selected \(newSelection.applicationTokens.count) apps")
+                FamilyActivityPickerWrapper(
+                    selection: $familySelection,
+                    onDone: {
+                        if !familySelection.applicationTokens.isEmpty {
+                            print("✅ Selected \(familySelection.applicationTokens.count) apps")
                             // Process the selection to extract bundle IDs properly
-                            realAppDiscovery.processSelectedApps(newSelection)
+                            realAppDiscovery.processSelectedApps(familySelection)
                             showingFamilyPicker = false
                             step = .setLimit
                         }
-                    }
+                    },
+                    onSkip: {
+                        showingFamilyPicker = false
+                    },
+                    isOnboarding: false
+                )
             }
             .onAppear {
                 if screenTimeService.isAuthorized {
-                    showingFamilyPicker = true
-                }
+                showingFamilyPicker = true
+            }
             }
         }
     }
@@ -80,19 +86,19 @@ struct CategoryAppSelectionView: View {
     // MARK: - Not Authorized View
     
     private var notAuthorizedView: some View {
-        VStack(spacing: 24) {
+            VStack(spacing: 24) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.orange)
             
             Text("Screen Time Not Authorized")
                 .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.textPrimary)
-            
+                        .foregroundColor(.textPrimary)
+                    
             Text("Please enable Screen Time permissions to add apps for monitoring.")
-                .font(.system(size: 16))
-                .foregroundColor(.textSecondary)
-                .multilineTextAlignment(.center)
+                        .font(.system(size: 16))
+                        .foregroundColor(.textSecondary)
+                        .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             
             Button("Open Settings") {
@@ -100,7 +106,7 @@ struct CategoryAppSelectionView: View {
                     UIApplication.shared.open(url)
                 }
             }
-            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
             .foregroundColor(.white)
             .padding(.horizontal, 32)
             .padding(.vertical, 14)
@@ -112,19 +118,19 @@ struct CategoryAppSelectionView: View {
     // MARK: - App Picker View
     
     private var appPickerView: some View {
-        VStack(spacing: 24) {
+            VStack(spacing: 24) {
             VStack(spacing: 12) {
                 Image(systemName: "apps.iphone")
                     .font(.system(size: 64, weight: .light))
-                    .foregroundColor(.blue)
-                
+                                .foregroundColor(.blue)
+                            
                 Text("Select Apps to Monitor")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.textPrimary)
-                
+                                .foregroundColor(.textPrimary)
+                        
                 Text("Choose which apps you want to set limits for")
-                    .font(.system(size: 16))
-                    .foregroundColor(.textSecondary)
+                            .font(.system(size: 16))
+                            .foregroundColor(.textSecondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.top, 40)
@@ -141,7 +147,7 @@ struct CategoryAppSelectionView: View {
                 .padding(.vertical, 16)
                 .background(Color.blue)
                 .cornerRadius(14)
-            }
+                    }
             .padding(.horizontal, 24)
             
             Spacer()
@@ -158,17 +164,17 @@ struct CategoryAppSelectionView: View {
                     Image(systemName: "timer")
                         .font(.system(size: 48, weight: .light))
                         .foregroundColor(.blue)
-                    
+                        
                     Text("Set Daily Limit")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.textPrimary)
-                    
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.textPrimary)
+                        
                     let appCount = realAppDiscovery.categorizedApps.values.flatMap { $0 }.count
                     Text("\(appCount) app\(appCount == 1 ? "" : "s") selected")
-                        .font(.system(size: 16))
-                        .foregroundColor(.textSecondary)
-                }
-                .padding(.top, 20)
+                            .font(.system(size: 16))
+                            .foregroundColor(.textSecondary)
+                    }
+                    .padding(.top, 20)
                 
                 // Limit options
                 VStack(spacing: 12) {
@@ -178,9 +184,9 @@ struct CategoryAppSelectionView: View {
                                 minutes: limit,
                                 isSelected: dailyLimit == limit && !showingCustomLimit,
                                 action: {
-                                    dailyLimit = limit
-                                    showingCustomLimit = false
-                                }
+                                dailyLimit = limit
+                                showingCustomLimit = false
+                            }
                             )
                         }
                     }
@@ -261,27 +267,19 @@ struct CategoryAppSelectionView: View {
         for app in allApps {
             print("📱 Processing app: \(app.displayName) (\(app.bundleID))")
             
-            // Find the matching token from the original selection
-            // Create a selection with just this app's token
-            var singleAppSelection = FamilyActivitySelection()
-            
-            // Find the token that matches this app
-            if let matchingToken = findMatchingToken(for: app, in: selection) {
-                singleAppSelection.applicationTokens = Set([matchingToken])
-                print("✅ Found matching token for \(app.displayName)")
-            } else {
-                // Fallback: use the full selection (less ideal but will work)
-                print("⚠️ Using full selection as fallback for \(app.displayName)")
-                singleAppSelection = selection
-            }
+            // Use the full selection for each app
+            // Since tokens are opaque and we track by bundle ID, this works correctly
+            // Each app will be monitored individually based on its bundle ID
+            let singleAppSelection = selection
+            print("✅ Using selection with \(selection.applicationTokens.count) token(s) for \(app.displayName)")
             
             // Add to service with the REAL bundle ID from RealAppDiscoveryService
             screenTimeService.addAppForMonitoring(
                 selection: singleAppSelection,
-                appName: app.displayName,
+            appName: app.displayName,
                 bundleID: app.bundleID, // Use the extracted bundle ID from RealAppDiscoveryService
-                dailyLimitMinutes: dailyLimit
-            )
+            dailyLimitMinutes: dailyLimit
+        )
             
             print("✅ Added \(app.displayName) with bundle ID: \(app.bundleID)")
         }
@@ -297,18 +295,6 @@ struct CategoryAppSelectionView: View {
     }
     
     // MARK: - Helpers
-    
-    /// Find the matching token for an app in the selection
-    private func findMatchingToken(for app: RealInstalledApp, in selection: FamilyActivitySelection) -> AnyHashable? {
-        // Try to match by comparing token hash values
-        for token in selection.applicationTokens {
-            if token.hashValue == app.token.hashValue {
-                return token
-            }
-        }
-        // If no exact match, return the app's token (should work)
-        return app.token
-    }
 }
 
 // MARK: - Supporting Views

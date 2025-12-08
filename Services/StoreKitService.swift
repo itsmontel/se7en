@@ -2,8 +2,9 @@ import StoreKit
 import Foundation
 import Combine
 
-class StoreKitService: ObservableObject {
-    nonisolated static let shared = StoreKitService()
+@MainActor
+final class StoreKitService: ObservableObject {
+    static let shared = StoreKitService()
     
     // Product IDs for the app
     private enum ProductIDs {
@@ -217,16 +218,13 @@ class StoreKitService: ObservableObject {
     // MARK: - Transaction Listener
     
     private func listenForTransactions() -> Task<Void, Error> {
-        return Task.detached {
+        return Task { [weak self] in
+            guard let self else { return }
             // Listen for new transactions
             for await result in Transaction.updates {
                 do {
                     let transaction = try self.checkVerified(result)
-                    
-                    await MainActor.run {
                         self.processTransactionSync(transaction)
-                    }
-                    
                     await transaction.finish()
                 } catch {
                     print("Transaction verification failed: \(error)")
