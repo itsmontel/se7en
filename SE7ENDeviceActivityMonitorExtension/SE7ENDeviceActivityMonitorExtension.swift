@@ -44,7 +44,7 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         if let bundleID = extractBundleID(from: eventString) {
             if eventString.contains("update") {
                 // Handle update events first (most frequent)
-                // These fire every 10 minutes to update usage
+                // These fire every 1 minute to update usage
                 handleUpdate(for: bundleID, activity: activity)
             } else if eventString.contains("warning") {
                 handleWarning(for: bundleID, activity: activity)
@@ -92,12 +92,12 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     
     private func handleUpdate(for bundleID: String, activity: DeviceActivityName) {
         print("🔄 Update event for: \(bundleID)")
-        // The threshold is 10 minutes, so we update usage by that amount
+        // The threshold is 1 minute, so we update usage by that amount
         // Save to shared container for main app to process
         saveEventToSharedContainer(type: "update", bundleID: bundleID, activity: activity)
         
         // Also update usage directly in shared container
-        let updateInterval = 10 // minutes
+        let updateInterval = 1 // minutes
         updateUsageInSharedContainer(bundleID: bundleID, minutes: updateInterval)
     }
     

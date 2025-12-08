@@ -49,6 +49,8 @@ class AppState: ObservableObject {
     private let screenTimeService = ScreenTimeService.shared
     private let notificationService = NotificationService.shared
     private var cancellables = Set<AnyCancellable>()
+    private var lastLoadAppGoalsTime: Date = Date.distantPast
+    private let loadAppGoalsThrottleInterval: TimeInterval = 2.0 // Minimum 2 seconds between calls
     
     init() {
         setupObservers()
@@ -177,6 +179,13 @@ class AppState: ObservableObject {
     }
     
     func loadAppGoals() {
+        // Throttle rapid calls - prevent calling more than once per 2 seconds
+        let now = Date()
+        guard now.timeIntervalSince(lastLoadAppGoalsTime) >= loadAppGoalsThrottleInterval else {
+            return // Skip if called too recently
+        }
+        lastLoadAppGoalsTime = now
+        
         // Clean up expired restrictions before loading
         cleanupExpiredRestrictions()
         
@@ -184,7 +193,6 @@ class AppState: ObservableObject {
         coreDataManager.cleanupMockApps()
         
         let goals = coreDataManager.getActiveAppGoals()
-        print("📊 Loading \(goals.count) app goals from Core Data")
         
         userGoals = goals.map { goal in
             UserGoal(
@@ -205,14 +213,12 @@ class AppState: ObservableObject {
             
             // ONLY show apps that have Screen Time tokens (are connected via FamilyActivityPicker)
             guard screenTimeService.hasSelection(for: bundleID) else {
-                print("⚠️ Skipping \(appName) - no Screen Time token (not connected via Screen Time API)")
                 return nil
             }
             
             // Get effective daily limit (includes extensions for today)
             let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: bundleID)
             
-            print("🔄 Converting \(appName) to MonitoredApp (limit: \(effectiveLimit) minutes)")
             return MonitoredApp(
                 name: appName,
                 icon: getAppIcon(for: appName),
@@ -223,7 +229,8 @@ class AppState: ObservableObject {
             )
         }
         
-        print("✅ Loaded \(userGoals.count) user goals and \(monitoredApps.count) monitored apps (only Screen Time connected apps)")
+        // Only log summary, not per-app details
+        print("📊 Loaded \(userGoals.count) goals, \(monitoredApps.count) monitored apps")
         
         // Convert to AppUsage format for dashboard display
         appUsage = userGoals.map { goal in

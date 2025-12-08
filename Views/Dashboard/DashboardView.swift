@@ -638,21 +638,27 @@ struct DashboardView: View {
                 )
             }
             .onAppear {
-                // Load immediately when view appears
                 print("📱 DashboardView.onAppear: Starting data load")
                 
-                // Ensure Screen Time is authorized; request if not
+                // Ensure Screen Time is authorized
                 if !screenTimeService.isAuthorized {
                     Task {
                         await screenTimeService.requestAuthorization()
+                        // Wait a moment for authorization to complete
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        // Then refresh monitoring
+                        screenTimeService.refreshAllMonitoring()
                     }
+                } else {
+                    // ⚠️ CRITICAL: Refresh monitoring immediately
+                    screenTimeService.refreshAllMonitoring()
                 }
                 
-                // Refresh monitoring when app opens to ensure it's active
-                screenTimeService.refreshAllMonitoring()
-                
-                loadScreenTimeData()
-                appState.refreshScreenTimeData()
+                // Small delay before loading data to ensure monitoring is active
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    loadScreenTimeData()
+                    appState.refreshScreenTimeData()
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 // Refresh monitoring and data when app enters foreground
@@ -961,18 +967,36 @@ struct DashboardView: View {
     
     @ViewBuilder
     private var todayOverviewReportView: some View {
-        let dateInterval = Calendar.current.dateInterval(of: .day, for: .now) ?? DateInterval(start: Date(), end: Date())
+        // ⚠️ CRITICAL: Use the EXACT same date interval that monitoring uses
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfDay = calendar.startOfDay(for: now)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? now
+        
+        let dateInterval = DateInterval(start: startOfDay, end: endOfDay)
+        
         let filter = DeviceActivityFilter(
             segment: .daily(during: dateInterval),
             users: .all,
-            devices: .all
+            devices: .init([.iPhone, .iPad])
         )
         
         DeviceActivityReport(.todayOverview, filter: filter)
             .frame(maxWidth: .infinity)
+            .frame(height: 200) // ✅ Add explicit height
             .background(Color.cardBackground)
             .cornerRadius(12)
             .padding(.horizontal, 20)
+            .onAppear {
+                print("📊 DashboardView: DeviceActivityReport(.todayOverview) view appeared")
+                print("   Context: .todayOverview")
+                print("   Filter: users=.all, devices=[.iPhone, .iPad]")
+                print("   Date interval: \(dateInterval.start) to \(dateInterval.end)")
+                print("   Authorization: \(screenTimeService.isAuthorized)")
+                
+                // ⚠️ CRITICAL: Force monitoring refresh when report appears
+                screenTimeService.refreshAllMonitoring()
+            }
     }
     
     @ViewBuilder
@@ -984,7 +1008,7 @@ struct DashboardView: View {
         let filter = DeviceActivityFilter(
             segment: .daily(during: dateInterval),
             users: .all,
-            devices: .all
+            devices: .init([.iPhone, .iPad])
         )
         
         DeviceActivityReport(.totalActivity, filter: filter)

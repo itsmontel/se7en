@@ -87,7 +87,7 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     private func handleUpdate(for bundleID: String) {
         print("🔄 Update event for: \(bundleID)")
         // Update usage based on the threshold that was reached
-        // The threshold is 10 minutes, so update usage to that amount
+        // The threshold is 1 minute, so update usage to that amount
         Task { @MainActor in
             ScreenTimeService.shared.handleUsageUpdate(for: bundleID)
         }

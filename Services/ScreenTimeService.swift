@@ -99,6 +99,11 @@ final class ScreenTimeService: ObservableObject {
         // This ensures we have records even before threshold events fire
         DispatchQueue.main.async {
             DeviceActivityReportService.shared.initializeUsageRecords()
+            
+            // ⚠️ CRITICAL: Start monitoring immediately if authorized
+            if self.isAuthorized {
+                self.refreshAllMonitoring()
+            }
         }
     }
     
@@ -110,6 +115,7 @@ final class ScreenTimeService: ObservableObject {
             try await authCenter.requestAuthorization(for: .individual)
             isAuthorized = authCenter.authorizationStatus == .approved
             print("🔐 Authorization result: \(isAuthorized ? "Approved" : "Denied")")
+            print("🔐 Authorization status: \(authCenter.authorizationStatus)")
         } catch {
             isAuthorized = false
             print("❌ Screen Time auth failed:", error)
@@ -266,13 +272,13 @@ final class ScreenTimeService: ObservableObject {
     }
     
     /// Set up monitoring with frequent thresholds for usage tracking
-    /// This fires events every 10 minutes to update usage data
+    /// This fires events every 1 minute to update usage data
     private func setupMonitoringWithFrequentUpdates(for goal: AppGoal, selection: FamilyActivitySelection) {
         guard let bundleID = goal.appBundleID else { return }
         
-        // Use frequent thresholds: every 10 minutes
+        // Use frequent thresholds: every 1 minute
         // This will fire events regularly to update usage
-        let updateInterval = 10 // minutes
+        let updateInterval = 1 // minutes
         let highLimit = 1440 // 24 hours (won't block)
         
         // Unique activity name for this app
@@ -293,7 +299,7 @@ final class ScreenTimeService: ObservableObject {
             repeats: true
         )
         
-        // Create frequent update events (every 10 minutes)
+        // Create frequent update events (every 1 minute)
         // These will fire regularly to update usage
         let updateEvent = DeviceActivityEvent(
             applications: selection.applicationTokens,
@@ -616,6 +622,9 @@ final class ScreenTimeService: ObservableObject {
                 // Set up monitoring with frequent thresholds for category-based tracking
                 setupMonitoringWithFrequentUpdates(for: goal, selection: storedSelection)
                 print("📊 Set up category-based monitoring for \(selection.categoryTokens.count) categories")
+                
+                // CRITICAL: Also set up a global monitoring session for DeviceActivityReport
+                setupGlobalMonitoringForReports(selection: storedSelection)
             }
             
             // Note: We can't extract individual apps from categories in DeviceActivityReport
@@ -671,7 +680,7 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Set up monitoring with a daily schedule (required for DeviceActivityReport)
-            // Use frequent thresholds (every 10 minutes) to get regular usage updates
+            // Use frequent thresholds (every 1 minute) to get regular usage updates
             // This ensures we get usage data without blocking apps
             if let appSelection = appSelections[bundleID], let goal = goal {
                 // Always set up frequent monitoring for all apps in allAppsSelection
@@ -686,6 +695,11 @@ final class ScreenTimeService: ObservableObject {
                 // Set up monitoring with frequent thresholds
                 setupMonitoringWithFrequentUpdates(for: goal, selection: appSelection)
                 print("📊 Set up frequent monitoring for \(bundleID) (10min update intervals)")
+                
+                // Also ensure global monitoring is set up for this selection
+                if selection.applicationTokens.count + selection.categoryTokens.count > 0 {
+                    setupGlobalMonitoringForReports(selection: selection)
+                }
             }
             
             // Try to fetch usage from report if we have a selection
@@ -1086,18 +1100,18 @@ final class ScreenTimeService: ObservableObject {
     }
     
     func handleUsageUpdate(for bundleID: String) {
-        // Handle frequent update events (every 10 minutes)
-        // The threshold that was reached is 10 minutes, so update usage to that
+        // Handle frequent update events (every 1 minute)
+        // The threshold that was reached is 1 minute, so update usage to that
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
             let goals = self.coreDataManager.getActiveAppGoals()
             guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else { return }
             
-            // The update threshold is 10 minutes
-            // This means the app has been used for at least 10 minutes since last update
+            // The update threshold is 1 minute
+            // This means the app has been used for at least 1 minute since last update
             // Update usage to reflect this
-            let updateThreshold = 10 // minutes
+            let updateThreshold = 1 // minutes
             let currentUsage = self.getUsageMinutes(for: bundleID)
         
             // Use the maximum of current usage or the threshold
@@ -1105,7 +1119,7 @@ final class ScreenTimeService: ObservableObject {
             let newUsage = max(currentUsage, updateThreshold)
             
             // If this is the first update, set to threshold amount
-            // Otherwise, increment by threshold (since event fires every 10 min)
+            // Otherwise, increment by threshold (since event fires every 1 min)
             let finalUsage = currentUsage == 0 ? updateThreshold : currentUsage + updateThreshold
             
             // Update usage record
@@ -1230,6 +1244,45 @@ final class ScreenTimeService: ObservableObject {
         return true
     }
     
+    /// Set up global monitoring specifically for DeviceActivityReport extensions
+    /// This ensures the report extensions receive data even without individual app limits
+    private func setupGlobalMonitoringForReports(selection: FamilyActivitySelection) {
+        let globalActivityName = DeviceActivityName("se7en.global.reports")
+        
+        print("🌍 Setting up global monitoring for DeviceActivityReport extensions")
+        print("   Activity Name: \(globalActivityName)")
+        print("   Apps: \(selection.applicationTokens.count)")
+        print("   Categories: \(selection.categoryTokens.count)")
+        
+        // Create 24-hour schedule
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: 0, minute: 0),
+            intervalEnd: DateComponents(hour: 23, minute: 59),
+            repeats: true
+        )
+        
+        // ⚠️ CRITICAL FIX: Use 1-minute threshold instead of 1440!
+        // This ensures reports get updated frequently
+        let reportingEvent = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            threshold: DateComponents(minute: 1) // ✅ Changed from 1440 to 1
+        )
+        
+        let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
+            DeviceActivityEvent.Name("global.reporting"): reportingEvent
+        ]
+        
+        do {
+            try deviceActivityCenter.startMonitoring(globalActivityName, during: schedule, events: events)
+            print("✅ Started global monitoring for DeviceActivityReport extensions")
+            print("   This enables the report extensions to receive usage data")
+        } catch {
+            print("❌ Failed to start global monitoring: \(error)")
+            print("   DeviceActivityReport extensions may not receive data!")
+        }
+    }
+    
     // MARK: - App Lifecycle Monitoring Refresh
     
     /// Refresh all monitoring setups when app opens
@@ -1289,6 +1342,9 @@ final class ScreenTimeService: ObservableObject {
         }
         
         print("✅ Monitoring refresh completed")
+        
+        // ⚠️ Add verification
+        verifyMonitoringSetup()
     }
     
     // MARK: - Monitor Extension Event Processing
@@ -1313,9 +1369,9 @@ final class ScreenTimeService: ObservableObject {
             
             switch type {
             case "update":
-                // Update usage by 10 minutes (the threshold interval)
+                // Update usage by 1 minute (the threshold interval)
                 let currentUsage = getUsageMinutes(for: bundleID)
-                let newUsage = currentUsage + 10
+                let newUsage = currentUsage + 1
                 updateUsage(for: bundleID, minutes: newUsage)
                 print("📊 Processed update event: \(bundleID) = \(newUsage) minutes")
                 
@@ -1345,6 +1401,37 @@ final class ScreenTimeService: ObservableObject {
         if let appsCount = sharedDefaults.object(forKey: "apps_count") as? Int, appsCount > 0 {
             print("📊 Found apps count in shared container: \(appsCount) apps")
         }
+    }
+    
+    // MARK: - Monitoring Verification
+    
+    /// Add this method after refreshAllMonitoring()
+    func verifyMonitoringSetup() {
+        print("\n" + String(repeating: "=", count: 60))
+        print("🔍 MONITORING VERIFICATION")
+        print(String(repeating: "=", count: 60))
+        
+        print("📱 Authorization Status: \(isAuthorized ? "✅ Authorized" : "❌ Not Authorized")")
+        print("📱 Auth Status Detail: \(authorizationStatus)")
+        
+        if let allApps = allAppsSelection {
+            print("\n📦 All Apps Selection:")
+            print("   • Application tokens: \(allApps.applicationTokens.count)")
+            print("   • Category tokens: \(allApps.categoryTokens.count)")
+            print("   • Total items: \(allApps.applicationTokens.count + allApps.categoryTokens.count)")
+        } else {
+            print("\n❌ No allAppsSelection found!")
+        }
+        
+        let goals = coreDataManager.getActiveAppGoals()
+        print("\n🎯 Active Goals: \(goals.count)")
+        for goal in goals {
+            let bundleID = goal.appBundleID ?? "unknown"
+            let hasSelection = hasSelection(for: bundleID)
+            print("   • \(goal.appName ?? "Unknown"): \(hasSelection ? "✅" : "❌") connected")
+        }
+        
+        print(String(repeating: "=", count: 60) + "\n")
     }
     
 }

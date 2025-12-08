@@ -2,8 +2,6 @@
 //  UsageSummary.swift
 //  SE7ENDeviceActivityReportExtension
 //
-//  Created by Cursor on 05/12/2025.
-//
 
 import Foundation
 

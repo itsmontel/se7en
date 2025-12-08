@@ -67,7 +67,6 @@
 		1059 /* Services/DeviceActivityReportExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2064 /* Services/DeviceActivityReportExtension.swift */; };
 		1060 /* Views/Dashboard/SelectAllAppsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2065 /* Views/Dashboard/SelectAllAppsView.swift */; };
 		1061 /* Views/Onboarding/FamilyActivityPickerWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2066 /* Views/Onboarding/FamilyActivityPickerWrapper.swift */; };
-		9002 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9000 /* Localizable.strings */; };
 		1078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3026 /* Assets.xcassets */; };
 		1079 /* dogintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3027 /* dogintro.mp4 */; };
 		1080 /* catintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3028 /* catintro.mp4 */; };
@@ -81,6 +80,7 @@
 		8FB3DA092EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8FB3DA3A2EE38ECD005BC03C /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */; };
 		8FB3DA422EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		9002 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9000 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -197,12 +197,12 @@
 		3032 /* Views/Components/BlockedAppModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/BlockedAppModal.swift; sourceTree = "<group>"; };
 		3034 /* Components/StreakCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakCelebrationView.swift; sourceTree = "<group>"; };
 		3037 /* Components/AchievementCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementCelebrationView.swift; sourceTree = "<group>"; };
-		9001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4000 /* Views/Dashboard/ExtendLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/ExtendLimitSheet.swift; sourceTree = "<group>"; };
 		4002 /* Views/Blocking/BlockingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Blocking/BlockingView.swift; sourceTree = "<group>"; };
 		8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = SE7ENDeviceActivityReportExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SE7ENDeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		9001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -615,17 +615,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXVariantGroup section */
-		9000 /* Localizable.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				9001 /* en */,
-			);
-			name = Localizable.strings;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
-
 /* Begin PBXSourcesBuildPhase section */
 		8FB3D9F92EE37903005BC03C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -726,6 +715,17 @@
 			targetProxy = 8FB3DA402EE38ECD005BC03C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		9000 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9001 /* en */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		81 /* Debug */ = {

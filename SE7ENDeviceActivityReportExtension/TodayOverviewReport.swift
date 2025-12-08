@@ -12,30 +12,48 @@ extension DeviceActivityReport.Context {
 }
 
 struct TodayOverviewReport: DeviceActivityReportScene {
-    // The context this scene responds to
     let context: DeviceActivityReport.Context = .todayOverview
-    
-    // The view we render, given a UsageSummary
     let content: (UsageSummary) -> TodayOverviewView
     
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> UsageSummary {
+        print("🚀 TodayOverviewReport.makeConfiguration: EXTENSION INVOKED!")
+        print("   ⏰ Current time: \(Date())")
+        print("   📅 Context: \(context)")
+        
         var totalDuration: TimeInterval = 0
         var perAppDuration: [String: TimeInterval] = [:]
         var uniqueApps: Set<String> = []
+        var segmentCount = 0
+        var categoryCount = 0
+        var appCount = 0
+        var dataIterations = 0
         
-        // data can contain multiple DeviceActivityData entries (e.g. multiple devices)
+        // Process all device activity data
         for await deviceActivityData in data {
-            // Each DeviceActivityData has an async sequence of segments
+            dataIterations += 1
+            print("   📦 Processing deviceActivityData iteration \(dataIterations)...")
             for await segment in deviceActivityData.activitySegments {
+                segmentCount += 1
                 totalDuration += segment.totalActivityDuration
+                print("   📈 Segment \(segmentCount): duration=\(Int(segment.totalActivityDuration))s")
                 
                 // Drill into categories and applications
                 for await category in segment.categories {
+                    categoryCount += 1
+                    print("      📂 Category \(categoryCount)")
                     for await app in category.applications {
-                        // Some system placeholders arrive as "app 902388" or "Unknown" – drop those
-                        guard let name = sanitizedAppName(app.application.localizedDisplayName) else { continue }
+                        appCount += 1
+                        let rawName = app.application.localizedDisplayName ?? "nil"
+                        print("         📱 App \(appCount): \(rawName) = \(Int(app.totalActivityDuration))s")
+                        
+                        // Filter out placeholder app names
+                        guard let name = sanitizedAppName(app.application.localizedDisplayName) else {
+                            print("         ⚠️ Filtered out: \(rawName)")
+                            continue
+                        }
+                        
                         uniqueApps.insert(name)
                         perAppDuration[name, default: 0] += app.totalActivityDuration
                     }
@@ -43,10 +61,15 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             }
         }
         
-        print("📊 TodayOverviewReport: totalDuration=\(Int(totalDuration))s uniqueApps=\(uniqueApps.count) perApp=\(perAppDuration.count)")
+        print("📊 TodayOverviewReport SUMMARY:")
+        print("   Segments: \(segmentCount), Categories: \(categoryCount), Apps: \(appCount)")
+        print("   totalDuration: \(Int(totalDuration))s")
+        print("   uniqueApps: \(uniqueApps.count)")
+        print("   perAppDuration: \(perAppDuration.count) entries")
         
         // No usage → empty summary
         guard totalDuration > 0 else {
+            print("⚠️ TodayOverviewReport: NO USAGE DATA - Returning .empty")
             return .empty
         }
         
@@ -62,13 +85,13 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             topApps: topApps
         )
         
-        // Persist a lightweight summary for the main app (optional quick read)
+        // Save summary to shared container
         saveSummaryToSharedContainer(summary)
         
         return summary
     }
     
-    /// Save totals/app count/top apps summary to the shared app group so the main app can read simple numbers without re-rendering the report.
+    /// Save summary to shared app group
     private func saveSummaryToSharedContainer(_ summary: UsageSummary) {
         let appGroupID = "group.com.se7en.app"
         DispatchQueue.main.async {
@@ -90,15 +113,19 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         }
     }
     
-    /// Filters out placeholder names such as "app 902388" or "Unknown"
+    /// Filter out placeholder app names like "app 902388" or "Unknown"
     private func sanitizedAppName(_ raw: String?) -> String? {
         guard let name = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !name.isEmpty else { return nil }
+              !name.isEmpty else {
+            return nil
+        }
         
         let lower = name.lowercased()
-        if lower == "unknown" { return nil }
+        if lower == "unknown" {
+            return nil
+        }
         
-        // Match strings like "app 902388" or "app902388"
+        // Match patterns like "app 902388" or "app902388"
         if let regex = try? NSRegularExpression(pattern: #"^app\s*\d{2,}$"#, options: [.caseInsensitive]) {
             let range = NSRange(location: 0, length: name.utf16.count)
             if regex.firstMatch(in: name, options: [], range: range) != nil {
@@ -109,3 +136,5 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         return name
     }
 }
+
+
