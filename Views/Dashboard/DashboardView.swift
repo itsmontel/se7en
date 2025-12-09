@@ -62,10 +62,6 @@ struct DashboardView: View {
     @State private var isLoadingScreenTime = false
     @State private var screenTimeError: String?
     
-    // Debug: show what the shared container currently holds
-    @State private var debugSharedUsage: Int = 0
-    @State private var debugSharedApps: Int = 0
-    @State private var debugLastUpdated: String = ""
     
     
     // Calculate total screen time today (all apps combined)
@@ -156,34 +152,33 @@ struct DashboardView: View {
             try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
             
             // Try to read from shared container (updated by DeviceActivityReport extension)
+            // ⚠️ CRITICAL: This is the source of truth - prioritize it over ScreenTimeService
             let sharedUsage = readUsageFromSharedContainer()
             let sharedAppsCount = readAppsCountFromSharedContainer()
-            if sharedUsage > 0 {
-                print("📊 Found usage in shared container: \(sharedUsage) minutes, \(sharedAppsCount) apps")
-            }
             
-            // Update debug info for shared container
-            let lastUpdated = readSharedLastUpdated()
-            await MainActor.run {
-                debugSharedUsage = sharedUsage
-                debugSharedApps = sharedAppsCount
-                debugLastUpdated = lastUpdated
-            }
-            
-            // Get total screen time and apps used from ScreenTimeService
-            // This will use allAppsSelection if available, otherwise monitored apps
+            // Get total screen time and apps used from ScreenTimeService (fallback)
             var (totalMinutes, appsUsed) = await screenTimeService.getTotalScreenTimeToday()
             
-            // Use shared container data if our tracked data is 0
-            if totalMinutes == 0 && sharedUsage > 0 {
+            // ⚠️ CRITICAL FIX: ALWAYS prioritize shared container data when available
+            // The report extension is the authoritative source for usage data
+            if sharedUsage > 0 {
+                let previousTotal = totalMinutes
                 totalMinutes = sharedUsage
-                print("📊 Using shared container usage: \(totalMinutes) minutes")
+                print("📊 Using shared container usage: \(totalMinutes) minutes (overriding ScreenTimeService: \(previousTotal))")
+            } else if totalMinutes > 0 {
+                print("📊 Using ScreenTimeService data: \(totalMinutes) minutes (shared container empty)")
+            } else {
+                print("⚠️ No usage data found in shared container or ScreenTimeService")
             }
             
-            // Use shared container apps count if our tracked count is 0
-            if appsUsed == 0 && sharedAppsCount > 0 {
+            // Always prioritize shared container apps count when available
+            if sharedAppsCount > 0 {
                 appsUsed = sharedAppsCount
-                print("📊 Using shared container apps count: \(appsUsed)")
+                print("📊 Using shared container apps count: \(appsUsed) apps")
+            } else if appsUsed > 0 {
+                print("📊 Using ScreenTimeService apps count: \(appsUsed) apps")
+            } else {
+                print("⚠️ No apps count found in shared container or ScreenTimeService")
             }
             
             print("📊 After update: Total minutes: \(totalMinutes), Apps used: \(appsUsed)")
@@ -236,38 +231,66 @@ struct DashboardView: View {
     /// Read usage data from the shared container (populated by DeviceActivityReport extension)
     private func readUsageFromSharedContainer() -> Int {
         let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            return 0
+        
+        // Create a serial queue for thread-safe UserDefaults access
+        let queue = DispatchQueue(label: "com.se7en.sharedDefaults.read", qos: .userInitiated)
+        
+        return queue.sync {
+            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+                print("❌ Failed to access shared container")
+                return 0
+            }
+            
+            // Force refresh from disk before reading
+            // This ensures we get the latest data written by the extension
+            sharedDefaults.synchronize()
+            
+            let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+            let lastUpdated = sharedDefaults.double(forKey: "last_updated")
+            
+            if lastUpdated > 0 {
+                let lastUpdateDate = Date(timeIntervalSince1970: lastUpdated)
+                let timeSinceUpdate = Date().timeIntervalSince(lastUpdateDate)
+                print("📊 Shared container last updated: \(Int(timeSinceUpdate)) seconds ago")
+            }
+            
+            if totalUsage > 0 {
+                print("📊 Found total_usage in shared container: \(totalUsage) minutes")
+            } else {
+                print("⚠️ total_usage is 0 in shared container")
+                
+                // Debug: List all keys in shared defaults
+                if let allKeys = sharedDefaults.dictionaryRepresentation().keys as? [String] {
+                    print("📊 Available keys in shared container: \(allKeys.joined(separator: ", "))")
+                }
+            }
+            
+            return totalUsage
         }
-        
-        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
-        let lastUpdated = sharedDefaults.double(forKey: "last_updated")
-        
-        if lastUpdated > 0 {
-            let lastUpdateDate = Date(timeIntervalSince1970: lastUpdated)
-            let timeSinceUpdate = Date().timeIntervalSince(lastUpdateDate)
-            print("📊 Shared container last updated: \(Int(timeSinceUpdate)) seconds ago")
-        }
-        
-        if totalUsage > 0 {
-            print("📊 Found total_usage in shared container: \(totalUsage) minutes")
-        }
-        
-        return totalUsage
     }
     
     /// Read apps count from the shared container
     private func readAppsCountFromSharedContainer() -> Int {
         let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            return 0
-        }
         
-        let appsCount = sharedDefaults.integer(forKey: "apps_count")
-        if appsCount > 0 {
-            print("📊 Found apps_count in shared container: \(appsCount)")
+        let queue = DispatchQueue(label: "com.se7en.sharedDefaults.read", qos: .userInitiated)
+        
+        return queue.sync {
+            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+                return 0
+            }
+            
+            // Force refresh from disk
+            sharedDefaults.synchronize()
+            
+            let appsCount = sharedDefaults.integer(forKey: "apps_count")
+            if appsCount > 0 {
+                print("📊 Found apps_count in shared container: \(appsCount)")
+            } else {
+                print("⚠️ apps_count is 0 or missing in shared container")
+            }
+            return appsCount
         }
-        return appsCount
     }
     
     /// Read last updated timestamp from the shared container for debugging
@@ -300,17 +323,21 @@ struct DashboardView: View {
         }
     }
     
-    // Get top 10 apps by usage today - ONLY apps from onboarding selection (allAppsSelection)
+    // Get top 10 apps by usage today - ONLY apps with usage > 0
     private var topDistractions: [MonitoredApp] {
-        // First, try to read from shared container (filtered by report extension)
+        // ALWAYS try to read from shared container first (filtered by report extension)
+        // This is the source of truth for top apps
         if let topAppsFromShared = readTopAppsFromSharedContainer(), !topAppsFromShared.isEmpty {
+            print("📊 Using top apps from shared container: \(topAppsFromShared.count) apps")
             return topAppsFromShared
         }
         
-        // Fallback: Only show apps from onboarding selection (allAppsSelection)
-        // Users must select all apps during onboarding for the app to work
+        print("⚠️ No top apps in shared container, computing from tracked usage...")
+        
+        // Fallback: Compute from tracked usage (only apps with usage > 0)
         guard let allApps = screenTimeService.allAppsSelection,
               !allApps.applicationTokens.isEmpty else {
+            print("⚠️ No allAppsSelection available")
             return []
         }
         
@@ -320,55 +347,77 @@ struct DashboardView: View {
     /// Read top apps from shared container (filtered by report extension, excludes placeholder apps)
     private func readTopAppsFromSharedContainer() -> [MonitoredApp]? {
         let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            return nil
-        }
         
-        guard let topAppsPayload = sharedDefaults.array(forKey: "top_apps") as? [[String: Any]] else {
-            return nil
-        }
+        let queue = DispatchQueue(label: "com.se7en.sharedDefaults.read", qos: .userInitiated)
         
-        let realAppDiscovery = RealAppDiscoveryService.shared
-        var topApps: [MonitoredApp] = []
-        
-        for appData in topAppsPayload {
-            guard let name = appData["name"] as? String,
-                  let minutes = appData["minutes"] as? Int else {
-                continue
+        return queue.sync {
+            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+                print("❌ Failed to access shared container for top apps")
+                return nil
             }
             
-            // Filter out placeholder names (should already be filtered by extension, but double-check)
-            if isPlaceholderAppName(name) {
-                continue
+            // Force refresh from disk
+            sharedDefaults.synchronize()
+            
+            guard let topAppsPayload = sharedDefaults.array(forKey: "top_apps") as? [[String: Any]] else {
+                print("⚠️ No top_apps key in shared container")
+                return nil
             }
             
-            // Find token for this app name
-            var token: AnyHashable? = nil
-            if let allApps = screenTimeService.allAppsSelection {
-                for appToken in allApps.applicationTokens {
-                    let tokenName = realAppDiscovery.extractDisplayName(from: appToken)
-                    if tokenName == name {
-                        token = appToken as AnyHashable
-                        break
+            print("📊 Found \(topAppsPayload.count) top apps in shared container")
+            
+            let realAppDiscovery = RealAppDiscoveryService.shared
+            var topApps: [MonitoredApp] = []
+            
+            for appData in topAppsPayload {
+                guard let name = appData["name"] as? String,
+                      let minutes = appData["minutes"] as? Int else {
+                    print("⚠️ Skipping invalid app data: \(appData)")
+                    continue
+                }
+                
+                // Filter out placeholder names (should already be filtered by extension, but double-check)
+                if isPlaceholderAppName(name) {
+                    print("⚠️ Filtering out placeholder: \(name)")
+                    continue
+                }
+                
+                // ⚠️ CRITICAL: Only include apps with minutes > 0
+                guard minutes > 0 else {
+                    print("⏭️ Skipping \(name): 0 minutes")
+                    continue
+                }
+                
+                print("✅ Including from shared container: \(name) - \(minutes) minutes")
+                
+                // Find token for this app name
+                var token: AnyHashable? = nil
+                if let allApps = screenTimeService.allAppsSelection {
+                    for appToken in allApps.applicationTokens {
+                        let tokenName = realAppDiscovery.extractDisplayName(from: appToken)
+                        if tokenName == name {
+                            token = appToken as AnyHashable
+                            break
+                        }
                     }
                 }
+                
+                // ✅ Use .application token type for categorization
+                let category = AppCategory.category(for: .application)
+                
+                topApps.append(MonitoredApp(
+                    name: name,
+                    icon: category.icon,
+                    dailyLimit: 0,
+                    usedToday: minutes,
+                    color: Color(category.color),
+                    isEnabled: false
+                ))
             }
             
-            // We don't need the real bundle ID here; fallback to unknown (avoids token casting issues)
-            let bundleID = "unknown.app"
-            let category = AppCategory.category(for: bundleID)
-            
-            topApps.append(MonitoredApp(
-                name: name,
-                icon: category.icon,
-                dailyLimit: 0,
-                usedToday: minutes,
-                color: Color(category.color),
-                isEnabled: false
-            ))
+            print("📊 Returning \(topApps.count) top apps from shared container")
+            return topApps  // ✅ Always return array, never nil
         }
-        
-        return topApps.isEmpty ? nil : topApps
     }
     
     /// Check if an app name is a placeholder (e.g., "app 902388", "Unknown")
@@ -396,7 +445,10 @@ struct DashboardView: View {
         }
         let realAppDiscovery = RealAppDiscoveryService.shared
         for token in allApps.applicationTokens {
-            let tokenBundleID = realAppDiscovery.extractBundleID(from: token)
+            guard let tokenBundleID = realAppDiscovery.extractBundleID(from: token),
+                  realAppDiscovery.isValidBundleID(tokenBundleID) else {
+                continue
+            }
             if tokenBundleID == bundleID {
                 return token as AnyHashable
             }
@@ -420,10 +472,11 @@ struct DashboardView: View {
         
         // Handle individual app tokens
         for token in selection.applicationTokens {
-            let bundleID = realAppDiscovery.extractBundleID(from: token)
-            
-            // Skip if bundle ID extraction failed
-            guard bundleID != "unknown.app" else { continue }
+            // Extract bundle ID - skip if extraction fails
+            guard let bundleID = realAppDiscovery.extractBundleID(from: token),
+                  realAppDiscovery.isValidBundleID(bundleID) else {
+                continue
+            }
             
             let appName = realAppDiscovery.extractDisplayName(from: token)
             
@@ -434,10 +487,16 @@ struct DashboardView: View {
             
             let usage = screenTimeService.getUsageMinutes(for: bundleID)
             
-            // Only include apps with usage > 0 (don't show 0-minute apps)
-            guard usage > 0 else { continue }
+            // ⚠️ CRITICAL: Only include apps with usage > 0
+            guard usage > 0 else {
+                print("⏭️ Skipping \(appName): 0 minutes usage")
+                continue
+            }
             
-            let category = AppCategory.category(for: bundleID)
+            print("✅ Including \(appName): \(usage) minutes usage")
+            
+            // ✅ Use .application token type for categorization (bundleID is not used for category anymore)
+            let category = AppCategory.category(for: .application)
             appsWithUsage.append((
                 name: appName,
                 minutes: usage,
@@ -450,11 +509,7 @@ struct DashboardView: View {
         
         // Handle category tokens - when only categories are selected, we can't show individual apps
         // DeviceActivityReport doesn't provide individual app breakdown for categories
-        // For now, return empty list when only categories are selected (will show total usage in main card)
-        // Individual app breakdown requires applicationTokens
         if !selection.categoryTokens.isEmpty && selection.applicationTokens.isEmpty {
-            // Can't show individual apps when only categories are selected
-            // The total usage will still be shown in the main dashboard card
             print("📊 Categories selected but no individual apps available for top distractions")
         }
         
@@ -462,6 +517,8 @@ struct DashboardView: View {
         let topApps = appsWithUsage
             .sorted { $0.minutes > $1.minutes }
             .prefix(10)
+        
+        print("📊 getTopAppsFromAllApps: Returning \(topApps.count) apps with usage")
         
         // Store tokens for later use in UI
         Task { @MainActor in
@@ -655,9 +712,24 @@ struct DashboardView: View {
                 }
                 
                 // Small delay before loading data to ensure monitoring is active
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // Then refresh periodically to catch report extension updates
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     loadScreenTimeData()
                     appState.refreshScreenTimeData()
+                }
+                
+                // Periodic refresh to catch report extension updates (every 3 seconds for first 15 seconds)
+                for delay in [3.0, 6.0, 9.0, 12.0, 15.0] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        print("🔄 Periodic refresh: Re-reading shared container...")
+                        let sharedUsage = readUsageFromSharedContainer()
+                        let sharedApps = readAppsCountFromSharedContainer()
+                        if sharedUsage > 0 || sharedApps > 0 {
+                            print("✅ Periodic refresh found data: \(sharedUsage) minutes, \(sharedApps) apps")
+                            totalScreenTimeMinutes = sharedUsage
+                            appsUsedToday = sharedApps
+                        }
+                    }
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
@@ -765,9 +837,11 @@ struct DashboardView: View {
             // Today's Screen Time Card
                         VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                            Text("Today's Screen Time")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.textPrimary)
+                    Spacer()
+                    
+                    Text("Today's Dashboard")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.textPrimary)
                     
                     Spacer()
                     
@@ -789,23 +863,9 @@ struct DashboardView: View {
                             }
                         }()
                         
-                        let statusText: String = {
-                            if !ScreenTimeService.shared.isAuthorized {
-                                return "Not Authorized"
-                            } else if connectedCount == 0 {
-                                return "No Apps"
-                            } else {
-                                return "Connected (\(connectedCount))"
-                            }
-                        }()
-                        
                         Circle()
                             .fill(statusColor)
                             .frame(width: 6, height: 6)
-                        
-                        Text(statusText)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.textSecondary)
                     }
                 }
                                 .padding(.horizontal, 20)
@@ -883,52 +943,10 @@ struct DashboardView: View {
                             todayOverviewReportView
                             hiddenTotalActivityReportView
                         }
-                        
-                        // Debug: show shared container values
-                        VStack(spacing: 6) {
-                            Text("Debug – Shared Container")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.textSecondary)
-                            Text("total_usage: \(debugSharedUsage) min | apps_count: \(debugSharedApps)")
-                                .font(.system(size: 12))
-                                .foregroundColor(.textSecondary)
-                            Text("last_updated: \(debugLastUpdated)")
-                                .font(.system(size: 12))
-                                .foregroundColor(.textSecondary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(Color.cardBackground.opacity(0.6))
-                        .cornerRadius(10)
-                        
-                        // Show our tracked data
-                        HStack(spacing: 20) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(formatScreenTime(totalScreenTimeToday))
-                                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                                    .foregroundColor(.textPrimary)
-                                
-                                Text("Tracked time")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.textSecondary)
-                            }
-                            
-                            Spacer()
-                            
-                            VStack(alignment: .trailing, spacing: 4) {
-                                Text("\(appsUsedToday)")
-                                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                                    .foregroundColor(.textPrimary)
-                                
-                                Text(appsUsedToday == 1 ? "app" : "apps")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.textSecondary)
-                            }
-                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
-                    .padding(.horizontal, 28)
+                    .padding(.horizontal, 8) // Minimal padding to maximize width
                 }
             }
             .background(Color.appBackground)
@@ -943,21 +961,6 @@ struct DashboardView: View {
             // Top App Today Card
             if let topApp = topAppToday, topApp.minutesUsed > 0 {
                 topAppCard(topApp)
-            } else if !isLoadingScreenTime && screenTimeError == nil {
-                VStack(spacing: 8) {
-                    Image(systemName: "apps.iphone")
-                        .font(.system(size: 24, weight: .light))
-                        .foregroundColor(.textSecondary.opacity(0.5))
-                    
-                    Text("No app usage data yet")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.textSecondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
-                            .background(Color.cardBackground)
-                            .cornerRadius(16)
-                            .padding(.horizontal, 20)
             }
                         }
                         .padding(.bottom, 24)
@@ -982,20 +985,34 @@ struct DashboardView: View {
         )
         
         DeviceActivityReport(.todayOverview, filter: filter)
-            .frame(maxWidth: .infinity)
-            .frame(height: 200) // ✅ Add explicit height
-            .background(Color.cardBackground)
+            .frame(maxWidth: .infinity, alignment: .top)
+            .frame(minHeight: 620) // Height to fit all 10 items without scrolling
+            .background(Color.appBackground)
             .cornerRadius(12)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 4) // Minimal padding to maximize width
             .onAppear {
-                print("📊 DashboardView: DeviceActivityReport(.todayOverview) view appeared")
-                print("   Context: .todayOverview")
-                print("   Filter: users=.all, devices=[.iPhone, .iPad]")
-                print("   Date interval: \(dateInterval.start) to \(dateInterval.end)")
-                print("   Authorization: \(screenTimeService.isAuthorized)")
-                
-                // ⚠️ CRITICAL: Force monitoring refresh when report appears
+                print("📊 DeviceActivityReport view appeared")
                 screenTimeService.refreshAllMonitoring()
+                
+                // ⚠️ Give extension time to save data, then refresh
+                // Try multiple times to catch the data
+                for delay in [1.0, 2.0, 3.0] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        print("🔄 Refreshing shared container data after report loaded (attempt at \(delay)s)...")
+                        
+                        // Force re-read from shared container
+                        let sharedUsage = readUsageFromSharedContainer()
+                        let sharedApps = readAppsCountFromSharedContainer()
+                        
+                        if sharedUsage > 0 || sharedApps > 0 {
+                            print("✅ Got updated data from shared container: \(sharedUsage) minutes, \(sharedApps) apps")
+                            totalScreenTimeMinutes = sharedUsage
+                            appsUsedToday = sharedApps
+                        } else {
+                            print("⚠️ Still no data in shared container after \(delay) seconds")
+                        }
+                    }
+                }
             }
     }
     
@@ -1039,7 +1056,10 @@ struct DashboardView: View {
                 if let allApps = screenTimeService.allAppsSelection {
                     let realAppDiscovery = RealAppDiscoveryService.shared
                     if let matchingToken = allApps.applicationTokens.first(where: { token in
-                        let tokenBundleID = realAppDiscovery.extractBundleID(from: token)
+                        guard let tokenBundleID = realAppDiscovery.extractBundleID(from: token),
+                              realAppDiscovery.isValidBundleID(tokenBundleID) else {
+                            return false
+                        }
                         return tokenBundleID == topApp.bundleID
                     }) {
                         Label(matchingToken)
@@ -1154,7 +1174,10 @@ struct DashboardView: View {
                    let allApps = screenTimeService.allAppsSelection {
                     let realAppDiscovery = RealAppDiscoveryService.shared
                     if let matchingToken = allApps.applicationTokens.first(where: { token in
-                        let tokenBundleID = realAppDiscovery.extractBundleID(from: token)
+                        guard let tokenBundleID = realAppDiscovery.extractBundleID(from: token),
+                              realAppDiscovery.isValidBundleID(tokenBundleID) else {
+                            return false
+                        }
                         return tokenBundleID == bundleID
                     }) {
                         Label(matchingToken)
@@ -1397,8 +1420,12 @@ struct AddAppSheet: View {
             let realAppDiscovery = RealAppDiscoveryService.shared
             // Find matching token in selection
             if let matchingToken = allApps.applicationTokens.first(where: { t in
-                let tokenBundleID = realAppDiscovery.extractBundleID(from: t)
-                let storedBundleID = realAppDiscovery.extractBundleID(from: token)
+                guard let tokenBundleID = realAppDiscovery.extractBundleID(from: t),
+                      let storedBundleID = realAppDiscovery.extractBundleID(from: token),
+                      realAppDiscovery.isValidBundleID(tokenBundleID),
+                      realAppDiscovery.isValidBundleID(storedBundleID) else {
+                    return false
+                }
                 return tokenBundleID == storedBundleID
             }) {
                 Label(matchingToken)
@@ -1677,17 +1704,21 @@ struct AddAppSheet: View {
             }
         }
         
-        // Extract bundle ID only for Core Data storage (not for display)
+        // Get display name from token (this always works)
+        // We don't need bundle ID - we'll use a stable internal ID
         let realAppDiscovery = RealAppDiscoveryService.shared
-        let bundleID = realAppDiscovery.extractBundleID(from: token)
         let displayName = realAppDiscovery.extractDisplayName(from: token)
+        
+        // Generate stable internal ID from app name (not from bundle ID)
+        // This is what we'll use for storage and monitoring
+        let stableID = "app.name.\(displayName.lowercased().replacingOccurrences(of: " ", with: "."))"
         
         // Use addAppGoalFromFamilySelection which handles tokens properly
         appState.addAppGoalFromFamilySelection(
             appSelection,
             appName: displayName,
             dailyLimitMinutes: dailyLimit,
-            bundleID: bundleID
+            bundleID: stableID
         )
         
         print("✅ Added app with \(dailyLimit) minute limit")

@@ -206,26 +206,37 @@ class AppState: ObservableObject {
         
         // Convert to MonitoredApp format for dashboard compatibility
         // ONLY include apps that have Screen Time tokens (are actually connected via Screen Time API)
+        // EXCLUDE category-based tracking (All Categories Tracking) - limits are only for individual apps
+        // ✅ Now using token hash as identifier (stored in appBundleID field)
         let screenTimeService = ScreenTimeService.shared
         monitoredApps = goals.compactMap { goal in
-            let appName = goal.appName ?? "Unknown"
-            let bundleID = goal.appBundleID ?? ""
+            let tokenHash = goal.appBundleID ?? "" // ✅ This is now the token hash
+            
+            // EXCLUDE "All Categories Tracking" - limits are only for individual apps
+            if tokenHash == "com.se7en.allcategories" {
+                return nil
+            }
             
             // ONLY show apps that have Screen Time tokens (are connected via FamilyActivityPicker)
-            guard screenTimeService.hasSelection(for: bundleID) else {
+            // We check by token hash
+            guard !tokenHash.isEmpty, screenTimeService.hasSelection(for: tokenHash) else {
                 return nil
             }
             
             // Get effective daily limit (includes extensions for today)
-            let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: bundleID)
+            let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: tokenHash)
+            
+            // ✅ Use custom name if provided, otherwise will be shown via Label(token) in UI
+            let customName = goal.appName ?? ""
             
             return MonitoredApp(
-                name: appName,
-                icon: getAppIcon(for: appName),
+                name: customName.isEmpty ? "App" : customName,  // Fallback name (real name shown via Label)
+                icon: "app.fill",  // Fallback icon (real icon shown via Label)
                 dailyLimit: effectiveLimit,
                 usedToday: getCurrentUsage(for: goal),
-                color: getAppColor(for: appName),
-                isEnabled: goal.isActive
+                color: getAppColor(for: customName),
+                isEnabled: goal.isActive,
+                tokenHash: tokenHash  // ✅ Store token hash for retrieving selection
             )
         }
         
@@ -384,13 +395,13 @@ class AppState: ObservableObject {
     }
     
     func addAppGoalFromFamilySelection(_ selection: FamilyActivitySelection, appName: String, dailyLimitMinutes: Int, bundleID: String? = nil) {
-        print("🔍 Adding app goal from Family Activity selection: \(appName)")
+        print("🎯 Adding app goal from Family Activity selection: \(appName)")
         
-        // Generate bundle ID if not provided
-        let finalBundleID = bundleID ?? "app.\(appName.lowercased().replacingOccurrences(of: " ", with: "")).\(UUID().uuidString.prefix(8))"
-        print("🔍 Using bundle ID: \(finalBundleID)")
+        // ✅ Generate stable ID if not provided (using app.name.xxx format)
+        let finalBundleID = bundleID ?? "app.name.\(appName.lowercased().replacingOccurrences(of: " ", with: "."))"
+        print("📝 Using stable ID: \(finalBundleID)")
         
-        // Use Screen Time service to handle the selection
+        // ✅ No validation needed - just add it!
         screenTimeService.addAppForMonitoring(
             selection: selection,
             appName: appName,

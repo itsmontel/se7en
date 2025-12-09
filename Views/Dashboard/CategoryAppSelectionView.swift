@@ -251,7 +251,7 @@ struct CategoryAppSelectionView: View {
     // MARK: - Add Apps
     
     private func addApps() {
-        // Get all apps from RealAppDiscoveryService (already processed with correct bundle IDs)
+        // ✅ Get all apps from RealAppDiscoveryService (using token-based approach)
         let allApps = realAppDiscovery.categorizedApps.values.flatMap { $0 }
         print("🔄 Adding \(allApps.count) apps with \(dailyLimit) minute limit")
         
@@ -260,28 +260,32 @@ struct CategoryAppSelectionView: View {
             return
         }
         
-        // Use the stored selection from RealAppDiscoveryService
+        // ✅ Use the stored selection from RealAppDiscoveryService
         let selection = realAppDiscovery.currentSelection
         
-        // For each app, create a goal with the correct bundle ID and token
+        // ✅ For each app, create a goal using token hash as identifier
         for app in allApps {
-            print("📱 Processing app: \(app.displayName) (\(app.bundleID))")
+            let tokenHash = app.tokenHash
+            print("📱 Processing app: token hash=\(tokenHash)")
             
-            // Use the full selection for each app
-            // Since tokens are opaque and we track by bundle ID, this works correctly
-            // Each app will be monitored individually based on its bundle ID
-            let singleAppSelection = selection
-            print("✅ Using selection with \(selection.applicationTokens.count) token(s) for \(app.displayName)")
+            // ✅ Create a selection for this specific app using its token
+            guard let singleAppSelection = realAppDiscovery.createSelection(for: tokenHash) else {
+                print("⚠️ Could not create selection for token hash: \(tokenHash)")
+                continue
+            }
             
-            // Add to service with the REAL bundle ID from RealAppDiscoveryService
+            print("✅ Using selection with \(singleAppSelection.applicationTokens.count) token(s) for hash: \(tokenHash)")
+            
+            // ✅ Add to service using token hash as identifier (not bundle ID)
+            // Custom name is optional - UI will use Label(token) to show real name
             screenTimeService.addAppForMonitoring(
                 selection: singleAppSelection,
-            appName: app.displayName,
-                bundleID: app.bundleID, // Use the extracted bundle ID from RealAppDiscoveryService
-            dailyLimitMinutes: dailyLimit
-        )
+                appName: app.customName ?? "",  // Optional custom name (empty string if none)
+                bundleID: tokenHash,  // ✅ Use token hash as identifier
+                dailyLimitMinutes: dailyLimit
+            )
             
-            print("✅ Added \(app.displayName) with bundle ID: \(app.bundleID)")
+            print("✅ Added app with token hash: \(tokenHash)")
         }
         
         // Refresh app state

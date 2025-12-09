@@ -37,11 +37,15 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         super.eventDidReachThreshold(event, activity: activity)
         
         let eventString = String(describing: event)
-        print("⚠️ Event threshold reached: \(eventString) for activity: \(activity)")
+        print("\n⚡ EVENT FIRED!")
+        print("   Event: '\(eventString)'")
+        print("   Activity: '\(String(describing: activity))'")
         
-        // Extract bundle ID from event name
-        // Format: "warning.bundleID", "limit.bundleID", or "update.bundleID"
+        // Extract bundle ID (stable ID) from event name
+        // Format: "warning.app.name.fc.mobile", "limit.app.name.fc.mobile", or "update.app.name.fc.mobile"
         if let bundleID = extractBundleID(from: eventString) {
+            print("   Extracted stable ID: '\(bundleID)'")
+            
             if eventString.contains("update") {
                 // Handle update events first (most frequent)
                 // These fire every 1 minute to update usage
@@ -51,6 +55,9 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
             } else if eventString.contains("limit") {
                 handleLimit(for: bundleID, activity: activity)
             }
+        } else {
+            print("   ❌ Could not extract stable ID from event name!")
+            print("   Event string: '\(eventString)'")
         }
     }
     
@@ -67,13 +74,13 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     // MARK: - Helpers
     
     private func extractBundleID(from eventString: String) -> String? {
-        // Event format: "warning.com.example.app" or "limit.com.example.app" or "update.com.example.app"
+        // ✅ Event format: "warning.123456789" or "limit.123456789" or "update.123456789"
+        // The identifier is now a token hash, not a bundle ID
         let parts = eventString.split(separator: ".")
         if parts.count >= 2 {
-            // Skip the first part (warning/limit/update) and join the rest
-            let bundleComponents = parts.dropFirst()
-            let bundleID = bundleComponents.joined(separator: ".")
-            return bundleID.isEmpty ? nil : bundleID
+            // Skip the first part (warning/limit/update) and get the token hash
+            let tokenHash = String(parts[1])
+            return tokenHash.isEmpty ? nil : tokenHash
         }
         return nil
     }

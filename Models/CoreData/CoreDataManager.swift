@@ -172,15 +172,28 @@ class CoreDataManager: ObservableObject {
     // MARK: - App Goal Methods
     
     func createAppGoal(appName: String, bundleID: String, dailyLimitMinutes: Int) -> AppGoal {
+        print("\n📝 CoreDataManager.createAppGoal called:")
+        print("   appName: '\(appName)'")
+        print("   bundleID: '\(bundleID)'")
+        print("   limit: \(dailyLimitMinutes) minutes")
+        
         let goal = AppGoal(context: context)
         goal.id = UUID()
-        goal.appName = appName
+        goal.appName = appName  // ✅ Critical - ensure this is set!
         goal.appBundleID = bundleID
         goal.dailyLimitMinutes = Int32(dailyLimitMinutes)
         goal.createdAt = Date()
         goal.updatedAt = Date()
         goal.isActive = true
+        
         save()
+        
+        // ✅ Verify it was saved
+        print("✅ Goal created and saved")
+        print("   Saved name: '\(goal.appName ?? "NIL")'")
+        print("   Saved ID: '\(goal.appBundleID ?? "NIL")'")
+        print("   Goal UUID: \(goal.id?.uuidString ?? "NIL")\n")
+        
         return goal
     }
     

@@ -33,7 +33,7 @@ struct MainTabView: View {
                 .tabItem {
                     VStack {
                         Image(systemName: "hand.raised.fill")
-                        Text("Blocking")
+                        Text("Limits")
                     }
                 }
                 .tag(1)

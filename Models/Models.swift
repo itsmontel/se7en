@@ -5,11 +5,12 @@ import UIKit
 struct MonitoredApp: Identifiable, Equatable {
     let id = UUID()
     var name: String
-    var icon: String // SF Symbol name
+    var icon: String // SF Symbol name (fallback - real icon shown via Label)
     var dailyLimit: Int // in minutes
     var usedToday: Int // in minutes
     var color: Color
     var isEnabled: Bool = true
+    var tokenHash: String? // ✅ Token hash identifier for retrieving selection
     
     var remainingMinutes: Int {
         max(0, dailyLimit - usedToday)
@@ -45,6 +46,7 @@ struct MonitoredApp: Identifiable, Equatable {
                lhs.dailyLimit == rhs.dailyLimit &&
                lhs.usedToday == rhs.usedToday &&
                lhs.isEnabled == rhs.isEnabled &&
+               lhs.tokenHash == rhs.tokenHash &&
                colorComponentsEqual(lhs.color, rhs.color)
     }
     
@@ -880,6 +882,409 @@ struct Achievement: Identifiable {
             category: .pet,
             rarity: .rare,
             isUnlocked: { _ in false } // Would need to track rename count
+        )
+        
+        // MARK: - Expansion: Progression (adds up to 100 total)
+        ,
+        Achievement(
+            id: "apps_5",
+            title: "Starter Set",
+            description: "Add limits for 5 apps",
+            icon: "hand.tap.fill",
+            color: .primary,
+            category: .usage,
+            rarity: .common,
+            isUnlocked: { appState in appState.monitoredApps.count >= 5 }
+        ),
+        Achievement(
+            id: "apps_10",
+            title: "Double Digits",
+            description: "Add limits for 10 apps",
+            icon: "hand.tap.fill",
+            color: .success,
+            category: .usage,
+            rarity: .common,
+            isUnlocked: { appState in appState.monitoredApps.count >= 10 }
+        ),
+        Achievement(
+            id: "apps_15",
+            title: "App Manager",
+            description: "Add limits for 15 apps",
+            icon: "rectangle.stack.badge.person.crop",
+            color: .secondary,
+            category: .usage,
+            rarity: .uncommon,
+            isUnlocked: { appState in appState.monitoredApps.count >= 15 }
+        ),
+        Achievement(
+            id: "apps_20",
+            title: "App Tamer",
+            description: "Add limits for 20 apps",
+            icon: "apps.iphone",
+            color: .warning,
+            category: .usage,
+            rarity: .rare,
+            isUnlocked: { appState in appState.monitoredApps.count >= 20 }
+        ),
+        Achievement(
+            id: "apps_25",
+            title: "Total Control",
+            description: "Add limits for 25 apps",
+            icon: "sparkles.rectangle.stack",
+            color: .purple,
+            category: .usage,
+            rarity: .epic,
+            isUnlocked: { appState in appState.monitoredApps.count >= 25 }
+        ),
+        Achievement(
+            id: "goals_5",
+            title: "Goal Getter",
+            description: "Create 5 app goals",
+            icon: "target",
+            color: .primary,
+            category: .milestones,
+            rarity: .common,
+            isUnlocked: { appState in appState.userGoals.count >= 5 }
+        ),
+        Achievement(
+            id: "goals_10",
+            title: "Goal Builder",
+            description: "Create 10 app goals",
+            icon: "target",
+            color: .success,
+            category: .milestones,
+            rarity: .uncommon,
+            isUnlocked: { appState in appState.userGoals.count >= 10 }
+        ),
+        Achievement(
+            id: "goals_15",
+            title: "Goal Architect",
+            description: "Create 15 app goals",
+            icon: "target",
+            color: .secondary,
+            category: .milestones,
+            rarity: .rare,
+            isUnlocked: { appState in appState.userGoals.count >= 15 }
+        ),
+        Achievement(
+            id: "goals_20",
+            title: "Goal Legend",
+            description: "Create 20 app goals",
+            icon: "target",
+            color: .purple,
+            category: .milestones,
+            rarity: .epic,
+            isUnlocked: { appState in appState.userGoals.count >= 20 }
+        ),
+        Achievement(
+            id: "goals_25",
+            title: "Limit Overlord",
+            description: "Create 25 app goals",
+            icon: "target",
+            color: .yellow,
+            category: .milestones,
+            rarity: .legendary,
+            isUnlocked: { appState in appState.userGoals.count >= 25 }
+        ),
+        Achievement(
+            id: "streak_45",
+            title: "Month and a Half",
+            description: "45-day streak",
+            icon: "flame.fill",
+            color: .warning,
+            category: .streaks,
+            rarity: .rare,
+            isUnlocked: { appState in appState.longestStreak >= 45 }
+        ),
+        Achievement(
+            id: "streak_60",
+            title: "Two Months Strong",
+            description: "60-day streak",
+            icon: "flame.fill",
+            color: .orange,
+            category: .streaks,
+            rarity: .epic,
+            isUnlocked: { appState in appState.longestStreak >= 60 }
+        ),
+        Achievement(
+            id: "streak_75",
+            title: "Seventy-Five Alive",
+            description: "75-day streak",
+            icon: "flame.fill",
+            color: .pink,
+            category: .streaks,
+            rarity: .epic,
+            isUnlocked: { appState in appState.longestStreak >= 75 }
+        ),
+        Achievement(
+            id: "streak_90",
+            title: "Quarter Year",
+            description: "90-day streak",
+            icon: "flame.fill",
+            color: .purple,
+            category: .streaks,
+            rarity: .epic,
+            isUnlocked: { appState in appState.longestStreak >= 90 }
+        ),
+        Achievement(
+            id: "streak_120",
+            title: "Seasoned",
+            description: "120-day streak",
+            icon: "flame.fill",
+            color: .yellow,
+            category: .streaks,
+            rarity: .legendary,
+            isUnlocked: { appState in appState.longestStreak >= 120 }
+        ),
+        Achievement(
+            id: "streak_150",
+            title: "Half-Year Hero",
+            description: "150-day streak",
+            icon: "flame.fill",
+            color: .purple,
+            category: .streaks,
+            rarity: .legendary,
+            isUnlocked: { appState in appState.longestStreak >= 150 }
+        ),
+        Achievement(
+            id: "streak_200",
+            title: "Double Century",
+            description: "200-day streak",
+            icon: "flame.fill",
+            color: .indigo,
+            category: .streaks,
+            rarity: .legendary,
+            isUnlocked: { appState in appState.longestStreak >= 200 }
+        ),
+        Achievement(
+            id: "streak_365",
+            title: "Year One",
+            description: "365-day streak",
+            icon: "crown.fill",
+            color: .yellow,
+            category: .mastery,
+            rarity: .legendary,
+            isUnlocked: { appState in appState.longestStreak >= 365 }
+        ),
+        Achievement(
+            id: "history_14",
+            title: "Two-Week Tracker",
+            description: "Log 14 days of history",
+            icon: "calendar",
+            color: .primary,
+            category: .habits,
+            rarity: .common,
+            isUnlocked: { appState in appState.dailyHistory.count >= 14 }
+        ),
+        Achievement(
+            id: "history_21",
+            title: "Three-Week Tracker",
+            description: "Log 21 days of history",
+            icon: "calendar",
+            color: .secondary,
+            category: .habits,
+            rarity: .common,
+            isUnlocked: { appState in appState.dailyHistory.count >= 21 }
+        ),
+        Achievement(
+            id: "history_30",
+            title: "Month Logger",
+            description: "Log 30 days of history",
+            icon: "calendar",
+            color: .success,
+            category: .habits,
+            rarity: .uncommon,
+            isUnlocked: { appState in appState.dailyHistory.count >= 30 }
+        ),
+        Achievement(
+            id: "history_45",
+            title: "Record Keeper",
+            description: "Log 45 days of history",
+            icon: "calendar",
+            color: .warning,
+            category: .habits,
+            rarity: .rare,
+            isUnlocked: { appState in appState.dailyHistory.count >= 45 }
+        ),
+        Achievement(
+            id: "history_60",
+            title: "Habit Hero",
+            description: "Log 60 days of history",
+            icon: "calendar",
+            color: .purple,
+            category: .habits,
+            rarity: .epic,
+            isUnlocked: { appState in appState.dailyHistory.count >= 60 }
+        ),
+        Achievement(
+            id: "history_90",
+            title: "Quarter Keeper",
+            description: "Log 90 days of history",
+            icon: "calendar",
+            color: .indigo,
+            category: .habits,
+            rarity: .epic,
+            isUnlocked: { appState in appState.dailyHistory.count >= 90 }
+        ),
+        Achievement(
+            id: "history_120",
+            title: "Archive Master",
+            description: "Log 120 days of history",
+            icon: "calendar",
+            color: .yellow,
+            category: .habits,
+            rarity: .legendary,
+            isUnlocked: { appState in appState.dailyHistory.count >= 120 }
+        ),
+        Achievement(
+            id: "achievements_5",
+            title: "Collector",
+            description: "Unlock 5 achievements",
+            icon: "medal.fill",
+            color: .primary,
+            category: .meta,
+            rarity: .common,
+            isUnlocked: { appState in appState.unlockedAchievements.count >= 5 }
+        ),
+        Achievement(
+            id: "achievements_10",
+            title: "Collector II",
+            description: "Unlock 10 achievements",
+            icon: "medal.fill",
+            color: .success,
+            category: .meta,
+            rarity: .common,
+            isUnlocked: { appState in appState.unlockedAchievements.count >= 10 }
+        ),
+        Achievement(
+            id: "achievements_20",
+            title: "Collector III",
+            description: "Unlock 20 achievements",
+            icon: "medal.fill",
+            color: .secondary,
+            category: .meta,
+            rarity: .uncommon,
+            isUnlocked: { appState in appState.unlockedAchievements.count >= 20 }
+        ),
+        Achievement(
+            id: "achievements_35",
+            title: "Collector IV",
+            description: "Unlock 35 achievements",
+            icon: "medal.fill",
+            color: .warning,
+            category: .meta,
+            rarity: .rare,
+            isUnlocked: { appState in appState.unlockedAchievements.count >= 35 }
+        ),
+        Achievement(
+            id: "achievements_50",
+            title: "Collector V",
+            description: "Unlock 50 achievements",
+            icon: "medal.fill",
+            color: .purple,
+            category: .meta,
+            rarity: .epic,
+            isUnlocked: { appState in appState.unlockedAchievements.count >= 50 }
+        ),
+        Achievement(
+            id: "achievements_75",
+            title: "Collector VI",
+            description: "Unlock 75 achievements",
+            icon: "medal.fill",
+            color: .yellow,
+            category: .meta,
+            rarity: .legendary,
+            isUnlocked: { appState in appState.unlockedAchievements.count >= 75 }
+        ),
+        Achievement(
+            id: "improvement_7days",
+            title: "First Week Reset",
+            description: "Keep a streak of 7 with daily history logged",
+            icon: "checkmark.seal.fill",
+            color: .success,
+            category: .improvement,
+            rarity: .uncommon,
+            isUnlocked: { appState in appState.longestStreak >= 7 && appState.dailyHistory.count >= 7 }
+        ),
+        Achievement(
+            id: "improvement_30days",
+            title: "Month Reset",
+            description: "Keep a streak of 30 with daily history logged",
+            icon: "checkmark.seal.fill",
+            color: .secondary,
+            category: .improvement,
+            rarity: .rare,
+            isUnlocked: { appState in appState.longestStreak >= 30 && appState.dailyHistory.count >= 30 }
+        ),
+        Achievement(
+            id: "improvement_90days",
+            title: "Quarter Reset",
+            description: "Keep a streak of 90 with daily history logged",
+            icon: "checkmark.seal.fill",
+            color: .purple,
+            category: .improvement,
+            rarity: .epic,
+            isUnlocked: { appState in appState.longestStreak >= 90 && appState.dailyHistory.count >= 90 }
+        ),
+        Achievement(
+            id: "improvement_180days",
+            title: "Half-Year Reset",
+            description: "Keep a streak of 180 with daily history logged",
+            icon: "checkmark.seal.fill",
+            color: .yellow,
+            category: .improvement,
+            rarity: .legendary,
+            isUnlocked: { appState in appState.longestStreak >= 180 && appState.dailyHistory.count >= 180 }
+        ),
+        Achievement(
+            id: "apps_used_1",
+            title: "One and Done",
+            description: "Track at least 1 app with real usage > 0",
+            icon: "app.fill",
+            color: .primary,
+            category: .usage,
+            rarity: .common,
+            isUnlocked: { appState in appState.monitoredApps.contains { $0.usedToday > 0 } }
+        ),
+        Achievement(
+            id: "apps_used_5",
+            title: "Five Alive",
+            description: "Track 5 apps with real usage > 0",
+            icon: "app.fill",
+            color: .success,
+            category: .usage,
+            rarity: .uncommon,
+            isUnlocked: { appState in appState.monitoredApps.filter { $0.usedToday > 0 }.count >= 5 }
+        ),
+        Achievement(
+            id: "apps_used_10",
+            title: "Ten Tracked",
+            description: "Track 10 apps with real usage > 0",
+            icon: "app.fill",
+            color: .warning,
+            category: .usage,
+            rarity: .rare,
+            isUnlocked: { appState in appState.monitoredApps.filter { $0.usedToday > 0 }.count >= 10 }
+        ),
+        Achievement(
+            id: "apps_used_15",
+            title: "Fifteen Focus",
+            description: "Track 15 apps with real usage > 0",
+            icon: "app.fill",
+            color: .purple,
+            category: .usage,
+            rarity: .epic,
+            isUnlocked: { appState in appState.monitoredApps.filter { $0.usedToday > 0 }.count >= 15 }
+        ),
+        Achievement(
+            id: "apps_used_20",
+            title: "Twenty Tracker",
+            description: "Track 20 apps with real usage > 0",
+            icon: "app.fill",
+            color: .yellow,
+            category: .usage,
+            rarity: .legendary,
+            isUnlocked: { appState in appState.monitoredApps.filter { $0.usedToday > 0 }.count >= 20 }
         )
     ]
 }

@@ -141,36 +141,49 @@ final class ScreenTimeService: ObservableObject {
             return
         }
         
-        guard !selection.applicationTokens.isEmpty else {
+        guard let firstToken = selection.applicationTokens.first else {
             print("❌ Cannot add app - no tokens in selection")
             return
         }
         
-        print("📱 Adding app for monitoring:")
-        print("   Name: \(appName)")
-        print("   Bundle ID: \(bundleID)")
+        // ✅ Use token hash as the unique identifier (not bundle ID!)
+        let tokenHash = String(firstToken.hashValue)
+        
+        print("\n" + String(repeating: "=", count: 60))
+        print("📱 ADDING APP FOR MONITORING")
+        print(String(repeating: "=", count: 60))
+        print("   Token hash: \(tokenHash)")
+        print("   Custom name: '\(appName)'")
         print("   Limit: \(dailyLimitMinutes) minutes")
-        print("   Tokens: \(selection.applicationTokens.count)")
+        print("   Tokens in selection: \(selection.applicationTokens.count)")
+        print(String(repeating: "=", count: 60) + "\n")
         
-        // Store the selection with the bundle ID
-        appSelections[bundleID] = selection
+        // ✅ Store the selection with token hash as key
+        appSelections[tokenHash] = selection
         
-        // Save to persistent storage
-        saveSelection(selection, forBundleID: bundleID)
+        // Save to persistent storage using token hash
+        saveSelection(selection, forBundleID: tokenHash)
         
-        // Create app goal in Core Data
+        // Create app goal in Core Data using token hash as identifier
+        // We store token hash in appBundleID field (for backward compatibility)
+        // ✅ Use empty string if no custom name provided (Label(token) will show real name in UI)
         let appGoal = coreDataManager.createAppGoal(
-            appName: appName,
-            bundleID: bundleID,
+            appName: appName.isEmpty ? "" : appName,  // Empty string if no custom name (UI uses Label(token))
+            bundleID: tokenHash,  // ✅ Store token hash as identifier
             dailyLimitMinutes: dailyLimitMinutes
         )
         
-        // Set up monitoring
-        setupMonitoring(for: appGoal, selection: selection)
+        print("✅ Created goal with token hash: '\(tokenHash)'")
+        print("   Goal ID: \(appGoal.id?.uuidString ?? "NIL")")
+        print("   Custom name: '\(appGoal.appName ?? "NIL")'")
+        
+        // Set up monitoring with frequent updates for real-time tracking
+        // Also includes warning and limit events for blocking
+        setupCombinedMonitoring(for: appGoal, selection: selection)
         
         // Initialize usage record immediately (so we track from the start)
         let today = Calendar.current.startOfDay(for: Date())
-        if coreDataManager.getTodaysUsageRecord(for: bundleID) == nil {
+        if coreDataManager.getTodaysUsageRecord(for: tokenHash) == nil {
             _ = coreDataManager.createUsageRecord(
                 for: appGoal,
                 date: today,
@@ -178,18 +191,17 @@ final class ScreenTimeService: ObservableObject {
                 didExceedLimit: false
             )
             coreDataManager.save()
-            print("📊 Initialized usage record for \(appName)")
+            print("📊 Initialized usage record for token hash: \(tokenHash)")
     }
     
         // Verify storage
-        if hasSelection(for: bundleID) {
-            print("✅ App added successfully: \(appName)")
-            print("   Bundle ID stored: \(bundleID)")
-            print("   Selection stored: \(appSelections[bundleID] != nil ? "Yes" : "No")")
+        if hasSelection(for: tokenHash) {
+            print("✅ App added successfully!")
+            print("   Token hash stored: '\(tokenHash)'")
+            print("   Selection stored: \(appSelections[tokenHash] != nil ? "Yes" : "No")")
             print("   Monitoring active: Check DeviceActivityCenter")
         } else {
-            print("❌ Failed to store selection for: \(appName)")
-            print("   Bundle ID: \(bundleID)")
+            print("❌ Failed to store selection for token hash: \(tokenHash)")
             print("   Available selections: \(appSelections.keys.joined(separator: ", "))")
         }
     }
@@ -219,15 +231,26 @@ final class ScreenTimeService: ObservableObject {
         return DeviceActivityName("se7en.\(bundleID.replacingOccurrences(of: ".", with: "_"))")
     }
     
-    private func setupMonitoring(for goal: AppGoal, selection: FamilyActivitySelection) {
-        guard let bundleID = goal.appBundleID else { return }
+    /// Combined monitoring setup with both frequent updates AND limit enforcement
+    /// This ensures real-time usage tracking while also enforcing limits
+    private func setupCombinedMonitoring(for goal: AppGoal, selection: FamilyActivitySelection) {
+        // ✅ bundleID field now contains token hash
+        guard let tokenHash = goal.appBundleID else {
+            print("❌ No token hash for goal!")
+            return
+        }
         
         let limitMinutes = Int(goal.dailyLimitMinutes)
         let warningMinutes = max(1, Int(Double(limitMinutes) * 0.8))
+        let updateInterval = 1 // 1 minute for real-time tracking
         
-        print("🔧 Setting up monitoring for \(goal.appName ?? "Unknown"):")
-        print("   Warning at: \(warningMinutes) minutes")
-        print("   Limit at: \(limitMinutes) minutes")
+        print("\n🔧 SETTING UP MONITORING:")
+        print("   Custom name: '\(goal.appName ?? "None")'")
+        print("   Token hash: '\(tokenHash)'")
+        print("   Update interval: \(updateInterval) min")
+        print("   Warning at: \(warningMinutes) min")
+        print("   Limit at: \(limitMinutes) min")
+        print("   Tokens: \(selection.applicationTokens.count)")
         
         // Create schedule (midnight to midnight)
         let schedule = DeviceActivitySchedule(
@@ -236,7 +259,13 @@ final class ScreenTimeService: ObservableObject {
             repeats: true
         )
         
-        // Create events
+        // Create events: update (1 min), warning (80%), and limit (100%)
+        let updateEvent = DeviceActivityEvent(
+            applications: selection.applicationTokens,  // ✅ Use tokens directly
+            categories: selection.categoryTokens,
+            threshold: DateComponents(minute: updateInterval)
+        )
+        
         let warningEvent = DeviceActivityEvent(
             applications: selection.applicationTokens,
             categories: selection.categoryTokens,
@@ -249,26 +278,39 @@ final class ScreenTimeService: ObservableObject {
             threshold: DateComponents(minute: limitMinutes)
         )
         
-        // Unique activity name for this app
-        let activityName = makeActivityName(for: bundleID)
+        // ✅ Use token hash in activity name
+        let activityName = makeActivityName(for: tokenHash)
+        
+        // ✅ Log the exact event names being used (with token hash)
+        let updateEventName = DeviceActivityEvent.Name("update.\(tokenHash)")
+        let warningEventName = DeviceActivityEvent.Name("warning.\(tokenHash)")
+        let limitEventName = DeviceActivityEvent.Name("limit.\(tokenHash)")
+        
+        print("   Event names:")
+        print("   - Update: '\(String(describing: updateEventName))'")
+        print("   - Warning: '\(String(describing: warningEventName))'")
+        print("   - Limit: '\(String(describing: limitEventName))'")
         
         let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
-            DeviceActivityEvent.Name("warning.\(bundleID)"): warningEvent,
-            DeviceActivityEvent.Name("limit.\(bundleID)"): limitEvent
+            updateEventName: updateEvent,
+            warningEventName: warningEvent,
+            limitEventName: limitEvent
         ]
         
         do {
             try deviceActivityCenter.startMonitoring(activityName, during: schedule, events: events)
-            print("✅ Started monitoring for \(goal.appName ?? bundleID)")
-            print("   Activity Name: \(activityName)")
-            print("   Bundle ID: \(bundleID)")
-            print("   Tokens in selection: \(selection.applicationTokens.count)")
-            print("   Warning threshold: \(warningMinutes) minutes")
-            print("   Limit threshold: \(limitMinutes) minutes")
+            print("✅ Monitoring started successfully!")
+            print("   Activity name: '\(String(describing: activityName))'\n")
         } catch {
-            print("❌ Failed to start monitoring for \(bundleID): \(error)")
-            print("   Error details: \(error.localizedDescription)")
+            print("❌ FAILED to start monitoring!")
+            print("   Error: \(error)")
+            print("   Error details: \(error.localizedDescription)\n")
         }
+    }
+    
+    private func setupMonitoring(for goal: AppGoal, selection: FamilyActivitySelection) {
+        // Legacy method - now redirects to combined monitoring
+        setupCombinedMonitoring(for: goal, selection: selection)
     }
     
     /// Set up monitoring with frequent thresholds for usage tracking
@@ -639,35 +681,39 @@ final class ScreenTimeService: ObservableObject {
         // Handle individual app-based selection (fallback)
         print("📱 Processing individual app-based selection with \(selection.applicationTokens.count) apps")
         for token in selection.applicationTokens {
-            let bundleID = realAppDiscovery.extractBundleID(from: token)
+            // Get display name from token (this always works)
+            let appName = realAppDiscovery.extractDisplayName(from: token)
+            
+            // Generate stable internal ID from app name (not from bundle ID)
+            // This is what we'll use for storage and monitoring
+            let stableID = "app.name.\(appName.lowercased().replacingOccurrences(of: " ", with: "."))"
         
             // Ensure we have a goal and usage record for this app
             let goals = coreDataManager.getActiveAppGoals()
-            var goal = goals.first(where: { $0.appBundleID == bundleID })
+            var goal = goals.first(where: { $0.appBundleID == stableID })
             
             // Create goal if it doesn't exist (for tracking all apps)
             if goal == nil {
-                let appName = realAppDiscovery.extractDisplayName(from: token)
                 goal = coreDataManager.createAppGoal(
                     appName: appName,
-                    bundleID: bundleID,
+                    bundleID: stableID, // Use stable ID, not extracted bundle ID
                     dailyLimitMinutes: 0 // No limit, just tracking
                 )
-                print("📱 Created tracking goal for: \(appName) (\(bundleID))")
+                print("📱 Created tracking goal for: \(appName) (\(stableID))")
             }
             
             // Ensure we have a selection stored for this app (needed for fetching usage)
-            if !hasSelection(for: bundleID), let goal = goal {
+            if !hasSelection(for: stableID), let goal = goal {
                 // Store the selection for this app
                 // Create a selection with just this token
                 var appSelection = FamilyActivitySelection()
                 appSelection.applicationTokens = [token]
-                saveSelection(appSelection, forBundleID: bundleID)
-                appSelections[bundleID] = appSelection
+                saveSelection(appSelection, forBundleID: stableID)
+                appSelections[stableID] = appSelection
             }
             
             // Ensure usage record exists
-            if coreDataManager.getTodaysUsageRecord(for: bundleID) == nil, let goal = goal {
+            if coreDataManager.getTodaysUsageRecord(for: stableID) == nil, let goal = goal {
                 let today = Calendar.current.startOfDay(for: Date())
             _ = coreDataManager.createUsageRecord(
                 for: goal,
@@ -676,13 +722,13 @@ final class ScreenTimeService: ObservableObject {
                     didExceedLimit: false
                 )
                 coreDataManager.save()
-                print("📊 Created usage record for: \(bundleID)")
+                print("📊 Created usage record for: \(stableID)")
             }
             
             // Set up monitoring with a daily schedule (required for DeviceActivityReport)
             // Use frequent thresholds (every 1 minute) to get regular usage updates
             // This ensures we get usage data without blocking apps
-            if let appSelection = appSelections[bundleID], let goal = goal {
+            if let appSelection = appSelections[stableID], let goal = goal {
                 // Always set up frequent monitoring for all apps in allAppsSelection
                 // This ensures we get regular usage updates
                 let trackingLimit = 1440 // 24 hours (won't block)
@@ -694,7 +740,7 @@ final class ScreenTimeService: ObservableObject {
                 
                 // Set up monitoring with frequent thresholds
                 setupMonitoringWithFrequentUpdates(for: goal, selection: appSelection)
-                print("📊 Set up frequent monitoring for \(bundleID) (10min update intervals)")
+                print("📊 Set up frequent monitoring for \(stableID) (10min update intervals)")
                 
                 // Also ensure global monitoring is set up for this selection
                 if selection.applicationTokens.count + selection.categoryTokens.count > 0 {
@@ -703,11 +749,11 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Try to fetch usage from report if we have a selection
-            if hasSelection(for: bundleID), let goal = goal {
-                let fetchedUsage = await fetchUsageFromReport(for: bundleID)
+            if hasSelection(for: stableID), let goal = goal {
+                let fetchedUsage = await fetchUsageFromReport(for: stableID)
                 if fetchedUsage > 0 {
-                    updateUsage(for: bundleID, minutes: fetchedUsage)
-                    print("📊 Fetched and updated usage for \(goal.appName ?? bundleID): \(fetchedUsage) minutes")
+                    updateUsage(for: stableID, minutes: fetchedUsage)
+                    print("📊 Fetched and updated usage for \(goal.appName ?? stableID): \(fetchedUsage) minutes")
                 }
             }
         }
@@ -764,43 +810,50 @@ final class ScreenTimeService: ObservableObject {
         
         // First, ensure all apps have goals and records
         for token in selection.applicationTokens {
-            let bundleID = realAppDiscovery.extractBundleID(from: token)
+            // Get display name from token (this always works)
+            let appName = realAppDiscovery.extractDisplayName(from: token)
+            
+            // Generate stable internal ID from app name (not from bundle ID)
+            let stableID = "app.name.\(appName.lowercased().replacingOccurrences(of: " ", with: "."))"
             
             // Ensure goal exists
             let goals = coreDataManager.getActiveAppGoals()
-            if goals.first(where: { $0.appBundleID == bundleID }) == nil {
-                let appName = realAppDiscovery.extractDisplayName(from: token)
+            if goals.first(where: { $0.appBundleID == stableID }) == nil {
                 _ = coreDataManager.createAppGoal(
             appName: appName,
-                    bundleID: bundleID,
+                    bundleID: stableID, // Use stable ID, not extracted bundle ID
                     dailyLimitMinutes: 0
                 )
             }
             
             // Ensure selection is stored
-            if !hasSelection(for: bundleID) {
+            if !hasSelection(for: stableID) {
                 var appSelection = FamilyActivitySelection()
                 appSelection.applicationTokens = [token]
-                saveSelection(appSelection, forBundleID: bundleID)
-                appSelections[bundleID] = appSelection
+                saveSelection(appSelection, forBundleID: stableID)
+                appSelections[stableID] = appSelection
         }
     }
         coreDataManager.save()
         
         // Now get usage for each app
         for token in selection.applicationTokens {
-            let bundleID = realAppDiscovery.extractBundleID(from: token)
+            // Get display name and generate stable ID
+            let appName = realAppDiscovery.extractDisplayName(from: token)
+            let stableID = "app.name.\(appName.lowercased().replacingOccurrences(of: " ", with: "."))"
             
             // Get usage for this app (will create record if needed)
-            let usage = getUsageMinutes(for: bundleID)
+            let usage = getUsageMinutes(for: stableID)
             
-            // Count ALL apps being tracked (even if usage is 0)
-            // This shows the user that monitoring is active
-            totalMinutes += usage
-            appsUsed += 1  // Count all apps, not just ones with usage
+            // ⚠️ CRITICAL FIX: Only count apps with usage > 0
+            // Don't count apps that haven't been used yet today
+            if usage > 0 {
+                totalMinutes += usage
+                appsUsed += 1  // Only count apps that have been used
+            }
         }
         
-        print("📊 getAllAppsUsageToday: \(totalMinutes) minutes across \(appsUsed) apps (from \(selection.applicationTokens.count) total apps)")
+        print("📊 getAllAppsUsageToday: \(totalMinutes) minutes across \(appsUsed) apps (out of \(selection.applicationTokens.count) total apps)")
         
         return (totalMinutes, appsUsed)
     }
@@ -821,27 +874,23 @@ final class ScreenTimeService: ObservableObject {
                 return (0, estimatedApps)
             }
             
+            // Force refresh from disk
+            sharedDefaults.synchronize()
+            
             // Read total usage directly
             let totalUsage = sharedDefaults.integer(forKey: "total_usage")
             
-            // Get apps count - either from shared container or estimate
-            var appsCount = sharedDefaults.integer(forKey: "apps_count")
-            
-            // If no apps count, estimate based on categories
-            if appsCount == 0 {
-                // Each category typically has 10-20 apps, estimate conservatively
-                appsCount = selection.categoryTokens.count * 15
-            }
+            // Get apps count - use from shared container (already filtered to apps with usage > 0)
+            let appsCount = sharedDefaults.integer(forKey: "apps_count")
             
             if totalUsage > 0 || appsCount > 0 {
-                print("📊 Found category usage from extension: \(totalUsage) minutes, \(appsCount) apps")
+                print("📊 Found category usage from extension: \(totalUsage) minutes, \(appsCount) apps (with usage)")
                 return (totalUsage, appsCount)
             }
             
-            // Fallback: estimate based on categories selected
-            let estimatedApps = selection.categoryTokens.count * 15
-            print("📊 Category fallback: Estimated \(estimatedApps) apps from \(selection.categoryTokens.count) categories")
-            return (0, estimatedApps)
+            // No usage data yet - return 0 for both
+            print("📊 No category usage data yet from extension")
+            return (0, 0)
         }
         
         // Fallback: estimate based on categories selected
@@ -891,16 +940,17 @@ final class ScreenTimeService: ObservableObject {
         let realAppDiscovery = RealAppDiscoveryService.shared
         
         for token in selection.applicationTokens {
-            let bundleID = realAppDiscovery.extractBundleID(from: token)
-            
-            // Get app name
+            // Get display name from token (this always works)
             let appName = realAppDiscovery.extractDisplayName(from: token)
             
+            // Generate stable internal ID from app name (not from bundle ID)
+            let stableID = "app.name.\(appName.lowercased().replacingOccurrences(of: " ", with: "."))"
+            
             // Get usage for this app
-            let usage = getUsageMinutes(for: bundleID)
+            let usage = getUsageMinutes(for: stableID)
             if usage > maxUsage {
                 maxUsage = usage
-                topApp = (name: appName, bundleID: bundleID, minutes: usage)
+                topApp = (name: appName, bundleID: stableID, minutes: usage)
         }
     }
     

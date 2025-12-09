@@ -318,18 +318,29 @@ struct SetGoalsView: View {
             realAppDiscovery.processSelectedApps(selection)
         }
         
-        // Save selected apps to AppState and establish limits
+        // ✅ Save selected apps to AppState using token-based approach
         for app in realAppDiscovery.categorizedApps.values.flatMap({ $0 }) {
-            selectedApps.insert(app.displayName)
-            if appLimits[app.displayName] == nil {
-                appLimits[app.displayName] = 60 // Default 60 minute limit
+            let tokenHash = app.tokenHash
+            let customName = app.customName ?? "App"
+            
+            // Use token hash as identifier for app limits
+            selectedApps.insert(tokenHash)
+            if appLimits[tokenHash] == nil {
+                appLimits[tokenHash] = 60 // Default 60 minute limit
             }
             
-            // Add to AppState with Screen Time integration
-            appState.addAppGoal(
-                appName: app.displayName,
-                bundleID: app.bundleID,
-                dailyLimitMinutes: appLimits[app.displayName] ?? 60
+            // ✅ Get selection for this token hash
+            guard let selection = realAppDiscovery.createSelection(for: tokenHash) else {
+                print("⚠️ Could not create selection for token hash: \(tokenHash)")
+                continue
+            }
+            
+            // Add to AppState with Screen Time integration using token hash
+            appState.addAppGoalFromFamilySelection(
+                selection,
+                appName: customName,
+                dailyLimitMinutes: appLimits[tokenHash] ?? 60,
+                bundleID: tokenHash  // ✅ Use token hash as identifier
             )
         }
     }
