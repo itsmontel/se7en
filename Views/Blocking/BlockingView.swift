@@ -227,6 +227,7 @@ struct BlockingView: View {
     private func appLimitRow(_ app: MonitoredApp) -> some View {
         // ✅ Get selection using token hash to display real app name and icon
         let selection = app.tokenHash.flatMap { screenTimeService.getSelection(for: $0) }
+        // applicationTokens.first is already ApplicationToken type, no cast needed
         let firstToken = selection?.applicationTokens.first
         
         VStack(spacing: 0) {
@@ -248,13 +249,16 @@ struct BlockingView: View {
                     
                     // ✅ Use Label(token) for real app icon, fallback to system icon
                     if let token = firstToken {
+                        // Token from applicationTokens is already ApplicationToken type - no cast needed
                         Label(token)
                             .labelStyle(.iconOnly)
-                            .font(.system(size: 28, weight: .semibold))
+                            .scaleEffect(2.5)  // ✅ Scale up to fill 62x62 border
+                            .frame(width: 62, height: 62)  // Match border size exactly
                     } else {
                         Image(systemName: app.icon)
-                            .font(.system(size: 28, weight: .semibold))
+                            .font(.system(size: 62, weight: .semibold))
                             .foregroundColor(app.color)
+                            .frame(width: 62, height: 62)  // Match border size exactly
                     }
                 }
                 .shadow(color: app.color.opacity(0.15), radius: 8, x: 0, y: 4)
@@ -263,6 +267,7 @@ struct BlockingView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     // ✅ Use Label(token) for real app name, fallback to stored name
                     if let token = firstToken {
+                        // Token from applicationTokens is already ApplicationToken type - no cast needed
                         Label(token)
                             .labelStyle(.titleOnly)
                             .font(.system(size: 19, weight: .bold, design: .rounded))
@@ -1056,16 +1061,36 @@ struct SetLimitSheet: View {
                                     )
                                     .frame(width: 110, height: 110)
                                 
-                                Image(systemName: "app.fill")
-                                    .font(.system(size: 52, weight: .semibold))
-                                    .foregroundColor(.textPrimary)
+                                // ✅ Use Label(token) to show real app icon instead of generic icon
+                                if let firstToken = fullSelection.applicationTokens.first {
+                                    // Token from applicationTokens is already ApplicationToken type - no cast needed
+                                    Label(firstToken)
+                                        .labelStyle(.iconOnly)
+                                        .scaleEffect(4.5)  // ✅ Scale up to fill 110x110 border
+                                        .frame(width: 110, height: 110)  // Match border size exactly
+                                } else {
+                                    // Fallback to generic icon if no token available
+                                    Image(systemName: "app.fill")
+                                        .font(.system(size: 110, weight: .semibold))
+                                        .foregroundColor(.textPrimary)
+                                        .frame(width: 110, height: 110)  // Match border size exactly
+                                }
                             }
                             .shadow(color: Color.primary.opacity(0.25), radius: 20, x: 0, y: 10)
                             
                             VStack(spacing: 8) {
-                                Text(appName)
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(.primary)
+                                // ✅ Use Label(token) to show real app name
+                                if let firstToken = fullSelection.applicationTokens.first {
+                                    // Token from applicationTokens is already ApplicationToken type
+                                    Label(firstToken)
+                                        .labelStyle(.titleOnly)
+                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                } else {
+                                    Text(appName.isEmpty ? "App" : appName)
+                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                }
                                 
                                 Text("Set a daily time limit")
                                     .font(.system(size: 16, weight: .semibold))
