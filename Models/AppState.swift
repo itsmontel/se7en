@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import CoreData
 import Combine
 import FamilyControls
@@ -72,6 +73,28 @@ class AppState: ObservableObject {
             .autoconnect()
             .sink { [weak self] _ in
                 self?.refreshData()
+            }
+            .store(in: &cancellables)
+        
+        // Refresh usage when app becomes active (simpler than constant polling)
+        NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+            .sink { [weak self] _ in
+                // Fetch fresh usage data when app becomes active
+                ScreenTimeService.shared.refreshUsageForAllApps()
+                // Reload app goals to refresh UI
+                self?.loadAppGoals()
+            }
+            .store(in: &cancellables)
+        
+        // Also sync periodically when app is active (every 30 seconds)
+        Timer.publish(every: 30, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                // Only sync if app is active
+                if UIApplication.shared.applicationState == .active {
+                    ScreenTimeService.shared.syncUsageFromSharedContainer()
+                    self?.loadAppGoals()
+                }
             }
             .store(in: &cancellables)
         
@@ -191,6 +214,10 @@ class AppState: ObservableObject {
         
         // Clean up mock apps that don't have Screen Time tokens
         coreDataManager.cleanupMockApps()
+        
+        // ✅ Sync usage from shared container (written by monitor extension) BEFORE loading goals
+        // This ensures we have the latest usage data when displaying limits
+        screenTimeService.syncUsageFromSharedContainer()
         
         let goals = coreDataManager.getActiveAppGoals()
         

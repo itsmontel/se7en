@@ -197,6 +197,17 @@ struct BlockingView: View {
                         .environmentObject(appState)
                 }
             }
+            .onAppear {
+                // Refresh usage data from shared container when Limits page appears
+                // This ensures we get the latest data from the report extension
+                screenTimeService.syncUsageFromSharedContainer()
+                appState.loadAppGoals()  // Reload to update monitoredApps with fresh usage
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                // Also refresh when app returns from background
+                screenTimeService.syncUsageFromSharedContainer()
+                appState.loadAppGoals()
+            }
         }
     }
     
@@ -472,8 +483,9 @@ struct EditLimitSheet: View {
         self._currentLimit = State(initialValue: currentLimit)
         self._newLimit = State(initialValue: currentLimit)
         
-        let bundleID = "app.name." + app.name.lowercased().replacingOccurrences(of: " ", with: ".")
-        let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(bundleID)")
+        // ✅ FIX: Use tokenHash instead of constructing bundleID
+        let tokenHash = app.tokenHash ?? "app.name." + app.name.lowercased().replacingOccurrences(of: " ", with: ".")
+        let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(tokenHash)")
         if let data = scheduleData,
            let decoded = try? JSONDecoder().decode(LimitSchedule.self, from: data) {
             self._schedule = State(initialValue: decoded)
@@ -985,17 +997,41 @@ struct EditLimitSheet: View {
         let coreDataManager = CoreDataManager.shared
         let goals = coreDataManager.getActiveAppGoals()
         
-        if let goal = goals.first(where: { $0.appName == app.name }) {
-            appState.updateAppGoal(goal.id ?? UUID(), dailyLimitMinutes: newLimit)
-            
-            let bundleID = "app.name." + app.name.lowercased().replacingOccurrences(of: " ", with: ".")
-            if let scheduleData = try? JSONEncoder().encode(schedule) {
-                UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(bundleID)")
-            }
-            
-            HapticFeedback.success.trigger()
+        // ✅ FIX: Use tokenHash to find the goal instead of app name
+        guard let tokenHash = app.tokenHash else {
+            print("❌ Cannot save limit - no token hash for app: \(app.name)")
+            dismiss()
+            return
         }
         
+        // Find goal by token hash (stored in appBundleID field)
+        guard let goal = goals.first(where: { $0.appBundleID == tokenHash }) else {
+            print("❌ Cannot find goal for token hash: \(tokenHash)")
+            dismiss()
+            return
+        }
+        
+        print("📝 Updating limit for app: \(app.name) (token hash: \(tokenHash))")
+        print("   Old limit: \(goal.dailyLimitMinutes) minutes")
+        print("   New limit: \(newLimit) minutes")
+        
+        // Update the goal
+        appState.updateAppGoal(goal.id ?? UUID(), dailyLimitMinutes: newLimit)
+        
+        // ✅ FIX: Save schedule using token hash (not constructed bundleID)
+        if let scheduleData = try? JSONEncoder().encode(schedule) {
+            UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
+            print("💾 Saved schedule for token hash: \(tokenHash)")
+        }
+        
+        // ✅ FIX: Refresh monitoring setup with new limit
+        let screenTimeService = ScreenTimeService.shared
+        screenTimeService.refreshMonitoring(for: tokenHash)
+        
+        // Reload app goals to refresh UI
+        appState.loadAppGoals()
+        
+        HapticFeedback.success.trigger()
         dismiss()
     }
     
@@ -1596,6 +1632,17 @@ struct SetLimitSheet: View {
         if let scheduleData = try? JSONEncoder().encode(schedule) {
             UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
             print("💾 Saved schedule for token hash: \(tokenHash)")
+        }
+        
+        // 🔍 DEBUG: App added successfully
+        print("\n🔍 DEBUG: App added successfully")
+        print("   Token hash: \(tokenHash)")
+        print("   Custom name: \(appName)")
+        print("   Limit: \(selectedLimit) minutes")
+        // Force immediate check
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            let currentUsage = ScreenTimeService.shared.getUsageMinutes(for: tokenHash)
+            print("   Current usage after 2s: \(currentUsage) minutes")
         }
         
         HapticFeedback.success.trigger()

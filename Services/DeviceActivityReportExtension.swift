@@ -19,37 +19,34 @@ final class DeviceActivityReportService {
     private init() {}
     
     /// Fetch usage data for a specific app from the extension via shared container
+    /// This method is now primarily used as a fallback - syncUsageFromSharedContainer handles the main sync
     func fetchUsageForApp(bundleID: String, activityName: DeviceActivityName, selection: FamilyActivitySelection) async -> Int {
         // First, try to get from shared container (updated by monitor/report extensions)
-        // Prefer the explicit key `usage_<bundleID>` that the monitor writes
         let queue = DispatchQueue(label: "com.se7en.sharedDefaults.read", qos: .utility)
         var usage: Int = 0
         
         queue.sync {
             guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
             
-            // 1) Direct per-app key written by the monitor extension
-            let perAppKey = "usage_\(bundleID)"
-            let perAppUsage = sharedDefaults.integer(forKey: perAppKey)
-            if perAppUsage > 0 {
-                usage = perAppUsage
-                return
-            }
-            
-            // 2) Legacy dictionary storage (if ever present)
-            if let usageData = sharedDefaults.dictionary(forKey: "appUsageData") as? [String: Int] {
-                // Try to find usage by matching tokens in the selection
-                for token in selection.applicationTokens {
-                    let tokenKey = String(describing: token)
-                    if let tokenUsage = usageData[tokenKey], tokenUsage > 0 {
-                        usage = max(usage, tokenUsage)
+            // Priority 1: Try per-app usage from report extension (keyed by app name)
+            // Need to match by app name from goal
+            if let goal = coreDataManager.getActiveAppGoals().first(where: { $0.appBundleID == bundleID }),
+               let appName = goal.appName {
+                let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+                let normalizedGoalName = appName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                for (reportAppName, reportUsage) in perAppUsage {
+                    let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    if normalizedGoalName == normalizedReportName {
+                        usage = reportUsage
+                        break
                     }
                 }
-                
-                // Also try direct bundle ID lookup (in case extension saves by bundle ID)
-                if usage == 0, let bundleUsage = usageData[bundleID], bundleUsage > 0 {
-                    usage = bundleUsage
-                }
+            }
+            
+            // Priority 2: Fallback to monitor extension data (keyed by token hash)
+            if usage == 0 {
+                let perAppKey = "usage_\(bundleID)"
+                usage = sharedDefaults.integer(forKey: perAppKey)
             }
         }
         

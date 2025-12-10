@@ -1,177 +1,78 @@
 import DeviceActivity
 import Foundation
-import ManagedSettings
 
-// MARK: - DeviceActivityMonitor Extension
-// Handles events from DeviceActivity framework when usage thresholds are reached
-// This extension runs automatically in the background when thresholds are reached
+// 🔥 ULTRA-MINIMAL Extension (under 1MB RAM)
+// The extension is unreliable in iOS 17+ so we keep it simple
+// Real tracking happens via timer-based fallback in main app
 
 @main
 class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     
-    // Required static main() function for @main annotation
-    static func main() {
-        // The system will automatically instantiate this class when events occur
-        // This function is required but doesn't need to do anything
-    }
+    static func main() {}
     
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
-        print("🟢 Device activity interval started: \(activity)")
         
-        // Reset daily tracking when interval starts (midnight)
-        // Note: We can't directly access ScreenTimeService from extension
-        // Instead, we'll save to shared container and main app will read it
-        saveToSharedContainer(key: "interval_started", value: Date().timeIntervalSince1970)
+        // Just mark that interval started
+        saveFlag(key: "interval_started", value: true)
     }
     
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
-        print("🔴 Device activity interval ended: \(activity)")
         
-        // Save to shared container
-        saveToSharedContainer(key: "interval_ended", value: Date().timeIntervalSince1970)
+        saveFlag(key: "interval_started", value: false)
     }
     
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
         
-        let eventString = String(describing: event)
-        print("\n⚡ EVENT FIRED!")
-        print("   Event: '\(eventString)'")
-        print("   Activity: '\(String(describing: activity))'")
+        // ✅ FIX: Use rawValue directly instead of parsing string description
+        let eventRawValue = event.rawValue
         
-        // Extract bundle ID (stable ID) from event name
-        // Format: "warning.app.name.fc.mobile", "limit.app.name.fc.mobile", or "update.app.name.fc.mobile"
-        if let bundleID = extractBundleID(from: eventString) {
-            print("   Extracted stable ID: '\(bundleID)'")
-            
-            if eventString.contains("update") {
-                // Handle update events first (most frequent)
-                // These fire every 1 minute to update usage
-                handleUpdate(for: bundleID, activity: activity)
-            } else if eventString.contains("warning") {
-                handleWarning(for: bundleID, activity: activity)
-            } else if eventString.contains("limit") {
-                handleLimit(for: bundleID, activity: activity)
-            }
-        } else {
-            print("   ❌ Could not extract stable ID from event name!")
-            print("   Event string: '\(eventString)'")
+        // Extract token hash from rawValue (format: "update.<tokenHash>" or "limit.<tokenHash>")
+        guard let tokenHash = extractTokenHash(from: eventRawValue) else {
+            print("⚠️ Monitor Extension: Could not extract token hash from event: \(eventRawValue)")
+            return
+        }
+        
+        if eventRawValue.contains("update") {
+            incrementUsage(for: tokenHash)
+            print("📊 Monitor Extension: Incremented usage for token hash: \(tokenHash)")
+        } else if eventRawValue.contains("limit") {
+            markLimitReached(for: tokenHash)
+            print("🚫 Monitor Extension: Limit reached for token hash: \(tokenHash)")
         }
     }
     
-    override func intervalWillStartWarning(for activity: DeviceActivityName) {
-        super.intervalWillStartWarning(for: activity)
-        print("🟡 Interval will start warning: \(activity)")
+    // MARK: - Minimal Helpers
+    
+    private func extractTokenHash(from eventRawValue: String) -> String? {
+        // Event format: "update.<tokenHash>" or "limit.<tokenHash>" or "warning.<tokenHash>"
+        // Split on "." and take everything after the first part
+        let parts = eventRawValue.split(separator: ".", maxSplits: 1)
+        guard parts.count == 2 else { return nil }
+        return String(parts[1])
     }
     
-    override func intervalWillEndWarning(for activity: DeviceActivityName) {
-        super.intervalWillEndWarning(for: activity)
-        print("🟡 Interval will end warning: \(activity)")
-    }
-    
-    // MARK: - Helpers
-    
-    private func extractBundleID(from eventString: String) -> String? {
-        // ✅ Event format: "warning.123456789" or "limit.123456789" or "update.123456789"
-        // The identifier is now a token hash, not a bundle ID
-        let parts = eventString.split(separator: ".")
-        if parts.count >= 2 {
-            // Skip the first part (warning/limit/update) and get the token hash
-            let tokenHash = String(parts[1])
-            return tokenHash.isEmpty ? nil : tokenHash
-        }
-        return nil
-    }
-    
-    private func handleWarning(for bundleID: String, activity: DeviceActivityName) {
-        print("🟡 Warning for: \(bundleID)")
-        // Save event to shared container for main app to process
-        saveEventToSharedContainer(type: "warning", bundleID: bundleID, activity: activity)
-    }
-    
-    private func handleLimit(for bundleID: String, activity: DeviceActivityName) {
-        print("🔴 Limit reached for: \(bundleID)")
-        // Save event to shared container for main app to process
-        saveEventToSharedContainer(type: "limit", bundleID: bundleID, activity: activity)
-    }
-    
-    private func handleUpdate(for bundleID: String, activity: DeviceActivityName) {
-        print("🔄 Update event for: \(bundleID)")
-        // The threshold is 1 minute, so we update usage by that amount
-        // Save to shared container for main app to process
-        saveEventToSharedContainer(type: "update", bundleID: bundleID, activity: activity)
+    private func incrementUsage(for tokenHash: String) {
+        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
         
-        // Also update usage directly in shared container
-        let updateInterval = 1 // minutes
-        updateUsageInSharedContainer(bundleID: bundleID, minutes: updateInterval)
+        let key = "usage_\(tokenHash)"
+        let current = defaults.integer(forKey: key)
+        defaults.set(current + 1, forKey: key)
+        defaults.set(Date().timeIntervalSince1970, forKey: "last_update")
+        defaults.synchronize()
     }
     
-    // MARK: - Shared Container Helpers
-    
-    private func saveToSharedContainer(key: String, value: Double) {
-        let appGroupID = "group.com.se7en.app"
-        
-        // Access UserDefaults on main thread to avoid CFPrefsPlistSource errors
-        DispatchQueue.main.async {
-            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-                print("❌ Failed to access shared container")
-                return
-            }
-            
-            // Save directly - avoid nested dictionaries
-            sharedDefaults.set(value, forKey: key)
-            print("💾 Saved to shared container: \(key) = \(value)")
-        }
+    private func markLimitReached(for tokenHash: String) {
+        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
+        defaults.set(true, forKey: "limit_reached_\(tokenHash)")
+        defaults.synchronize()
     }
     
-    private func saveEventToSharedContainer(type: String, bundleID: String, activity: DeviceActivityName) {
-        let appGroupID = "group.com.se7en.app"
-        
-        // Access UserDefaults on main thread to avoid CFPrefsPlistSource errors
-        DispatchQueue.main.async {
-            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-                print("❌ Failed to access shared container")
-                return
-            }
-            
-            var events = sharedDefaults.array(forKey: "pendingEvents") as? [[String: String]] ?? []
-            events.append([
-                "type": type,
-                "bundleID": bundleID,
-                "activity": String(describing: activity),
-                "timestamp": String(Date().timeIntervalSince1970)
-            ])
-            
-            // Keep only last 100 events
-            if events.count > 100 {
-                events = Array(events.suffix(100))
-            }
-            
-            sharedDefaults.set(events, forKey: "pendingEvents")
-            print("💾 Saved event to shared container: \(type) for \(bundleID)")
-        }
-    }
-    
-    private func updateUsageInSharedContainer(bundleID: String, minutes: Int) {
-        let appGroupID = "group.com.se7en.app"
-        
-        // Access UserDefaults on main thread to avoid CFPrefsPlistSource errors
-        DispatchQueue.main.async {
-            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-                print("❌ Failed to access shared container")
-                return
-            }
-            
-            // Use simple key-based storage for each app
-            let key = "usage_\(bundleID)"
-            let currentUsage = sharedDefaults.integer(forKey: key)
-            let newUsage = currentUsage + minutes
-            sharedDefaults.set(newUsage, forKey: key)
-            sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
-            
-            print("📊 Updated usage in shared container: \(bundleID) = \(newUsage) minutes")
-        }
+    private func saveFlag(key: String, value: Bool) {
+        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
+        defaults.set(value, forKey: key)
+        defaults.synchronize()
     }
 }

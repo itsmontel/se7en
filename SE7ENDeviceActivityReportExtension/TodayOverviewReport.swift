@@ -105,13 +105,13 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         )
         
         // Save summary to shared container
-        saveSummaryToSharedContainer(summary)
+        saveSummaryToSharedContainer(summary, perAppDuration: perAppDuration)
         
         return summary
     }
     
     /// Save summary to shared app group
-    private func saveSummaryToSharedContainer(_ summary: UsageSummary) {
+    private func saveSummaryToSharedContainer(_ summary: UsageSummary, perAppDuration: [String: TimeInterval]) {
         let appGroupID = "group.com.se7en.app"
         
         // ⚠️ CRITICAL: Don't use DispatchQueue.main.async in extension
@@ -127,11 +127,21 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             ["name": $0.name, "minutes": Int($0.duration / 60)] 
         }
         
+        // Build per-app usage dictionary keyed by app name (for Limits page)
+        var perAppUsage: [String: Int] = [:]
+        for (appName, duration) in perAppDuration {
+            let minutes = Int(duration / 60)
+            if minutes > 0 {
+                perAppUsage[appName] = minutes
+            }
+        }
+        
         // Save data
         sharedDefaults.set(totalMinutes, forKey: "total_usage")
         sharedDefaults.set(appsCount, forKey: "apps_count")
         sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
         sharedDefaults.set(topAppsPayload, forKey: "top_apps")
+        sharedDefaults.set(perAppUsage, forKey: "per_app_usage")  // New: per-app usage for Limits page
         
         // ⚠️ CRITICAL: Force synchronization immediately
         let synced = sharedDefaults.synchronize()
@@ -140,6 +150,7 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         print("   • Total minutes: \(totalMinutes)")
         print("   • Apps count: \(appsCount)")
         print("   • Top apps: \(topAppsPayload.count)")
+        print("   • Per-app usage: \(perAppUsage.count) apps")
         print("   • Sync result: \(synced ? "✅ Success" : "❌ Failed")")
         
         // Verify the save by reading it back
