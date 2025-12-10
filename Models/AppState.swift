@@ -296,13 +296,29 @@ class AppState: ObservableObject {
     }
     
     private func getCurrentUsage(for goal: AppGoal) -> Int {
-        // Get today's usage from Screen Time or Core Data
+        // ✅ FIX: Prioritize report extension data (same source as Top 10 Distractions)
+        // This ensures Limits view matches the dashboard exactly
+        let appGroupID = "group.com.se7en.app"
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID),
+           let appName = goal.appName {
+            // Try to get from per_app_usage (report extension data - same as Top 10)
+            let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+            let normalizedGoalName = appName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            for (reportAppName, reportUsage) in perAppUsage {
+                let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                if normalizedGoalName == normalizedReportName {
+                    print("📊 Limits: Matched usage by name from report extension: \(appName) = \(reportUsage) minutes")
+                    return reportUsage
+                }
+            }
+        }
+        
+        // Fallback: Get from Core Data (which is synced from shared container)
         if let usageRecord = screenTimeService.getAppUsageToday(for: goal.appBundleID ?? "") {
             return Int(usageRecord.actualUsageMinutes)
         }
         
-        // If no record exists, try to get from Screen Time service asynchronously
-        // For synchronous context, return 0 and let the async refresh handle it
+        // If no record exists, return 0
         return 0
     }
     

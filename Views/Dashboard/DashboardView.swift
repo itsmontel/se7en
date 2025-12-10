@@ -32,28 +32,8 @@ struct DashboardView: View {
     @State private var topAppToken: AnyHashable? = nil // Store token for top app
     
     private var healthScore: Int {
-        // Calculate health based on actual app usage
-        // For new users with no apps or no usage, return 100 (start at full health)
-        guard !appState.monitoredApps.isEmpty else { return 100 }
-        
-        let totalUsageToday = appState.monitoredApps.reduce(0) { $0 + $1.usedToday }
-        let totalLimits = appState.monitoredApps.reduce(0) { $0 + $1.dailyLimit }
-        
-        guard totalLimits > 0 else { return 100 }
-        
-        // If no usage yet today, return 100 (start at full health)
-        guard totalUsageToday > 0 else { return 100 }
-        
-        let usagePercentage = Double(totalUsageToday) / Double(totalLimits)
-        
-        // Convert usage percentage to health score (inverse relationship)
-        switch usagePercentage {
-        case 0...0.5: return 100 // Under 50% usage = perfect health
-        case 0.5...0.7: return 80 // 50-70% usage = good health
-        case 0.7...0.9: return 60 // 70-90% usage = okay health
-        case 0.9...1.1: return 40 // 90-110% usage = poor health
-        default: return 20 // Over 110% usage = very poor health
-        }
+        // Align health score with pet health calculation so the bar matches pet state
+        return appState.calculatePetHealthPercentage()
     }
     
     @State private var totalScreenTimeMinutes: Int = 0
@@ -797,13 +777,20 @@ struct DashboardView: View {
     private var petImageSection: some View {
         Group {
             if let pet = appState.userPet {
-                let petImageName = "\(pet.type.folderName.lowercased())fullhealth"
-                            Image(petImageName)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(height: 200)
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 24)
+                // Ensure pet health state reflects latest usage
+                let healthState = pet.healthState
+                let petImageName = "\(pet.type.folderName.lowercased())\(healthState.rawValue)"
+                
+                Image(petImageName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 200)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
+                    .id(healthState) // force refresh on state change
+                    .onAppear {
+                        appState.updatePetHealth()
+                    }
             }
         }
                         }
@@ -815,11 +802,21 @@ struct DashboardView: View {
                             .foregroundColor(.textPrimary)
                             .padding(.bottom, 12)
                         
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(healthColor)
-                            .frame(height: 6)
-                            .padding(.horizontal, 40)
-                            .padding(.bottom, 10)
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                // Track
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.white.opacity(0.08))
+                                
+                                // Fill based on healthScore (0-100)
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(healthColor)
+                                    .frame(width: geometry.size.width * CGFloat(healthScore) / 100)
+                            }
+                        }
+                        .frame(height: 10)
+                        .padding(.horizontal, 40)
+                        .padding(.bottom, 10)
                         
                         Text("Health")
                             .font(.system(size: 13, weight: .medium))
@@ -1138,20 +1135,22 @@ struct DashboardView: View {
                                     .padding(.horizontal, 20)
                                 
                                 VStack(spacing: 8) {
-                                    ForEach(Array(topDistractions.enumerated()), id: \.element.id) { index, app in
+                                    // Ensure exactly 10 items are shown
+                                    ForEach(Array(topDistractions.prefix(10).enumerated()), id: \.element.id) { index, app in
                             distractionRow(app: app, index: index)
                         }
                     }
                     .padding(.vertical, 12)
-                    .background(Color.appBackground)
+                    .padding(.bottom, 16) // More bottom padding to keep the 10th item fully visible
+                    .background(Color.appBackground.opacity(0.95))
                     .cornerRadius(16)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.cardBackground, lineWidth: 1)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
                     )
                     .padding(.horizontal, 20)
                 }
-                .padding(.bottom, 24)
+                .padding(.bottom, 40)
             }
         }
     }
@@ -1209,10 +1208,10 @@ struct DashboardView: View {
                                         }
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 12)
-                                        .background(Color.cardBackground)
+                                        .background(Color.appBackground.opacity(0.9))
                                         .cornerRadius(12)
                                         
-                                        if index < topDistractions.count - 1 {
+                                        if index < min(topDistractions.count, 10) - 1 {
                                             Divider()
                                                 .padding(.horizontal, 16)
                                         }
