@@ -53,6 +53,13 @@ class AppState: ObservableObject {
     private var lastLoadAppGoalsTime: Date = Date.distantPast
     private let loadAppGoalsThrottleInterval: TimeInterval = 2.0 // Minimum 2 seconds between calls
     
+    // ✅ PERFORMANCE / CORRECTNESS: Cache usage data to avoid repeated UserDefaults lookups
+    // Cache by normalized app name (per_app_usage from report extension) and by token hash (usage_<tokenHash>)
+    private var nameUsageCache: [String: Int] = [:]
+    private var tokenUsageCache: [String: Int] = [:]
+    private var usageCacheTimestamp: Date = Date.distantPast
+    private let usageCacheTimeout: TimeInterval = 60 // Cache for 60 seconds
+    
     init() {
         setupObservers()
         // Perform daily reset check on app launch
@@ -86,8 +93,8 @@ class AppState: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // Also sync periodically when app is active (every 30 seconds)
-        Timer.publish(every: 30, on: .main, in: .common)
+        // ✅ PERFORMANCE: Reduced frequency from 30 seconds to 2 minutes to reduce CPU/memory pressure
+        Timer.publish(every: 120, on: .main, in: .common) // Every 2 minutes instead of 30 seconds
             .autoconnect()
             .sink { [weak self] _ in
                 // Only sync if app is active
@@ -219,7 +226,10 @@ class AppState: ObservableObject {
         // This ensures we have the latest usage data when displaying limits
         screenTimeService.syncUsageFromSharedContainer()
         
+        // ✅ PERFORMANCE: Refresh usage cache when loading goals
         let goals = coreDataManager.getActiveAppGoals()
+        refreshUsageCache(with: goals)
+        
         
         userGoals = goals.map { goal in
             UserGoal(
@@ -296,30 +306,68 @@ class AppState: ObservableObject {
     }
     
     private func getCurrentUsage(for goal: AppGoal) -> Int {
-        // ✅ FIX: Prioritize report extension data (same source as Top 10 Distractions)
-        // This ensures Limits view matches the dashboard exactly
-        let appGroupID = "group.com.se7en.app"
-        if let sharedDefaults = UserDefaults(suiteName: appGroupID),
-           let appName = goal.appName {
-            // Try to get from per_app_usage (report extension data - same as Top 10)
-            let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
-            let normalizedGoalName = appName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            for (reportAppName, reportUsage) in perAppUsage {
-                let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                if normalizedGoalName == normalizedReportName {
-                    print("📊 Limits: Matched usage by name from report extension: \(appName) = \(reportUsage) minutes")
-                    return reportUsage
-                }
-            }
+        guard let appName = goal.appName else { return 0 }
+        let normalizedGoalName = appName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let tokenHash = goal.appBundleID ?? ""
+        
+        // ✅ PERFORMANCE/CORRECTNESS: If cache is stale, refresh it with current goals
+        if Date().timeIntervalSince(usageCacheTimestamp) >= usageCacheTimeout {
+            let goals = coreDataManager.getActiveAppGoals()
+            refreshUsageCache(with: goals)
         }
         
-        // Fallback: Get from Core Data (which is synced from shared container)
-        if let usageRecord = screenTimeService.getAppUsageToday(for: goal.appBundleID ?? "") {
-            return Int(usageRecord.actualUsageMinutes)
+        // ✅ Check name-based cache (per_app_usage from report extension)
+        if let cachedByName = nameUsageCache[normalizedGoalName] {
+            return cachedByName
+        }
+        
+        // ✅ Check token-based cache (usage_<tokenHash> from monitor extension)
+        if let cachedByToken = tokenUsageCache[tokenHash], cachedByToken > 0 {
+            return cachedByToken
+        }
+        
+        // Fallback: Get from Core Data (synced elsewhere)
+        if let usageRecord = screenTimeService.getAppUsageToday(for: tokenHash) {
+            let usage = Int(usageRecord.actualUsageMinutes)
+            // Update caches
+            nameUsageCache[normalizedGoalName] = usage
+            tokenUsageCache[tokenHash] = usage
+            return usage
         }
         
         // If no record exists, return 0
         return 0
+    }
+    
+    // ✅ PERFORMANCE: Refresh usage cache from shared container for a given set of goals
+    private func refreshUsageCache(with goals: [AppGoal]) {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return
+        }
+        
+        // ✅ PERFORMANCE: Don't call synchronize() - UserDefaults auto-syncs
+        let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+        
+        // Build normalized name cache
+        nameUsageCache.removeAll()
+        for (reportAppName, reportUsage) in perAppUsage {
+            let normalizedName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            nameUsageCache[normalizedName] = reportUsage
+        }
+        
+        // Build token cache from monitor extension usage_<tokenHash> for current goals
+        tokenUsageCache.removeAll()
+        for goal in goals {
+            guard let tokenHash = goal.appBundleID else { continue }
+            let tokenUsage = sharedDefaults.integer(forKey: "usage_\(tokenHash)")
+            if tokenUsage > 0 {
+                tokenUsageCache[tokenHash] = tokenUsage
+            }
+        }
+        
+        usageCacheTimestamp = Date()
+        print("📊 Refreshed usage cache with \(nameUsageCache.count) name entries, \(tokenUsageCache.count) token entries")
     }
     
     private func getAppIcon(for appName: String) -> String {

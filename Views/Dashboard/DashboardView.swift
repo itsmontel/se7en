@@ -42,6 +42,11 @@ struct DashboardView: View {
     @State private var isLoadingScreenTime = false
     @State private var screenTimeError: String?
     
+    // ✅ PERFORMANCE: Cache top distractions to prevent recalculation on every render
+    @State private var cachedTopDistractions: [MonitoredApp] = []
+    @State private var topDistractionsLastRefresh: Date = Date.distantPast
+    private let topDistractionsCacheTimeout: TimeInterval = 300 // 5 minutes - only refresh on foreground
+    
     
     
     // Calculate total screen time today (all apps combined)
@@ -212,65 +217,35 @@ struct DashboardView: View {
     private func readUsageFromSharedContainer() -> Int {
         let appGroupID = "group.com.se7en.app"
         
-        // Create a serial queue for thread-safe UserDefaults access
-        let queue = DispatchQueue(label: "com.se7en.sharedDefaults.read", qos: .userInitiated)
-        
-        return queue.sync {
-            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-                print("❌ Failed to access shared container")
-                return 0
-            }
-            
-            // Force refresh from disk before reading
-            // This ensures we get the latest data written by the extension
-            sharedDefaults.synchronize()
-            
-            let totalUsage = sharedDefaults.integer(forKey: "total_usage")
-            let lastUpdated = sharedDefaults.double(forKey: "last_updated")
-            
-            if lastUpdated > 0 {
-                let lastUpdateDate = Date(timeIntervalSince1970: lastUpdated)
-                let timeSinceUpdate = Date().timeIntervalSince(lastUpdateDate)
-                print("📊 Shared container last updated: \(Int(timeSinceUpdate)) seconds ago")
-            }
-            
-            if totalUsage > 0 {
-                print("📊 Found total_usage in shared container: \(totalUsage) minutes")
-            } else {
-                print("⚠️ total_usage is 0 in shared container")
-                
-                // Debug: List all keys in shared defaults
-                if let allKeys = sharedDefaults.dictionaryRepresentation().keys as? [String] {
-                    print("📊 Available keys in shared container: \(allKeys.joined(separator: ", "))")
-                }
-            }
-            
-            return totalUsage
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ Failed to access shared container")
+            return 0
         }
+        
+        // ✅ PERFORMANCE: Don't call synchronize() - UserDefaults auto-syncs
+        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+        
+        if totalUsage > 0 {
+            print("📊 Found total_usage in shared container: \(totalUsage) minutes")
+        }
+        
+        return totalUsage
     }
     
-    /// Read apps count from the shared container
+    /// ✅ PERFORMANCE: Optimized version without synchronize()
     private func readAppsCountFromSharedContainer() -> Int {
         let appGroupID = "group.com.se7en.app"
         
-        let queue = DispatchQueue(label: "com.se7en.sharedDefaults.read", qos: .userInitiated)
-        
-        return queue.sync {
-            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-                return 0
-            }
-            
-            // Force refresh from disk
-            sharedDefaults.synchronize()
-            
-            let appsCount = sharedDefaults.integer(forKey: "apps_count")
-            if appsCount > 0 {
-                print("📊 Found apps_count in shared container: \(appsCount)")
-            } else {
-                print("⚠️ apps_count is 0 or missing in shared container")
-            }
-            return appsCount
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return 0
         }
+        
+        // ✅ PERFORMANCE: Don't call synchronize() - UserDefaults auto-syncs
+        let appsCount = sharedDefaults.integer(forKey: "apps_count")
+        if appsCount > 0 {
+            print("📊 Found apps_count in shared container: \(appsCount)")
+        }
+        return appsCount
     }
     
     /// Read last updated timestamp from the shared container for debugging
@@ -303,13 +278,21 @@ struct DashboardView: View {
         }
     }
     
-    // Get top 10 apps by usage today - ONLY apps with usage > 0
+    // ✅ PERFORMANCE: Use cached top distractions instead of recalculating on every render
     private var topDistractions: [MonitoredApp] {
-        // ALWAYS try to read from shared container first (filtered by report extension)
-        // This is the source of truth for top apps
-        if let topAppsFromShared = readTopAppsFromSharedContainer(), !topAppsFromShared.isEmpty {
+        return cachedTopDistractions
+    }
+    
+    // ✅ PERFORMANCE: Refresh top distractions only when needed (foreground or manual)
+    private func refreshTopDistractions() {
+        print("🔄 Refreshing top distractions...")
+        
+        // Try to read from shared container first (filtered by report extension)
+        if let topAppsFromShared = readTopAppsFromSharedContainerOptimized(), !topAppsFromShared.isEmpty {
             print("📊 Using top apps from shared container: \(topAppsFromShared.count) apps")
-            return topAppsFromShared
+            cachedTopDistractions = topAppsFromShared
+            topDistractionsLastRefresh = Date()
+            return
         }
         
         print("⚠️ No top apps in shared container, computing from tracked usage...")
@@ -318,86 +301,75 @@ struct DashboardView: View {
         guard let allApps = screenTimeService.allAppsSelection,
               !allApps.applicationTokens.isEmpty else {
             print("⚠️ No allAppsSelection available")
-            return []
+            cachedTopDistractions = []
+            topDistractionsLastRefresh = Date()
+            return
         }
         
-        return getTopAppsFromAllApps(allApps)
+        cachedTopDistractions = getTopAppsFromAllApps(allApps)
+        topDistractionsLastRefresh = Date()
     }
     
-    /// Read top apps from shared container (filtered by report extension, excludes placeholder apps)
-    private func readTopAppsFromSharedContainer() -> [MonitoredApp]? {
+    /// ✅ PERFORMANCE: Optimized version without synchronize() - UserDefaults auto-syncs
+    private func readTopAppsFromSharedContainerOptimized() -> [MonitoredApp]? {
         let appGroupID = "group.com.se7en.app"
         
-        let queue = DispatchQueue(label: "com.se7en.sharedDefaults.read", qos: .userInitiated)
-        
-        return queue.sync {
-            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-                print("❌ Failed to access shared container for top apps")
-                return nil
-            }
-            
-            // Force refresh from disk
-            sharedDefaults.synchronize()
-            
-            guard let topAppsPayload = sharedDefaults.array(forKey: "top_apps") as? [[String: Any]] else {
-                print("⚠️ No top_apps key in shared container")
-                return nil
-            }
-            
-            print("📊 Found \(topAppsPayload.count) top apps in shared container")
-            
-            let realAppDiscovery = RealAppDiscoveryService.shared
-            var topApps: [MonitoredApp] = []
-            
-            for appData in topAppsPayload {
-                guard let name = appData["name"] as? String,
-                      let minutes = appData["minutes"] as? Int else {
-                    print("⚠️ Skipping invalid app data: \(appData)")
-                    continue
-                }
-                
-                // Filter out placeholder names (should already be filtered by extension, but double-check)
-                if isPlaceholderAppName(name) {
-                    print("⚠️ Filtering out placeholder: \(name)")
-                    continue
-                }
-                
-                // ⚠️ CRITICAL: Only include apps with minutes > 0
-                guard minutes > 0 else {
-                    print("⏭️ Skipping \(name): 0 minutes")
-                    continue
-                }
-                
-                print("✅ Including from shared container: \(name) - \(minutes) minutes")
-                
-                // Find token for this app name
-                var token: AnyHashable? = nil
-                if let allApps = screenTimeService.allAppsSelection {
-                    for appToken in allApps.applicationTokens {
-                        let tokenName = realAppDiscovery.extractDisplayName(from: appToken)
-                        if tokenName == name {
-                            token = appToken as AnyHashable
-                            break
-                        }
-                    }
-                }
-                
-                // ✅ Use .application token type for categorization
-                let category = AppCategory.category(for: .application)
-                
-                topApps.append(MonitoredApp(
-                    name: name,
-                    icon: category.icon,
-                    dailyLimit: 0,
-                    usedToday: minutes,
-                    color: Color(category.color),
-                    isEnabled: false
-                ))
-            }
-            
-            print("📊 Returning \(topApps.count) top apps from shared container")
-            return topApps  // ✅ Always return array, never nil
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ Failed to access shared container for top apps")
+            return nil
         }
+        
+        // ✅ PERFORMANCE: Don't call synchronize() - UserDefaults auto-syncs and this blocks I/O
+        
+        guard let topAppsPayload = sharedDefaults.array(forKey: "top_apps") as? [[String: Any]] else {
+            print("⚠️ No top_apps key in shared container")
+            return nil
+        }
+        
+        print("📊 Found \(topAppsPayload.count) top apps in shared container")
+        
+        let realAppDiscovery = RealAppDiscoveryService.shared
+        var topApps: [MonitoredApp] = []
+        
+        for appData in topAppsPayload {
+            guard let name = appData["name"] as? String,
+                  let minutes = appData["minutes"] as? Int else {
+                print("⚠️ Skipping invalid app data: \(appData)")
+                continue
+            }
+            
+            // Filter out placeholder names (should already be filtered by extension, but double-check)
+            if isPlaceholderAppName(name) {
+                print("⚠️ Filtering out placeholder: \(name)")
+                continue
+            }
+            
+            // ⚠️ CRITICAL: Only include apps with minutes > 0
+            guard minutes > 0 else {
+                print("⏭️ Skipping \(name): 0 minutes")
+                continue
+            }
+            
+            print("✅ Including from shared container: \(name) - \(minutes) minutes")
+            
+            // ✅ PERFORMANCE: Skip token lookup - not needed for display
+            // Token lookup is expensive and not necessary for showing the list
+            
+            // ✅ Use .application token type for categorization
+            let category = AppCategory.category(for: .application)
+            
+            topApps.append(MonitoredApp(
+                name: name,
+                icon: category.icon,
+                dailyLimit: 0,
+                usedToday: minutes,
+                color: Color(category.color),
+                isEnabled: false
+            ))
+        }
+        
+        print("📊 Returning \(topApps.count) top apps from shared container")
+        return topApps  // ✅ Always return array, never nil
     }
     
     /// Check if an app name is a placeholder (e.g., "app 902388", "Unknown")
@@ -677,6 +649,11 @@ struct DashboardView: View {
             .onAppear {
                 print("📱 DashboardView.onAppear: Starting data load")
                 
+                // ✅ PERFORMANCE: Only refresh top distractions if cache is empty or stale (first load)
+                if cachedTopDistractions.isEmpty || Date().timeIntervalSince(topDistractionsLastRefresh) > topDistractionsCacheTimeout {
+                    refreshTopDistractions()
+                }
+                
                 // Ensure Screen Time is authorized
                 if !screenTimeService.isAuthorized {
                     Task {
@@ -692,35 +669,25 @@ struct DashboardView: View {
                 }
                 
                 // Small delay before loading data to ensure monitoring is active
-                // Then refresh periodically to catch report extension updates
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     loadScreenTimeData()
                     appState.refreshScreenTimeData()
                 }
                 
-                // Periodic refresh to catch report extension updates (every 3 seconds for first 15 seconds)
-                for delay in [3.0, 6.0, 9.0, 12.0, 15.0] {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                        print("🔄 Periodic refresh: Re-reading shared container...")
-                        let sharedUsage = readUsageFromSharedContainer()
-                        let sharedApps = readAppsCountFromSharedContainer()
-                        if sharedUsage > 0 || sharedApps > 0 {
-                            print("✅ Periodic refresh found data: \(sharedUsage) minutes, \(sharedApps) apps")
-                            totalScreenTimeMinutes = sharedUsage
-                            appsUsedToday = sharedApps
-                        }
-                    }
-                }
+                // ✅ PERFORMANCE: Removed periodic refreshes - they cause performance issues
+                // Data will refresh when app enters foreground instead
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                // Refresh monitoring and data when app enters foreground
-                print("📱 App entered foreground - refreshing monitoring")
+                // ✅ PERFORMANCE: Only refresh when app enters foreground (user reopens app)
+                print("📱 App entered foreground - refreshing data")
                 screenTimeService.refreshAllMonitoring()
                 loadScreenTimeData()
+                refreshTopDistractions() // Refresh top distractions on foreground
             }
             .onChange(of: screenTimeService.allAppsSelection) { _ in
                 // Refresh when allAppsSelection changes (e.g., after onboarding)
                 loadScreenTimeData()
+                refreshTopDistractions() // Refresh when selection changes
             }
         }
     }
@@ -802,16 +769,21 @@ struct DashboardView: View {
                             .foregroundColor(.textPrimary)
                             .padding(.bottom, 12)
                         
+                        // Health bar with full border and proportional fill
                         GeometryReader { geometry in
                             ZStack(alignment: .leading) {
-                                // Track
+                                // Full track/border (always visible from 0-100) - visible in both light and dark mode
                                 RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.white.opacity(0.08))
+                                    .stroke(Color.primary.opacity(0.3), lineWidth: 2)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(Color.primary.opacity(0.1))
+                                    )
                                 
-                                // Fill based on healthScore (0-100)
+                                // Fill based on healthScore (0-100) - only colored portion
                                 RoundedRectangle(cornerRadius: 6)
                                     .fill(healthColor)
-                                    .frame(width: geometry.size.width * CGFloat(healthScore) / 100)
+                                    .frame(width: max(0, geometry.size.width * CGFloat(healthScore) / 100))
                             }
                         }
                         .frame(height: 10)
@@ -1129,10 +1101,23 @@ struct DashboardView: View {
         Group {
                         if !topDistractions.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("Top Distractions")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.textPrimary)
-                                    .padding(.horizontal, 20)
+                                HStack {
+                                    Text("Top Distractions")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(.textPrimary)
+                                    
+                                    Spacer()
+                                    
+                                    // ✅ Manual refresh button
+                                    Button(action: {
+                                        refreshTopDistractions()
+                                    }) {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(.textSecondary)
+                                    }
+                                }
+                                .padding(.horizontal, 20)
                                 
                                 VStack(spacing: 8) {
                                     // Ensure exactly 10 items are shown

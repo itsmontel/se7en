@@ -26,29 +26,23 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
         
-        // ✅ FIX: Use rawValue directly instead of parsing string description
+        // Use rawValue to reliably parse the event name (format: update.<tokenHash> / limit.<tokenHash>)
         let eventRawValue = event.rawValue
         
-        // Extract token hash from rawValue (format: "update.<tokenHash>" or "limit.<tokenHash>")
-        guard let tokenHash = extractTokenHash(from: eventRawValue) else {
-            print("⚠️ Monitor Extension: Could not extract token hash from event: \(eventRawValue)")
-            return
-        }
+        // Extract token hash from rawValue
+        guard let tokenHash = extractTokenHash(from: eventRawValue) else { return }
         
         if eventRawValue.contains("update") {
             incrementUsage(for: tokenHash)
-            print("📊 Monitor Extension: Incremented usage for token hash: \(tokenHash)")
         } else if eventRawValue.contains("limit") {
             markLimitReached(for: tokenHash)
-            print("🚫 Monitor Extension: Limit reached for token hash: \(tokenHash)")
         }
     }
     
     // MARK: - Minimal Helpers
     
     private func extractTokenHash(from eventRawValue: String) -> String? {
-        // Event format: "update.<tokenHash>" or "limit.<tokenHash>" or "warning.<tokenHash>"
-        // Split on "." and take everything after the first part
+        // Expect formats like "update.<tokenHash>" or "limit.<tokenHash>"
         let parts = eventRawValue.split(separator: ".", maxSplits: 1)
         guard parts.count == 2 else { return nil }
         return String(parts[1])

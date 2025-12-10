@@ -222,7 +222,7 @@ final class ScreenTimeService: ObservableObject {
         do {
             let data = try PropertyListEncoder().encode(selection)
             sharedDefaults.set(data, forKey: "selection_\(tokenHash)")
-            sharedDefaults.synchronize()
+            // ✅ PERFORMANCE: Removed synchronize() - UserDefaults auto-syncs and this blocks I/O
             print("💾 Saved selection to shared container for: \(tokenHash)")
         } catch {
             print("❌ Failed to encode selection: \(error)")
@@ -339,7 +339,7 @@ final class ScreenTimeService: ObservableObject {
         let key = "usage_\(tokenHash)"
         if sharedDefaults.object(forKey: key) == nil {
             sharedDefaults.set(0, forKey: key)
-            sharedDefaults.synchronize()
+            // ✅ PERFORMANCE: Removed synchronize() - UserDefaults auto-syncs and this blocks I/O
             print("💾 Initialized shared container usage to 0 for \(tokenHash)")
         }
     }
@@ -1088,7 +1088,7 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Force refresh from disk
-            sharedDefaults.synchronize()
+            // ✅ PERFORMANCE: Removed synchronize() - UserDefaults auto-syncs and this blocks I/O
             
             // Read total usage directly
             let totalUsage = sharedDefaults.integer(forKey: "total_usage")
@@ -1201,7 +1201,7 @@ final class ScreenTimeService: ObservableObject {
             let data = try PropertyListEncoder().encode(selection)
             UserDefaults.standard.set(data, forKey: allAppsSelectionKey)
             // Force UserDefaults to sync immediately for critical onboarding data
-            UserDefaults.standard.synchronize()
+            // ✅ PERFORMANCE: Removed synchronize() - UserDefaults auto-syncs
             print("💾 Saved all apps selection with \(selection.applicationTokens.count) apps and \(selection.categoryTokens.count) categories to UserDefaults")
             
             // Verify the save by immediately reading it back
