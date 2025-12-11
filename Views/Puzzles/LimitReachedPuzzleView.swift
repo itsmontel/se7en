@@ -152,7 +152,7 @@ struct LimitReachedPuzzleView: View {
                     )
                 case .pattern:
                     PatternGameView(
-                        sequence: PatternSequence.generate(length: 7),
+                        sequence: PatternSequence.generate(length: 6),
                         onComplete: {
                             handlePuzzleComplete(puzzleType: puzzleType)
                         },
@@ -196,4 +196,3 @@ struct LimitReachedPuzzleView: View {
         }
     }
 }
-

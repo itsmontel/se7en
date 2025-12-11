@@ -23,18 +23,18 @@ struct SudokuView: View {
     }
     
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             // Header
             VStack(spacing: 8) {
-                Text("Sudoku 4×4")
+                Text("Sudoku 6×6")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
-                Text("Fill all cells with numbers 1-4")
+                Text("Fill all cells with numbers 1-6")
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundColor(.secondary)
                 
-                Text("\(filledCells) / 16 cells filled")
+                Text("\(filledCells) / 36 cells filled")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundColor(.blue)
                     .padding(.top, 4)
@@ -43,9 +43,9 @@ struct SudokuView: View {
             
             // Sudoku Grid
             VStack(spacing: 0) {
-                ForEach(0..<4, id: \.self) { row in
+                ForEach(0..<6, id: \.self) { row in
                     HStack(spacing: 0) {
-                        ForEach(0..<4, id: \.self) { col in
+                        ForEach(0..<6, id: \.self) { col in
                             let isGiven = puzzle.initialGrid[row][col] != nil
                             let cellKey = "\(row)-\(col)"
                             SudokuCell(
@@ -53,13 +53,15 @@ struct SudokuView: View {
                                 isSelected: selectedCell?.row == row && selectedCell?.col == col,
                                 isGiven: isGiven,
                                 showsError: errorCells.contains(cellKey),
-                                isTopBorder: row == 0 || row == 2,
-                                isBottomBorder: row == 1 || row == 3,
-                                isLeftBorder: col == 0 || col == 2,
-                                isRightBorder: col == 1 || col == 3,
+                                isTopBorder: row % 2 == 0,
+                                isBottomBorder: (row + 1) % 2 == 0,
+                                isLeftBorder: col % 3 == 0,
+                                isRightBorder: (col + 1) % 3 == 0,
                                 onTap: {
                                     if !isGiven {
-                                        selectedCell = (row, col)
+                                        withAnimation(.easeInOut(duration: 0.15)) {
+                                            selectedCell = (row, col)
+                                        }
                                         HapticFeedback.light.trigger()
                                     }
                                 }
@@ -75,8 +77,8 @@ struct SudokuView: View {
             
             // Number Pad
             VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    ForEach(1...4, id: \.self) { number in
+                HStack(spacing: 10) {
+                    ForEach(1...6, id: \.self) { number in
                         NumberButton(number: number) {
                             enterNumber(number)
                         }
@@ -130,7 +132,9 @@ struct SudokuView: View {
         let cellKey = "\(cell.row)-\(cell.col)"
         
         if puzzle.isValidMove(number, at: cell.row, col: cell.col, in: grid) {
-            grid[cell.row][cell.col] = number
+            withAnimation(.easeInOut(duration: 0.15)) {
+                grid[cell.row][cell.col] = number
+            }
             errorCells.remove(cellKey)
             HapticFeedback.success.trigger()
             
@@ -142,7 +146,9 @@ struct SudokuView: View {
                 }
             }
         } else {
-            grid[cell.row][cell.col] = number
+            withAnimation(.easeInOut(duration: 0.15)) {
+                grid[cell.row][cell.col] = number
+            }
             errorCells.insert(cellKey)
             HapticFeedback.error.trigger()
         }
@@ -159,7 +165,9 @@ struct SudokuView: View {
             return
         }
         
-        grid[cell.row][cell.col] = nil
+        withAnimation(.easeInOut(duration: 0.15)) {
+            grid[cell.row][cell.col] = nil
+        }
         errorCells.remove("\(cell.row)-\(cell.col)")
         HapticFeedback.light.trigger()
     }
@@ -176,7 +184,9 @@ struct SudokuView: View {
         }
         
         let correctNumber = puzzle.solution[cell.row][cell.col]
-        grid[cell.row][cell.col] = correctNumber
+        withAnimation(.easeInOut(duration: 0.2)) {
+            grid[cell.row][cell.col] = correctNumber
+        }
         errorCells.remove("\(cell.row)-\(cell.col)")
         HapticFeedback.success.trigger()
         
@@ -203,58 +213,60 @@ struct SudokuCell: View {
     
     var body: some View {
         Button(action: onTap) {
-            Text(value != nil ? "\(value!)" : "")
-                .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundColor(isGiven ? .primary : (showsError ? .red : .blue))
-                .frame(width: 70, height: 70)
-                .background(
-                    Group {
-                        if showsError {
-                            Color.red.opacity(0.1)
-                        } else if isSelected {
-                            Color.blue.opacity(0.2)
-                        } else {
-                            Color.white
-                        }
+            ZStack {
+                // Background
+                Group {
+                    if showsError {
+                        Color.red.opacity(0.15)
+                    } else if isSelected {
+                        Color.blue.opacity(0.25)
+                    } else {
+                        Color.white
                     }
-                )
-                .overlay(
-                    Rectangle()
-                        .strokeBorder(
-                            Color.gray.opacity(0.3),
-                            lineWidth: 0.5
-                        )
-                )
-                .overlay(
-                    VStack(spacing: 0) {
-                        if isTopBorder {
-                            Rectangle()
-                                .fill(Color.primary)
-                                .frame(height: 2)
-                        }
-                        Spacer()
-                        if isBottomBorder {
-                            Rectangle()
-                                .fill(Color.primary)
-                                .frame(height: 2)
-                        }
+                }
+                
+                // Value text
+                if let value = value {
+                    Text("\(value)")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(isGiven ? .primary : (showsError ? .red : .blue))
+                }
+            }
+            .frame(width: 50, height: 50)
+            .overlay(
+                Rectangle()
+                    .strokeBorder(Color.gray.opacity(0.3), lineWidth: 0.5)
+            )
+            .overlay(
+                VStack(spacing: 0) {
+                    if isTopBorder {
+                        Rectangle()
+                            .fill(Color.primary)
+                            .frame(height: 2)
                     }
-                )
-                .overlay(
-                    HStack(spacing: 0) {
-                        if isLeftBorder {
-                            Rectangle()
-                                .fill(Color.primary)
-                                .frame(width: 2)
-                        }
-                        Spacer()
-                        if isRightBorder {
-                            Rectangle()
-                                .fill(Color.primary)
-                                .frame(width: 2)
-                        }
+                    Spacer()
+                    if isBottomBorder {
+                        Rectangle()
+                            .fill(Color.primary)
+                            .frame(height: 2)
                     }
-                )
+                }
+            )
+            .overlay(
+                HStack(spacing: 0) {
+                    if isLeftBorder {
+                        Rectangle()
+                            .fill(Color.primary)
+                            .frame(width: 2)
+                    }
+                    Spacer()
+                    if isRightBorder {
+                        Rectangle()
+                            .fill(Color.primary)
+                            .frame(width: 2)
+                    }
+                }
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -266,11 +278,14 @@ struct NumberButton: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticFeedback.light.trigger()
+            action()
+        }) {
             Text("\(number)")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
-                .frame(width: 70, height: 70)
+                .frame(width: 50, height: 50)
                 .background(
                     LinearGradient(
                         gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
@@ -281,6 +296,7 @@ struct NumberButton: View {
                 .cornerRadius(12)
                 .shadow(color: Color.blue.opacity(0.3), radius: 4, x: 0, y: 2)
         }
+        .buttonStyle(ScaleButtonStyle())
     }
 }
 
@@ -289,7 +305,10 @@ struct ClearButton: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticFeedback.light.trigger()
+            action()
+        }) {
             HStack {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 20))
@@ -303,6 +322,7 @@ struct ClearButton: View {
             .cornerRadius(12)
             .shadow(color: Color.red.opacity(0.3), radius: 4, x: 0, y: 2)
         }
+        .buttonStyle(ScaleButtonStyle())
     }
 }
 
@@ -311,7 +331,10 @@ struct HintButton: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            HapticFeedback.light.trigger()
+            action()
+        }) {
             HStack {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 20))
@@ -325,7 +348,16 @@ struct HintButton: View {
             .cornerRadius(12)
             .shadow(color: Color.orange.opacity(0.3), radius: 4, x: 0, y: 2)
         }
+        .buttonStyle(ScaleButtonStyle())
     }
 }
 
+// MARK: - Scale Button Style
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
 

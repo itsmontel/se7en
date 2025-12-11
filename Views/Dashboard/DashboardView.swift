@@ -13,14 +13,10 @@ extension DeviceActivityReport.Context {
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
     private let screenTimeService = ScreenTimeService.shared
-    @State private var showingCreditLossAlert = false
     @State private var showingSuccessToast = false
-    @State private var creditsLostInAlert = 0
     @State private var showingAddAppSheet = false
     @State private var selectedDate = Date()
     @State private var showingDatePicker = false
-    @State private var showingUnblockConfirmation = false
-    @State private var appToUnblock: MonitoredApp?
     @State private var showingLimitReachedPuzzle = false
     @State private var limitReachedAppName: String = ""
     @State private var limitReachedBundleID: String = ""
@@ -42,11 +38,13 @@ struct DashboardView: View {
     @State private var topAppToday: TopAppData?
     @State private var isLoadingScreenTime = false
     @State private var screenTimeError: String?
+    @State private var hasLoadedInitialData = false // Track if we've loaded data on app launch
     
     // ✅ PERFORMANCE: Cache top distractions to prevent recalculation on every render
     @State private var cachedTopDistractions: [MonitoredApp] = []
     @State private var topDistractionsLastRefresh: Date = Date.distantPast
     private let topDistractionsCacheTimeout: TimeInterval = 300 // 5 minutes - only refresh on foreground
+
     
     
     
@@ -56,7 +54,7 @@ struct DashboardView: View {
     }
     
     // Load comprehensive screen time data from Screen Time API
-    private func loadScreenTimeData() {
+    private func loadScreenTimeData(showLoading: Bool = false) {
         guard !isLoadingScreenTime else { return }
         
         // Check synchronously if we have allAppsSelection before showing loading state
@@ -97,13 +95,14 @@ struct DashboardView: View {
             self.appsUsedToday = 0
             self.topAppToday = nil
             self.isLoadingScreenTime = false
+            self.hasLoadedInitialData = true // Mark as loaded even if empty
             // Don't show error if onboarding is complete - just show empty state
             self.screenTimeError = isOnboardingComplete ? nil : "Select all apps to view your total screen time"
             return
         }
         
-        // Only show loading if we have apps to load data for
-        isLoadingScreenTime = true
+        // Only show loading spinner on first load (app launch) or when explicitly requested
+        isLoadingScreenTime = showLoading && !hasLoadedInitialData
         screenTimeError = nil
         
         Task {
@@ -117,6 +116,7 @@ struct DashboardView: View {
                     self.appsUsedToday = 0
                     self.topAppToday = nil
                     self.isLoadingScreenTime = false
+                    self.hasLoadedInitialData = true // Mark as loaded even if error
                     self.screenTimeError = "Screen Time not authorized. Please enable Screen Time access in Settings."
                 }
                 return
@@ -195,6 +195,7 @@ struct DashboardView: View {
                 self.topAppToday = topAppData
                 self.topAppToken = topToken
                 self.isLoadingScreenTime = false
+                self.hasLoadedInitialData = true // Mark that we've loaded initial data
                 
                 // Only show informational message if we have connected apps but no usage yet
                 // Usage records are initialized immediately, so 0 means no usage yet (which is normal)
@@ -514,30 +515,20 @@ struct DashboardView: View {
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 0) {
-                            headerSection
-                            petAndCreditsSection
-                            petImageSection
-                            healthSection
-                            screenTimeSection
-                            topDistractionsSection
-                        }
-                        .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
-                        Spacer()
+                    VStack(spacing: 0) {
+                        headerSection
+                        petNameSection
+                        petImageSection
+                        healthSection
+                        screenTimeSection
+                        topDistractionsSection
                     }
+                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity, alignment: .center)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 32) // ensure scrollable area
                 }
                 
                 // Overlays
-                if showingCreditLossAlert {
-                    CreditLossAlert(
-                        isPresented: $showingCreditLossAlert,
-                        creditsLost: creditsLostInAlert,
-                        creditsRemaining: appState.currentCredits
-                    )
-                }
-                
                 // Streak Celebration Overlay
                 if appState.shouldShowStreakCelebration {
                     StreakCelebrationView(
@@ -576,16 +567,6 @@ struct DashboardView: View {
                     )
                     .environmentObject(appState)
                     .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .alert("Unblock App", isPresented: $showingUnblockConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Spend 1 Credit") {
-                    handleConfirmUnblock()
-                }
-            } message: {
-                if let app = appToUnblock {
-                    Text("Spend 1 credit to unblock \(app.name) now? You have \(appState.currentCredits) credits remaining.")
                 }
             }
             .sheet(isPresented: $showingExtendLimitSheet) {
@@ -628,9 +609,6 @@ struct DashboardView: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    CompactStreakView(streak: appState.currentStreak)
-                }
             }
             .sheet(isPresented: $showingAddAppSheet) {
                 CategoryAppSelectionView()
@@ -648,62 +626,37 @@ struct DashboardView: View {
                 )
             }
             .onAppear {
-                print("📱 DashboardView.onAppear: Starting data load")
-                
                 // ✅ TEST: Show puzzle modal on app launch
                 if showPuzzleOnAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         limitReachedAppName = "Instagram"
                         limitReachedBundleID = "test_bundle_id"
                         showingLimitReachedPuzzle = true
-                        showPuzzleOnAppear = false // Only show once
+                        showPuzzleOnAppear = false
                     }
                 }
                 
-                // Ensure Screen Time is authorized
+                // Ensure Screen Time is authorized (only refresh if needed)
                 if !screenTimeService.isAuthorized {
                     Task {
                         await screenTimeService.requestAuthorization()
-                        // Wait a moment for authorization to complete
-                        try? await Task.sleep(nanoseconds: 500_000_000)
-                        // Then refresh monitoring
-                        screenTimeService.refreshAllMonitoring()
                     }
-                } else {
-                    // ⚠️ CRITICAL: Refresh monitoring immediately
-                    screenTimeService.refreshAllMonitoring()
                 }
                 
-                // Small delay before loading data to ensure monitoring is active
-                // Then refresh periodically to catch report extension updates
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    loadScreenTimeData()
-                    appState.refreshScreenTimeData()
-                }
-                
-                // Periodic refresh to catch report extension updates (every 3 seconds for first 15 seconds)
-                for delay in [3.0, 6.0, 9.0, 12.0, 15.0] {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                        print("🔄 Periodic refresh: Re-reading shared container...")
-                        let sharedUsage = readUsageFromSharedContainer()
-                        let sharedApps = readAppsCountFromSharedContainer()
-                        if sharedUsage > 0 || sharedApps > 0 {
-                            print("✅ Periodic refresh found data: \(sharedUsage) minutes, \(sharedApps) apps")
-                            totalScreenTimeMinutes = sharedUsage
-                            appsUsedToday = sharedApps
-                        }
+                // Load data with single delay (only on first app launch)
+                if !hasLoadedInitialData {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        loadScreenTimeData(showLoading: true)
+                        appState.refreshScreenTimeData()
                     }
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                // Refresh monitoring and data when app enters foreground
-                print("📱 App entered foreground - refreshing monitoring")
-                screenTimeService.refreshAllMonitoring()
-                loadScreenTimeData()
-            }
-            .onChange(of: screenTimeService.allAppsSelection) { _ in
-                // Refresh when allAppsSelection changes (e.g., after onboarding)
-                loadScreenTimeData()
+                // Refresh data when app enters foreground (only show loading if first time)
+                // This only triggers when app comes back from background, not when switching tabs
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    loadScreenTimeData(showLoading: !hasLoadedInitialData)
+                }
             }
         }
     }
@@ -721,40 +674,21 @@ struct DashboardView: View {
                         .padding(.bottom, 16)
     }
                         
-    private var petAndCreditsSection: some View {
-                        HStack(alignment: .center) {
-                            if let pet = appState.userPet {
-                                Text(pet.name)
-                                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                                    .foregroundColor(.textPrimary)
-                            }
-                            
-                            Spacer()
-                            
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [Color.blue, Color.purple]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 64, height: 64)
-                                
-                                VStack(spacing: 2) {
-                                    Text("\(appState.currentCredits)")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundColor(.white)
-                                    
-                                    Text("credits")
-                                        .font(.system(size: 9, weight: .medium))
-                                        .foregroundColor(.white.opacity(0.9))
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
+    private var petNameSection: some View {
+        HStack(alignment: .center) {
+            if let pet = appState.userPet {
+                Text(pet.name)
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundColor(.textPrimary)
+            }
+            
+            Spacer()
+            
+            // Streak icon on the right (where credits used to be)
+            CompactStreakView(streak: appState.currentStreak)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
     }
     
     private var petImageSection: some View {
@@ -763,17 +697,38 @@ struct DashboardView: View {
                 // Ensure pet health state reflects latest usage
                 let healthState = pet.healthState
                 let petImageName = "\(pet.type.folderName.lowercased())\(healthState.rawValue)"
+                let glowColor = healthState.color
                 
-                Image(petImageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: 200)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
-                    .id(healthState) // force refresh on state change
-                    .onAppear {
-                        appState.updatePetHealth()
-                    }
+                ZStack {
+                    // Subtle glow behind the pet (health-based colors)
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    glowColor.opacity(0.1),
+                                    glowColor.opacity(0.05),
+                                    Color.clear
+                                ],
+                                center: .center,
+                                startRadius: 50,
+                                endRadius: 120
+                            )
+                        )
+                        .frame(width: 240, height: 240)
+                        .blur(radius: 12)
+                    
+                    Image(petImageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: 200)
+                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+                .id(healthState) // force refresh on state change
+                .onAppear {
+                    appState.updatePetHealth()
+                }
             }
         }
                         }
@@ -910,7 +865,7 @@ struct DashboardView: View {
                         
                         if isError {
                             Button("Retry") {
-                                loadScreenTimeData()
+                                loadScreenTimeData(showLoading: false)
                             }
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.blue)
@@ -926,7 +881,6 @@ struct DashboardView: View {
                         // This displays the TodayOverviewView with total time, apps used, and top 10 apps
                         if screenTimeService.isAuthorized {
                             todayOverviewReportView
-                            hiddenTotalActivityReportView
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -976,26 +930,13 @@ struct DashboardView: View {
             .cornerRadius(12)
             .padding(.horizontal, 4) // Minimal padding to maximize width
             .onAppear {
-                print("📊 DeviceActivityReport view appeared")
-                screenTimeService.refreshAllMonitoring()
-                
-                // ⚠️ Give extension time to save data, then refresh
-                // Try multiple times to catch the data
-                for delay in [1.0, 2.0, 3.0] {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                        print("🔄 Refreshing shared container data after report loaded (attempt at \(delay)s)...")
-                        
-                        // Force re-read from shared container
-                        let sharedUsage = readUsageFromSharedContainer()
-                        let sharedApps = readAppsCountFromSharedContainer()
-                        
-                        if sharedUsage > 0 || sharedApps > 0 {
-                            print("✅ Got updated data from shared container: \(sharedUsage) minutes, \(sharedApps) apps")
-                            totalScreenTimeMinutes = sharedUsage
-                            appsUsedToday = sharedApps
-                        } else {
-                            print("⚠️ Still no data in shared container after \(delay) seconds")
-                        }
+                // Single refresh check after report loads
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    let sharedUsage = readUsageFromSharedContainer()
+                    let sharedApps = readAppsCountFromSharedContainer()
+                    if sharedUsage > 0 || sharedApps > 0 {
+                        totalScreenTimeMinutes = sharedUsage
+                        appsUsedToday = sharedApps
                     }
                 }
             }
@@ -1271,40 +1212,6 @@ struct DashboardView: View {
     
     // MARK: - App Blocking/Unblocking Methods
     
-    private func handleUnblockApp(_ app: MonitoredApp) {
-        appToUnblock = app
-        showingUnblockConfirmation = true
-    }
-    
-    private func handleConfirmUnblock() {
-        guard let app = appToUnblock else { return }
-        
-        // Get bundleID from Core Data using app name
-        let coreDataManager = CoreDataManager.shared
-        let goals = coreDataManager.getActiveAppGoals()
-        guard let goal = goals.first(where: { $0.appName == app.name }),
-              let bundleID = goal.appBundleID else {
-            print("❌ Could not find bundle ID for app: \(app.name)")
-            appToUnblock = nil
-            showingUnblockConfirmation = false
-            return
-        }
-        
-        // Use ScreenTimeService to unblock with credit
-        let success = ScreenTimeService.shared.unblockAppWithCredit(bundleID)
-        
-        if success {
-            // Refresh app state
-            appState.refreshData()
-            HapticFeedback.success.trigger()
-        } else {
-            HapticFeedback.error.trigger()
-        }
-        
-        // Reset state
-        appToUnblock = nil
-        showingUnblockConfirmation = false
-    }
     
     private func showBlockedAppModal(appName: String, bundleID: String) {
         limitReachedAppName = appName
@@ -1824,36 +1731,51 @@ struct CompactStreakView: View {
     let streak: Int
     
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(streakColor.opacity(0.2))
-                    .frame(width: 28, height: 28)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                streakColor.opacity(0.2),
+                                streakColor.opacity(0.1)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 36, height: 36)
                 
                 Image(systemName: streakIcon)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundColor(streakColor)
             }
             
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("\(streak)")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.textPrimary)
                 
-                Text("streak")
-                    .font(.system(size: 9, weight: .medium))
+                Text("day streak")
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.textSecondary)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(Color.appBackground)
-        .cornerRadius(8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.cardBackground.opacity(0.8))
-                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+            RoundedRectangle(cornerRadius: 14)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.cardBackground,
+                            Color.cardBackground.opacity(0.96)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .shadow(color: streakColor.opacity(0.12), radius: 6, x: 0, y: 2)
         )
     }
     
@@ -1882,9 +1804,7 @@ struct CompactStreakView: View {
             return "minus.circle.fill"
         case 1...2:
             return "checkmark.circle.fill"
-        case 3...6:
-            return "flame.fill"
-        case 7...13:
+        case 3...13:
             return "flame.fill"
         case 14...29:
             return "crown.fill"

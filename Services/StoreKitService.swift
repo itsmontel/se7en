@@ -9,17 +9,9 @@ final class StoreKitService: ObservableObject {
     // Product IDs for the app
     private enum ProductIDs {
         static let biWeeklySubscription = "se7en_biweekly_subscription"
-        static let oneCredit = "se7en_one_credit"
-        static let twoCredits = "se7en_two_credits"
-        static let threeCredits = "se7en_three_credits"
-        static let fourCredits = "se7en_four_credits"
-        static let fiveCredits = "se7en_five_credits"
-        static let sixCredits = "se7en_six_credits"
-        static let sevenCredits = "se7en_seven_credits"
     }
     
     @Published var subscriptionProduct: Product?
-    @Published var creditProducts: [Product] = []
     @Published var isSubscribed = false
     @Published var purchaseState: PurchaseState = .idle
     
@@ -47,33 +39,16 @@ final class StoreKitService: ObservableObject {
     func loadProducts() async {
         do {
             let products = try await Product.products(for: [
-                ProductIDs.biWeeklySubscription,
-                ProductIDs.oneCredit,
-                ProductIDs.twoCredits,
-                ProductIDs.threeCredits,
-                ProductIDs.fourCredits,
-                ProductIDs.fiveCredits,
-                ProductIDs.sixCredits,
-                ProductIDs.sevenCredits
+                ProductIDs.biWeeklySubscription
             ])
             
             for product in products {
-                switch product.id {
-                case ProductIDs.biWeeklySubscription:
+                if product.id == ProductIDs.biWeeklySubscription {
                     subscriptionProduct = product
-                case ProductIDs.oneCredit, ProductIDs.twoCredits, ProductIDs.threeCredits,
-                     ProductIDs.fourCredits, ProductIDs.fiveCredits, ProductIDs.sixCredits,
-                     ProductIDs.sevenCredits:
-                    creditProducts.append(product)
-                default:
-                    break
                 }
             }
             
-            // Sort credit products by price
-            creditProducts.sort { $0.price < $1.price }
-            
-            print("Loaded subscription and \(creditProducts.count) credit products")
+            print("Loaded subscription product")
         } catch {
             print("Failed to load products: \(error)")
         }
@@ -121,18 +96,6 @@ final class StoreKitService: ObservableObject {
         
         isSubscribed = false
         appState.updateSubscriptionStatus(false)
-    }
-    
-    // MARK: - Credit Purchases
-    
-    func purchaseCredits(_ productID: String) async -> Bool {
-        guard let product = creditProducts.first(where: { $0.id == productID }) else {
-            print("Credit product not found: \(productID)")
-            return false
-        }
-        
-        // Purchase will handle credit addition via processTransactionSync
-        return await purchase(product)
     }
     
     // MARK: - Purchase Flow
@@ -189,26 +152,9 @@ final class StoreKitService: ObservableObject {
         print("Processing transaction: \(transaction.productID)")
         
         switch transaction.productID {
-        case ProductIDs.oneCredit:
-            appState.addCredits(amount: 1, reason: "Purchased 1 credit")
-            
-        case ProductIDs.twoCredits:
-            appState.addCredits(amount: 2, reason: "Purchased 2 credits")
-            
-        case ProductIDs.threeCredits:
-            appState.addCredits(amount: 3, reason: "Purchased 3 credits")
-            
-        case ProductIDs.fourCredits:
-            appState.addCredits(amount: 4, reason: "Purchased 4 credits")
-            
-        case ProductIDs.fiveCredits:
-            appState.addCredits(amount: 5, reason: "Purchased 5 credits")
-            
-        case ProductIDs.sixCredits:
-            appState.addCredits(amount: 6, reason: "Purchased 6 credits")
-            
-        case ProductIDs.sevenCredits:
-            appState.addCredits(amount: 7, reason: "Purchased 7 credits")
+        case ProductIDs.biWeeklySubscription:
+            // Subscription handled by checkSubscriptionStatus
+            print("Subscription transaction processed")
             
         default:
             print("Unknown product ID: \(transaction.productID)")
@@ -245,24 +191,6 @@ final class StoreKitService: ObservableObject {
     }
     
     // MARK: - Product Helpers
-    
-    func getCreditProduct(for credits: Int) -> Product? {
-        guard credits >= 1 && credits <= 7 else { return nil }
-        
-        let productID: String
-        switch credits {
-        case 1: productID = ProductIDs.oneCredit
-        case 2: productID = ProductIDs.twoCredits
-        case 3: productID = ProductIDs.threeCredits
-        case 4: productID = ProductIDs.fourCredits
-        case 5: productID = ProductIDs.fiveCredits
-        case 6: productID = ProductIDs.sixCredits
-        case 7: productID = ProductIDs.sevenCredits
-        default: return nil
-        }
-        
-        return creditProducts.first { $0.id == productID }
-    }
     
     func formatPrice(for product: Product) -> String {
         return product.displayPrice

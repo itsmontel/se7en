@@ -8,14 +8,8 @@ struct PetHealthCard: View {
     }
     
     private var petHealthState: PetHealthState {
-        // Calculate health based on credits
-        switch appState.currentCredits {
-        case 7: return .fullHealth
-        case 5...6: return .happy
-        case 3...4: return .content
-        case 1...2: return .sad
-        default: return .sick
-        }
+        // Use pet health from AppState (based on usage, not credits)
+        return currentPet?.healthState ?? .sick
     }
     
     private var petName: String {
@@ -81,7 +75,7 @@ struct PetHealthCard: View {
         case .sad:
             return "\(petName) is struggling. Be careful!"
         case .sick:
-            return "\(petName) needs help! Time to top up credits."
+            return "\(petName) needs help! Stay within your limits."
         }
     }
 }

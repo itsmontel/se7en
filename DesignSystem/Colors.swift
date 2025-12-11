@@ -51,20 +51,6 @@ extension Color {
         Color(UIColor.tertiarySystemBackground)
     }
     
-    // Credit Ring Colors
-    static func creditColor(for credits: Int) -> Color {
-        switch credits {
-        case 7:
-            return .sevenIndigo
-        case 4...6:
-            return .sevenAmber
-        case 0...3:
-            return .sevenRose
-        default:
-            return .sevenIndigo
-        }
-    }
-    
     // Hex initializer
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)

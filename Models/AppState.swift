@@ -16,8 +16,6 @@ extension Notification.Name {
 @MainActor
 class AppState: ObservableObject {
     @Published var isOnboarding = true
-    @Published var credits = 7
-    @Published var currentCredits = 7 // Alias for compatibility
     @Published var weekProgress: Double = 0.0
     @Published var currentStreak = 0
     @Published var longestStreak = 0
@@ -146,7 +144,7 @@ class AppState: ObservableObject {
         isOnboarding = preferences.isOnboarding
         averageScreenTimeHours = preferences.averageScreenTimeHours
         
-        // If pet exists, update its health based on current credits
+        // Update pet health based on usage
         if userPet != nil {
             updatePetHealth()
         }
@@ -178,9 +176,7 @@ class AppState: ObservableObject {
         coreDataManager.performDailyResetIfNeeded()
         
         let weeklyPlan = coreDataManager.getOrCreateCurrentWeeklyPlan()
-        credits = Int(weeklyPlan.creditsRemaining)
-        currentCredits = credits // Keep in sync
-        updatePetHealth() // Update pet health based on credits
+        updatePetHealth() // Update pet health based on usage
         
         // Re-setup monitoring (individual apps will be blocked if limits exceeded)
         if isScreenTimeAuthorized && !isOnboarding {
@@ -497,15 +493,6 @@ class AppState: ObservableObject {
         }
     }
     
-    // MARK: - Credit System
-    
-    var hasPaidAccountabilityFeeToday: Bool {
-        let weeklyPlan = coreDataManager.getOrCreateCurrentWeeklyPlan()
-        let today = Calendar.current.startOfDay(for: Date())
-        let accountabilityFeePaidDate = weeklyPlan.accountabilityFeePaidDate.map { Calendar.current.startOfDay(for: $0) }
-        return accountabilityFeePaidDate == today
-    }
-    
     // MARK: - Subscription Management
     
     func updateSubscriptionStatus(_ isActive: Bool) {
@@ -518,63 +505,23 @@ class AppState: ObservableObject {
         saveUserPreferences() // Also save preferences
     }
     
-    func deductCredit(for appName: String, reason: String) {
-        _ = coreDataManager.deductCredit(reason: reason)
-        loadCurrentWeekData()
-        loadDailyHistory() // Reload history after credit change
-        
-        // Re-setup monitoring (only the app that exceeded limit is blocked)
-        if isScreenTimeAuthorized {
-            screenTimeService.checkAndUpdateAppBlocking()
-        }
-        
-        checkAchievements()
-    }
-    
-    func addCredits(amount: Int, reason: String) {
-        _ = coreDataManager.addCredits(amount: amount, reason: reason)
-        loadCurrentWeekData()
-        loadDailyHistory() // Reload history after credit change
-        
-        // Re-setup monitoring (individual apps remain blocked if they exceeded limits)
-        if isScreenTimeAuthorized {
-            screenTimeService.checkAndUpdateAppBlocking()
-        }
-    }
     
     // MARK: - Streak Management
     
     func updateStreak() {
+        // Streak is now updated automatically during daily reset
+        // This function is kept for compatibility but just loads the current streak
         let userProfile = coreDataManager.getOrCreateUserProfile()
-        let weeklyPlan = coreDataManager.getCurrentWeeklyPlan()
+        previousStreak = currentStreak
+        currentStreak = Int(userProfile.currentStreak)
         
-        // Store previous streak before updating
-        previousStreak = Int(userProfile.currentStreak)
-        
-        // If user kept all 7 credits, increment streak
-        if weeklyPlan?.creditsRemaining == 7 {
-            userProfile.currentStreak += 1
-            if userProfile.currentStreak > userProfile.longestStreak {
-                userProfile.longestStreak = userProfile.currentStreak
-            }
-            
-            // Check if streak increased (not just maintained)
-            let newStreak = Int(userProfile.currentStreak)
-            if newStreak > previousStreak {
-                // Trigger celebration animation
-                newStreakValue = newStreak
-                shouldShowStreakCelebration = true
-            }
-            
-            // Send streak milestone notification
-            notificationService.sendStreakMilestoneNotification(streak: Int(userProfile.currentStreak))
-        } else {
-            // Reset streak if credits were lost
-            userProfile.currentStreak = 0
+        // Check if streak increased (for celebration)
+        if currentStreak > previousStreak {
+            newStreakValue = currentStreak
+            shouldShowStreakCelebration = true
+            notificationService.sendStreakMilestoneNotification(streak: currentStreak)
         }
         
-        userProfile.updatedAt = Date()
-        coreDataManager.save()
         loadUserProfile()
     }
     
@@ -589,7 +536,7 @@ class AppState: ObservableObject {
     // MARK: - Week Management
     
     func resetWeek() {
-        // Weekly reset - credits reset to 7 daily at midnight
+        // Weekly reset
         Task {
             screenTimeService.performWeeklyReset()
         }
@@ -598,18 +545,6 @@ class AppState: ObservableObject {
         loadDailyHistory() // Reload history after week reset
         updateStreak()
         checkAchievements()
-    }
-    
-    // MARK: - Accountability Fee System
-    
-    func getCurrentFailureCount() -> Int {
-        // No longer using progressive failure count - always returns 0
-        return coreDataManager.getCurrentFailureCount()
-    }
-    
-    func getNextFailurePenalty() -> Int {
-        // Always 7 credits (99 cents) - simple accountability fee
-        return coreDataManager.getNextFailurePenalty()
     }
     
     // MARK: - Screen Time Authorization

@@ -1463,43 +1463,6 @@ final class ScreenTimeService: ObservableObject {
         }
     }
     
-    /// Unblock an app using credits
-    @discardableResult
-    func unblockAppWithCredit(_ bundleID: String) -> Bool {
-        // Check if user has credits
-        guard let currentPlan = coreDataManager.getCurrentWeeklyPlan(),
-              currentPlan.creditsRemaining > 0 else {
-            print("❌ No credits remaining to unblock app")
-            return false
-        }
-        
-        // Deduct credit
-        currentPlan.creditsRemaining -= 1
-        coreDataManager.save()
-        
-        // Unblock the app
-        unblockApp(bundleID)
-        
-        // Get app name for notification
-        let appGoal = coreDataManager.getActiveAppGoals().first { $0.appBundleID == bundleID }
-        let appName = appGoal?.appName ?? "App"
-        
-        print("✅ Unblocked \(appName) using 1 credit. Credits remaining: \(currentPlan.creditsRemaining)")
-        
-        // Send notification
-        NotificationService.shared.sendAppUnblockedNotification(appName: appName)
-        
-        // Post notification for UI update
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .appUnblocked,
-                object: nil,
-                userInfo: ["appName": appName, "bundleID": bundleID]
-            )
-        }
-        
-        return true
-    }
     
     /// Set up global monitoring specifically for DeviceActivityReport extensions
     /// This ensures the report extensions receive data even without individual app limits

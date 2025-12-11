@@ -10,9 +10,25 @@ struct AchievementsView: View {
             appState.achievements : 
             appState.achievements.filter { $0.category == selectedCategory }
         
-        return showingUnlockedOnly ? 
+        let filtered = showingUnlockedOnly ? 
             achievements.filter { appState.unlockedAchievements.contains($0.id) } : 
             achievements
+        
+        // Sort: unlocked achievements first, then locked ones
+        return filtered.sorted { achievement1, achievement2 in
+            let isUnlocked1 = appState.unlockedAchievements.contains(achievement1.id)
+            let isUnlocked2 = appState.unlockedAchievements.contains(achievement2.id)
+            
+            // Unlocked achievements come first
+            if isUnlocked1 && !isUnlocked2 {
+                return true
+            }
+            if !isUnlocked1 && isUnlocked2 {
+                return false
+            }
+            // If both have same unlock status, maintain original order
+            return false
+        }
     }
     
     private var unlockedCount: Int {

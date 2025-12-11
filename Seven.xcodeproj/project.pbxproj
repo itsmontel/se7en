@@ -22,15 +22,10 @@
 		1013 /* Views/Onboarding/SetGoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2013 /* Views/Onboarding/SetGoalsView.swift */; };
 		1014 /* Views/Onboarding/PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2014 /* Views/Onboarding/PaywallView.swift */; };
 		1015 /* Views/Dashboard/DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2015 /* Views/Dashboard/DashboardView.swift */; };
-		1016 /* Views/Dashboard/CreditRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2016 /* Views/Dashboard/CreditRingView.swift */; };
 		1017 /* Views/Dashboard/DailySummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2017 /* Views/Dashboard/DailySummaryCard.swift */; };
 		1018 /* Views/Dashboard/AppUsageCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2018 /* Views/Dashboard/AppUsageCard.swift */; };
 		1019 /* Views/Goals/GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2019 /* Views/Goals/GoalsView.swift */; };
-		1020 /* Views/Credits/CreditHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2020 /* Views/Credits/CreditHistoryView.swift */; };
-		1021 /* Views/Subscription/SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2021 /* Views/Subscription/SubscriptionView.swift */; };
-		1022 /* Views/Subscription/TopUpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2022 /* Views/Subscription/TopUpSheet.swift */; };
 		1023 /* Views/Settings/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2023 /* Views/Settings/SettingsView.swift */; };
-		1024 /* Components/CreditLossAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2024 /* Components/CreditLossAlert.swift */; };
 		1025 /* Components/LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2025 /* Components/LoadingView.swift */; };
 		1026 /* Components/SuccessToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2026 /* Components/SuccessToast.swift */; };
 		1027 /* Components/AnimatedNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2027 /* Components/AnimatedNumber.swift */; };
@@ -147,15 +142,10 @@
 		2013 /* Views/Onboarding/SetGoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/SetGoalsView.swift; sourceTree = "<group>"; };
 		2014 /* Views/Onboarding/PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PaywallView.swift; sourceTree = "<group>"; };
 		2015 /* Views/Dashboard/DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/DashboardView.swift; sourceTree = "<group>"; };
-		2016 /* Views/Dashboard/CreditRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/CreditRingView.swift; sourceTree = "<group>"; };
 		2017 /* Views/Dashboard/DailySummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/DailySummaryCard.swift; sourceTree = "<group>"; };
 		2018 /* Views/Dashboard/AppUsageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/AppUsageCard.swift; sourceTree = "<group>"; };
 		2019 /* Views/Goals/GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Goals/GoalsView.swift; sourceTree = "<group>"; };
-		2020 /* Views/Credits/CreditHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Credits/CreditHistoryView.swift; sourceTree = "<group>"; };
-		2021 /* Views/Subscription/SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Subscription/SubscriptionView.swift; sourceTree = "<group>"; };
-		2022 /* Views/Subscription/TopUpSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Subscription/TopUpSheet.swift; sourceTree = "<group>"; };
 		2023 /* Views/Settings/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
-		2024 /* Components/CreditLossAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/CreditLossAlert.swift; sourceTree = "<group>"; };
 		2025 /* Components/LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/LoadingView.swift; sourceTree = "<group>"; };
 		2026 /* Components/SuccessToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/SuccessToast.swift; sourceTree = "<group>"; };
 		2027 /* Components/AnimatedNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AnimatedNumber.swift; sourceTree = "<group>"; };
@@ -299,7 +289,6 @@
 				2061 /* Views/Dashboard/CategoryAppSelectionView.swift */,
 				2065 /* Views/Dashboard/SelectAllAppsView.swift */,
 				2052 /* Views/Dashboard/PetHealthCard.swift */,
-				2016 /* Views/Dashboard/CreditRingView.swift */,
 				2017 /* Views/Dashboard/DailySummaryCard.swift */,
 				2018 /* Views/Dashboard/AppUsageCard.swift */,
 				4000 /* Views/Dashboard/ExtendLimitSheet.swift */,
@@ -316,15 +305,12 @@
 		105 = {
 			isa = PBXGroup;
 			children = (
-				2020 /* Views/Credits/CreditHistoryView.swift */,
 			);
 			sourceTree = "<group>";
 		};
 		106 = {
 			isa = PBXGroup;
 			children = (
-				2021 /* Views/Subscription/SubscriptionView.swift */,
-				2022 /* Views/Subscription/TopUpSheet.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -453,7 +439,6 @@
 		93 = {
 			isa = PBXGroup;
 			children = (
-				2024 /* Components/CreditLossAlert.swift */,
 				2025 /* Components/LoadingView.swift */,
 				2026 /* Components/SuccessToast.swift */,
 				2027 /* Components/AnimatedNumber.swift */,
@@ -686,16 +671,11 @@
 				1014 /* Views/Onboarding/PaywallView.swift in Sources */,
 				1015 /* Views/Dashboard/DashboardView.swift in Sources */,
 				1056 /* Views/Dashboard/PetHealthCard.swift in Sources */,
-				1016 /* Views/Dashboard/CreditRingView.swift in Sources */,
 				1017 /* Views/Dashboard/DailySummaryCard.swift in Sources */,
 				1018 /* Views/Dashboard/AppUsageCard.swift in Sources */,
 				4001 /* Views/Dashboard/ExtendLimitSheet.swift in Sources */,
 				1019 /* Views/Goals/GoalsView.swift in Sources */,
-				1020 /* Views/Credits/CreditHistoryView.swift in Sources */,
-				1021 /* Views/Subscription/SubscriptionView.swift in Sources */,
-				1022 /* Views/Subscription/TopUpSheet.swift in Sources */,
 				1023 /* Views/Settings/SettingsView.swift in Sources */,
-				1024 /* Components/CreditLossAlert.swift in Sources */,
 				1025 /* Components/LoadingView.swift in Sources */,
 				1026 /* Components/SuccessToast.swift in Sources */,
 				1027 /* Components/AnimatedNumber.swift in Sources */,

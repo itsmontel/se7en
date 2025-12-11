@@ -123,6 +123,9 @@ class CoreDataManager: ObservableObject {
                 currentPlan.lastFailureDate = nil
                 currentPlan.accountabilityFeePaidDate = nil
                 
+                // Check and update streak for yesterday (once per day at reset)
+                checkAndUpdateStreakForYesterday()
+                
                 // Apply pending limit changes
                 applyPendingLimitChanges()
                 
@@ -388,50 +391,11 @@ class CoreDataManager: ObservableObject {
         return extendedLimit
     }
     
-    // MARK: - Credit Transaction Methods
+    // MARK: - Legacy Credit Methods (No longer used - puzzle system replaces credits)
     
-    func deductCredit(reason: String, for usageRecord: AppUsageRecord? = nil) -> CreditTransaction {
-        let weeklyPlan = getOrCreateCurrentWeeklyPlan()
-        let today = Calendar.current.startOfDay(for: Date())
-        
-        // Check if accountability fee has been paid today
-        let accountabilityFeePaidDate = weeklyPlan.accountabilityFeePaidDate.map { Calendar.current.startOfDay(for: $0) }
-        let hasPaidAccountabilityFeeToday = accountabilityFeePaidDate == today
-        
-        // If already paid today, no credit deduction (just block the app)
-        if hasPaidAccountabilityFeeToday {
-            print("💳 Accountability fee already paid today - no credit deduction")
-            let transaction = CreditTransaction(context: context)
-            transaction.id = UUID()
-            transaction.date = Date()
-            transaction.amount = 0 // No deduction
-            transaction.reason = "\(reason) (accountability fee already paid today)"
-            transaction.transactionType = "deduction"
-            transaction.usageRecord = usageRecord
-            transaction.weeklyPlan = weeklyPlan
-            save()
-            return transaction
-        }
-        
-        // First failure of the day - deduct all credits (user must pay 99 cents or wait)
-        // Set credits to 0 to indicate they need to pay accountability fee
-        weeklyPlan.lastFailureDate = Date()
-        weeklyPlan.creditsRemaining = 0
-        
-        // Create transaction
-        let transaction = CreditTransaction(context: context)
-        transaction.id = UUID()
-        transaction.date = Date()
-        transaction.amount = -Int32(7) // Deduct all 7 credits
-        transaction.reason = "\(reason) (Daily limit exceeded - pay 99¢ to renew or wait till tomorrow)"
-        transaction.transactionType = "deduction"
-        transaction.usageRecord = usageRecord
-        transaction.weeklyPlan = weeklyPlan
-        
-        print("💳 Daily limit exceeded: Credits set to 0. User must pay 99¢ to renew for today or wait till tomorrow.")
-        
-        save()
-        return transaction
+    func deductCredit(reason: String, for usageRecord: AppUsageRecord? = nil) -> CreditTransaction? {
+        // Credit system removed - puzzles are used instead
+        return nil
     }
     
     func resetWeeklyFailureCount() {
@@ -448,54 +412,92 @@ class CoreDataManager: ObservableObject {
     }
     
     func getNextFailurePenalty() -> Int {
-        // Always 7 credits (99 cents) - simple accountability fee
-        return 7
+        // No longer used
+        return 0
     }
     
     func payAccountabilityFee() {
-        // When user pays 99 cents, restore credits to 7 for the day
-        let weeklyPlan = getOrCreateCurrentWeeklyPlan()
-        let today = Calendar.current.startOfDay(for: Date())
+        // No longer used - puzzles replace accountability fee
+    }
+    
+    func addCredits(amount: Int, reason: String) -> CreditTransaction? {
+        // Credit system removed - puzzles are used instead
+        return nil
+    }
+    
+    // MARK: - Streak Management
+    
+    func checkAndUpdateStreakForYesterday() {
+        let userProfile = getOrCreateUserProfile()
+        let goals = getActiveAppGoals()
+        let screenTimeService = ScreenTimeService.shared
         
-        weeklyPlan.creditsRemaining = 7
-        weeklyPlan.accountabilityFeePaidDate = today
+        // Check if any limits were exceeded yesterday
+        // At midnight reset, we check yesterday's final usage
+        // Since usage resets at midnight, we check if current usage is 0 (new day just started)
+        // and look at yesterday's usage records if available
+        let calendar = Calendar.current
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+        let startOfYesterday = calendar.startOfDay(for: yesterday)
+        let endOfYesterday = calendar.date(byAdding: .day, value: 1, to: startOfYesterday) ?? Date()
         
-        // Create transaction for accountability fee payment
-        let transaction = CreditTransaction(context: context)
-        transaction.id = UUID()
-        transaction.date = Date()
-        transaction.amount = 7 // Add 7 credits
-        transaction.reason = "Accountability fee paid (99¢) - credits restored for today"
-        transaction.transactionType = "payment"
-        transaction.weeklyPlan = weeklyPlan
+        var hasExceededLimit = false
         
-        print("✅ Accountability fee paid - credits restored to 7 for today")
+        // Check each goal to see if it was exceeded yesterday
+        for goal in goals {
+            guard let bundleID = goal.appBundleID else { continue }
+            
+            // Try to get yesterday's usage from Core Data
+            if let usageRecord = getAppUsageRecord(for: bundleID, on: startOfYesterday) {
+                if Int(usageRecord.actualUsageMinutes) >= Int(goal.dailyLimitMinutes) {
+                    hasExceededLimit = true
+                    break
+                }
+            } else {
+                // If no record exists, check current usage (should be 0 at reset, but check anyway)
+                let currentUsage = screenTimeService.getUsageMinutes(for: bundleID)
+                if currentUsage >= Int(goal.dailyLimitMinutes) {
+                    hasExceededLimit = true
+                    break
+                }
+            }
+        }
+        
+        if !hasExceededLimit {
+            // No limits exceeded yesterday - increment streak
+            let previousStreak = Int(userProfile.currentStreak)
+            userProfile.currentStreak += 1
+            if userProfile.currentStreak > userProfile.longestStreak {
+                userProfile.longestStreak = userProfile.currentStreak
+            }
+            print("🔥 Streak updated: \(previousStreak) → \(userProfile.currentStreak) days")
+        } else {
+            // Limits were exceeded yesterday - reset streak
+            if userProfile.currentStreak > 0 {
+                print("💔 Streak broken: Was \(userProfile.currentStreak) days")
+            }
+            userProfile.currentStreak = 0
+        }
+        
+        userProfile.updatedAt = Date()
         save()
     }
     
-    func addCredits(amount: Int, reason: String) -> CreditTransaction {
-        let transaction = CreditTransaction(context: context)
-        transaction.id = UUID()
-        transaction.date = Date()
-        transaction.amount = Int32(amount)
-        transaction.reason = reason
-        transaction.transactionType = "addition"
-        transaction.weeklyPlan = getOrCreateCurrentWeeklyPlan()
+    func getAppUsageRecord(for bundleID: String, on date: Date) -> AppUsageRecord? {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? date
         
-        // Update weekly plan credits
-        let weeklyPlan = getOrCreateCurrentWeeklyPlan()
-        let oldCredits = weeklyPlan.creditsRemaining
-        weeklyPlan.creditsRemaining = min(7, weeklyPlan.creditsRemaining + Int32(amount))
+        let request: NSFetchRequest<AppUsageRecord> = AppUsageRecord.fetchRequest()
+        request.predicate = NSPredicate(
+            format: "appBundleID == %@ AND date >= %@ AND date < %@",
+            bundleID,
+            startOfDay as NSDate,
+            endOfDay as NSDate
+        )
+        request.fetchLimit = 1
         
-        // If credits reach 7 and they were below 7 before, mark accountability fee as paid
-        let today = Calendar.current.startOfDay(for: Date())
-        if oldCredits < 7 && weeklyPlan.creditsRemaining >= 7 {
-            weeklyPlan.accountabilityFeePaidDate = today
-            print("✅ Accountability fee marked as paid - credits reached 7")
-        }
-        
-        save()
-        return transaction
+        return try? context.fetch(request).first
     }
     
     // MARK: - Achievement Methods

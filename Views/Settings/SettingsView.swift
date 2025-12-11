@@ -21,7 +21,7 @@ struct SettingsView: View {
                         Spacer()
                         VStack(spacing: 32) {
                         // Hero Section
-                        SettingsHeroCard(streak: appState.currentStreak, credits: appState.currentCredits)
+                        SettingsHeroCard(streak: appState.currentStreak)
                             .padding(.top, 10)
                         
                         // Settings Groups
@@ -49,18 +49,6 @@ struct SettingsView: View {
                                         showingRenamePet = true
                                         HapticFeedback.light.trigger()
                                     }
-                                }
-                            }
-                            
-                            // Credits
-                            SettingsGroup(title: "Credits") {
-                                NavigationLink(destination: SubscriptionView()) {
-                                    SettingRowContent(
-                                        icon: "creditcard.fill",
-                                        color: .blue,
-                                        title: "Manage Credits",
-                                        subtitle: "\(appState.currentCredits)/7 credits remaining"
-                                    )
                                 }
                             }
                             
@@ -218,7 +206,6 @@ struct SettingsView: View {
 
 struct SettingsHeroCard: View {
     let streak: Int
-    let credits: Int
     
     var body: some View {
         HStack(spacing: 20) {
@@ -243,34 +230,8 @@ struct SettingsHeroCard: View {
                         .foregroundColor(.textSecondary)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             
-            Divider()
-                .frame(height: 40)
-                .background(Color.white.opacity(0.2))
-            
-            // Credits
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.blue.opacity(0.2))
-                        .frame(width: 48, height: 48)
-                    Text("7")
-                        .font(.system(size: 24, weight: .heavy, design: .rounded))
-                        .foregroundColor(.blue)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(credits)/7")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(.textPrimary)
-                    Text("Credits Left")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.textSecondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer()
         }
         .padding(20)
         .background(Color.cardBackground)

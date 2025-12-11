@@ -64,7 +64,7 @@ struct WhyChooseSE7ENView: View {
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                             
-                            Text("The only app that combines money with habits")
+                            Text("Build better habits through engaging challenges")
                                 .font(.system(size: 18, weight: .medium))
                                 .foregroundColor(.gray)
                                 .multilineTextAlignment(.center)
@@ -79,18 +79,18 @@ struct WhyChooseSE7ENView: View {
                     // Key differentiators
                     VStack(spacing: 20) {
                         DifferentiatorCard(
-                            icon: "flame.fill",
-                            gradient: [Color.red, Color.orange],
-                            title: "Real Accountability",
-                            description: "Put your money where your mouth is. Financial stakes create real motivation.",
+                            icon: "pawprint.fill",
+                            gradient: [Color.blue, Color.purple],
+                            title: "Your Digital Companion",
+                            description: "Care for your virtual pet by staying within your limits. Watch it thrive as you build better habits.",
                             delay: 0.2
                         )
                         
                         DifferentiatorCard(
-                            icon: "creditcard.fill",
+                            icon: "puzzlepiece.fill",
                             gradient: [Color.green, Color.blue],
-                            title: "The 7-Credit System",
-                            description: "Start each week with 7 credits. Lose one daily when you exceed limits. Keep all 7 to stay free.",
+                            title: "Puzzle-Based Extensions",
+                            description: "Hit your limit? Solve fun puzzles to earn extra time. Sudoku, memory games, and pattern challenges make earning time engaging.",
                             delay: 0.4
                         )
                         
@@ -98,7 +98,7 @@ struct WhyChooseSE7ENView: View {
                             icon: "chart.line.uptrend.xyaxis",
                             gradient: [Color.purple, Color.pink],
                             title: "Designed to be Free",
-                            description: "Build healthy habits and never pay. The app rewards good behavior, not addiction.",
+                            description: "Build healthy habits through gamification. The app rewards good behavior with engaging challenges, not payments.",
                             delay: 0.6
                         )
                     }

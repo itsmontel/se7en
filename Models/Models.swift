@@ -99,34 +99,6 @@ struct DailyRecord: Identifiable {
     }
 }
 
-// MARK: - Credit Package
-struct CreditPackage: Identifiable {
-    let id = UUID()
-    let credits: Int
-    let price: Double
-    
-    var priceString: String {
-        // Use localized currency formatting
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = Locale.current
-        return formatter.string(from: NSNumber(value: price)) ?? String(format: "%.2f", price)
-    }
-    
-    var perCreditPrice: Double {
-        price / Double(credits)
-    }
-    
-    static let packages: [CreditPackage] = [
-        CreditPackage(credits: 1, price: 0.99),
-        CreditPackage(credits: 2, price: 1.99),
-        CreditPackage(credits: 3, price: 2.99),
-        CreditPackage(credits: 4, price: 3.99),
-        CreditPackage(credits: 5, price: 4.99),
-        CreditPackage(credits: 6, price: 5.99),
-        CreditPackage(credits: 7, price: 6.99)
-    ]
-}
 
 // MARK: - Onboarding Step
 enum OnboardingStep: Int, CaseIterable {
@@ -265,9 +237,17 @@ struct Achievement: Identifiable {
             description: "Finish a week with all 7 credits",
             icon: "checkmark.seal.fill",
             color: .success,
-            category: .credits,
+            category: .streaks,
             rarity: .uncommon,
-            isUnlocked: { appState in appState.currentCredits == 7 }
+            isUnlocked: { appState in 
+                // Check if all apps stayed within limits (no limits exceeded)
+                let goals = CoreDataManager.shared.getActiveAppGoals()
+                return goals.allSatisfy { goal in
+                    guard let bundleID = goal.appBundleID else { return true }
+                    let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
+                    return usage < Int(goal.dailyLimitMinutes)
+                }
+            }
         ),
         
         Achievement(
@@ -628,7 +608,15 @@ struct Achievement: Identifiable {
             isUnlocked: { appState in 
                 appState.longestStreak >= 50 && 
                 appState.unlockedAchievements.count >= 20 && 
-                appState.currentCredits == 7
+                // Check if all apps stayed within limits
+                {
+                    let goals = CoreDataManager.shared.getActiveAppGoals()
+                    return goals.allSatisfy { goal in
+                        guard let bundleID = goal.appBundleID else { return true }
+                        let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
+                        return usage < Int(goal.dailyLimitMinutes)
+                    }
+                }()
             }
         ),
         
@@ -780,8 +768,14 @@ struct Achievement: Identifiable {
             rarity: .uncommon,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                // Check if pet has been at full health (this would need tracking)
-                return pet.healthState == .fullHealth && appState.currentCredits == 7
+                // Check if pet is at full health and all apps within limits
+                let goals = CoreDataManager.shared.getActiveAppGoals()
+                let allWithinLimits = goals.allSatisfy { goal in
+                    guard let bundleID = goal.appBundleID else { return true }
+                    let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
+                    return usage < Int(goal.dailyLimitMinutes)
+                }
+                return pet.healthState == .fullHealth && allWithinLimits
             }
         ),
         
@@ -795,8 +789,15 @@ struct Achievement: Identifiable {
             rarity: .uncommon,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                return (pet.healthState == .fullHealth || pet.healthState == .happy) && 
-                       appState.currentCredits >= 5
+                // Check if pet is healthy and most apps within limits
+                let goals = CoreDataManager.shared.getActiveAppGoals()
+                let withinLimitsCount = goals.filter { goal in
+                    guard let bundleID = goal.appBundleID else { return true }
+                    let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
+                    return usage < Int(goal.dailyLimitMinutes)
+                }.count
+                let mostWithinLimits = goals.isEmpty || (Double(withinLimitsCount) / Double(goals.count)) >= 0.7
+                return (pet.healthState == .fullHealth || pet.healthState == .happy) && mostWithinLimits
             }
         ),
         
@@ -811,7 +812,14 @@ struct Achievement: Identifiable {
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
                 // This would need to track if pet was sick and is now healthy
-                return pet.healthState == .fullHealth && appState.currentCredits == 7
+                // Check if pet is at full health and all apps within limits
+                let goals = CoreDataManager.shared.getActiveAppGoals()
+                let allWithinLimits = goals.allSatisfy { goal in
+                    guard let bundleID = goal.appBundleID else { return true }
+                    let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
+                    return usage < Int(goal.dailyLimitMinutes)
+                }
+                return pet.healthState == .fullHealth && allWithinLimits
             }
         ),
         

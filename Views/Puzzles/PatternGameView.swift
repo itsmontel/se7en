@@ -3,7 +3,6 @@ import SwiftUI
 // MARK: - Game State
 enum GameState {
     case showing
-    case memorizing
     case input
     case success
     case failure
@@ -16,9 +15,13 @@ struct PatternGameView: View {
     let onDismiss: () -> Void
     
     @State private var gameState: GameState = .showing
-    @State private var currentShowIndex = -1
+    @State private var currentShowIndex = 0
+    @State private var showElement: PatternElement? = nil
     @State private var userInput: [PatternElement] = []
-    @State private var timer: Timer? = nil
+    @State private var attemptsLeft = 3
+    @State private var currentSequence: [PatternElement] = []
+    
+    private let sequenceLength = 6
     
     var body: some View {
         VStack(spacing: 24) {
@@ -34,10 +37,26 @@ struct PatternGameView: View {
                     .multilineTextAlignment(.center)
                 
                 if gameState == .input {
-                    Text("\(userInput.count) / \(sequence.length) correct")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundColor(.blue)
-                        .padding(.top, 4)
+                    VStack(spacing: 8) {
+                        Text("\(userInput.count) / \(sequenceLength) correct")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundColor(.blue)
+                        
+                        HStack(spacing: 16) {
+                            Text("Attempts:")
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
+                            
+                            HStack(spacing: 4) {
+                                ForEach(0..<3, id: \.self) { index in
+                                    Circle()
+                                        .fill(index < attemptsLeft ? Color.green : Color.red.opacity(0.3))
+                                        .frame(width: 12, height: 12)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 4)
                 }
             }
             .padding(.top, 20)
@@ -46,8 +65,8 @@ struct PatternGameView: View {
             Spacer()
             
             // Content Area
-            if gameState == .showing || gameState == .memorizing {
-                sequenceDisplayView
+            if gameState == .showing {
+                showingView
             } else if gameState == .input {
                 inputView
             }
@@ -72,6 +91,7 @@ struct PatternGameView: View {
                     SuccessOverlay(message: "Perfect Memory!", emoji: "🧠")
                 } else if gameState == .failure {
                     FailureOverlay(
+                        attemptsLeft: attemptsLeft,
                         onRetry: {
                             restartGame()
                         },
@@ -81,51 +101,49 @@ struct PatternGameView: View {
             }
         )
         .onAppear {
+            currentSequence = Array(sequence.elements.prefix(sequenceLength))
             startSequenceDisplay()
-        }
-        .onDisappear {
-            timer?.invalidate()
         }
     }
     
     private var headerText: String {
         switch gameState {
         case .showing:
-            return "Watch the sequence carefully..."
-        case .memorizing:
-            return "Memorize the pattern!"
+            return "Watch carefully as each symbol appears..."
         case .input:
-            return "Now repeat the sequence"
+            return "Tap the symbols in the correct order"
         case .success:
             return "You did it!"
         case .failure:
-            return "Try again!"
+            return attemptsLeft > 0 ? "Wrong! Try again" : "Out of attempts"
         }
     }
     
-    // MARK: - Sequence Display View
-    private var sequenceDisplayView: some View {
+    // MARK: - Showing View
+    private var showingView: some View {
         VStack(spacing: 30) {
-            // Sequence display
-            HStack(spacing: 12) {
-                ForEach(Array(sequence.elements.enumerated()), id: \.offset) { index, element in
-                    PatternElementView(
-                        element: element,
-                        isHighlighted: index == currentShowIndex,
-                        size: 60
+            if let element = showElement {
+                PatternElementView(
+                    element: element,
+                    isHighlighted: true,
+                    size: 120
+                )
+                .transition(.scale.combined(with: .opacity))
+            } else {
+                // Placeholder
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
+                    .frame(width: 120, height: 120)
+                    .overlay(
+                        Text("?")
+                            .font(.system(size: 60, weight: .bold))
+                            .foregroundColor(.gray.opacity(0.3))
                     )
-                }
             }
-            .padding(24)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
             
-            if gameState == .memorizing {
-                Text("Get ready...")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .foregroundColor(.orange)
-            }
+            Text("Item \(min(currentShowIndex + 1, sequenceLength)) of \(sequenceLength)")
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundColor(.secondary)
         }
         .padding(.horizontal, 20)
     }
@@ -140,16 +158,19 @@ struct PatternGameView: View {
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundColor(.secondary)
                     
-                    HStack(spacing: 12) {
-                        ForEach(Array(userInput.enumerated()), id: \.offset) { index, element in
-                            PatternElementView(
-                                element: element,
-                                isHighlighted: false,
-                                size: 50
-                            )
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(Array(userInput.enumerated()), id: \.offset) { index, element in
+                                PatternElementView(
+                                    element: element,
+                                    isHighlighted: false,
+                                    size: 50
+                                )
+                            }
                         }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(20)
+                    .frame(height: 70)
                     .background(Color(UIColor.secondarySystemGroupedBackground))
                     .cornerRadius(12)
                 }
@@ -172,6 +193,7 @@ struct PatternGameView: View {
                                 size: 60
                             )
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding(20)
@@ -186,26 +208,42 @@ struct PatternGameView: View {
     // MARK: - Game Logic
     private func startSequenceDisplay() {
         gameState = .showing
-        currentShowIndex = -1
+        currentShowIndex = 0
+        showElement = nil
         
-        var index = 0
-        timer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { timer in
-            if index < sequence.length {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    currentShowIndex = index
+        // Show first element after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            showNextElement()
+        }
+    }
+    
+    private func showNextElement() {
+        guard currentShowIndex < currentSequence.count else {
+            // Finished showing all elements
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation {
+                    gameState = .input
                 }
-                HapticFeedback.light.trigger()
-                index += 1
-            } else {
-                timer.invalidate()
-                currentShowIndex = -1
-                gameState = .memorizing
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    withAnimation {
-                        gameState = .input
-                    }
-                }
+            }
+            return
+        }
+        
+        // Show element
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+            showElement = currentSequence[currentShowIndex]
+        }
+        HapticFeedback.light.trigger()
+        
+        // Hide element after 1.5 seconds and show next
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeOut(duration: 0.25)) {
+                showElement = nil
+            }
+            
+            currentShowIndex += 1
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                showNextElement()
             }
         }
     }
@@ -214,12 +252,14 @@ struct PatternGameView: View {
         let currentIndex = userInput.count
         
         // Check if this is the correct element
-        if currentIndex < sequence.elements.count && element == sequence.elements[currentIndex] {
-            userInput.append(element)
+        if currentIndex < currentSequence.count && element == currentSequence[currentIndex] {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                userInput.append(element)
+            }
             HapticFeedback.success.trigger()
             
             // Check if sequence is complete
-            if userInput.count == sequence.length {
+            if userInput.count == currentSequence.count {
                 gameState = .success
                 HapticFeedback.success.trigger()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -229,13 +269,35 @@ struct PatternGameView: View {
         } else {
             // Wrong element
             HapticFeedback.error.trigger()
-            gameState = .failure
+            attemptsLeft -= 1
+            
+            if attemptsLeft > 0 {
+                // Show error and reset input
+                withAnimation {
+                    gameState = .failure
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation {
+                        userInput = []
+                        gameState = .input
+                    }
+                }
+            } else {
+                // Out of attempts
+                withAnimation {
+                    gameState = .failure
+                }
+            }
         }
     }
     
     private func restartGame() {
+        // Generate new sequence
+        currentSequence = PatternElement.allCases.shuffled().prefix(sequenceLength).map { $0 }
         userInput = []
-        gameState = .showing
+        attemptsLeft = 3
+        currentShowIndex = 0
+        showElement = nil
         startSequenceDisplay()
     }
 }
@@ -259,14 +321,14 @@ struct PatternElementView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(element.color, lineWidth: isHighlighted ? 0 : 2)
             )
-            .scaleEffect(isHighlighted ? 1.15 : 1.0)
+            .scaleEffect(isHighlighted ? 1.1 : 1.0)
             .shadow(color: isHighlighted ? element.color.opacity(0.5) : Color.clear, radius: 8, x: 0, y: 4)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHighlighted)
     }
 }
 
 // MARK: - Failure Overlay
 struct FailureOverlay: View {
+    let attemptsLeft: Int
     let onRetry: () -> Void
     let onDismiss: () -> Void
     
@@ -279,17 +341,23 @@ struct FailureOverlay: View {
                 Text("❌")
                     .font(.system(size: 80))
                 
-                Text("Wrong Sequence!")
+                Text(attemptsLeft > 0 ? "Wrong Order!" : "Out of Attempts!")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                 
-                Text("Don't worry, try again!")
-                    .font(.system(size: 18, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.8))
+                if attemptsLeft > 0 {
+                    Text("You have \(attemptsLeft) attempt\(attemptsLeft == 1 ? "" : "s") left")
+                        .font(.system(size: 18, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
+                } else {
+                    Text("Try a new pattern")
+                        .font(.system(size: 18, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
+                }
                 
                 HStack(spacing: 16) {
                     Button(action: onRetry) {
-                        Text("Try Again")
+                        Text(attemptsLeft > 0 ? "Continue" : "New Pattern")
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)

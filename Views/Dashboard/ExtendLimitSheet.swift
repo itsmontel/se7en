@@ -17,21 +17,6 @@ struct ExtendLimitSheet: View {
         (selectedHours * 60) + selectedMinutes
     }
     
-    private var costCredits: Int {
-        // Check if accountability fee has been paid today
-        let weeklyPlan = CoreDataManager.shared.getOrCreateCurrentWeeklyPlan()
-        let today = Calendar.current.startOfDay(for: Date())
-        let accountabilityFeePaidDate = weeklyPlan.accountabilityFeePaidDate.map { Calendar.current.startOfDay(for: $0) }
-        let hasPaidAccountabilityFeeToday = accountabilityFeePaidDate == today
-        
-        // If accountability fee paid, extensions are free for the day
-        if hasPaidAccountabilityFeeToday {
-            return 0
-        }
-        
-        // First extension of the day costs 1 credit
-        return 1
-    }
     
     var body: some View {
         NavigationStack {
@@ -126,49 +111,6 @@ struct ExtendLimitSheet: View {
                         .background(Color.cardBackground)
                         .cornerRadius(16)
                         
-                        // Cost Info
-                        if costCredits > 0 {
-                            VStack(spacing: 8) {
-                                HStack {
-                                    Image(systemName: "creditcard.fill")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.orange)
-                                    
-                                    Text("Cost: \(costCredits) credit\(costCredits == 1 ? "" : "s")")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.textPrimary)
-                                }
-                                
-                                Text("First extension today costs 1 credit. After paying accountability fee, additional extensions are free for the day.")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.textSecondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding(16)
-                            .background(Color.orange.opacity(0.1))
-                            .cornerRadius(12)
-                        } else {
-                            VStack(spacing: 8) {
-                                HStack {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.green)
-                                    
-                                    Text("Free Extension")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.textPrimary)
-                                }
-                                
-                                Text("Accountability fee paid - extensions are free for today")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.textSecondary)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding(16)
-                            .background(Color.green.opacity(0.1))
-                            .cornerRadius(12)
-                        }
-                        
                         // Extend Button
                         Button(action: extendLimit) {
                             HStack(spacing: 12) {
@@ -230,27 +172,8 @@ struct ExtendLimitSheet: View {
             return
         }
         
-        // Check if we need to deduct credits
-        let weeklyPlan = CoreDataManager.shared.getOrCreateCurrentWeeklyPlan()
-        let today = Calendar.current.startOfDay(for: Date())
-        let accountabilityFeePaidDate = weeklyPlan.accountabilityFeePaidDate.map { Calendar.current.startOfDay(for: $0) }
-        let hasPaidAccountabilityFeeToday = accountabilityFeePaidDate == today
-        
-        if !hasPaidAccountabilityFeeToday {
-            // Deduct 1 credit for first extension
-            let transaction = CoreDataManager.shared.deductCredit(
-                reason: "Extended limit for \(app.name)",
-                for: nil
-            )
-            
-            let creditsDeducted = abs(Int(transaction.amount))
-            print("💳 Deducted \(creditsDeducted) credit for extending \(app.name)")
-            
-            // Refresh app state
-            appState.loadCurrentWeekData()
-        } else {
-            print("✅ Accountability fee paid - extension is free")
-        }
+        // Extend limit (no credit system - extensions are free)
+        print("✅ Extending limit for \(app.name)")
         
         // Extend the limit
         let success = CoreDataManager.shared.extendAppLimit(
