@@ -185,29 +185,10 @@ final class ScreenTimeService: ObservableObject {
         // Initialize shared container
         initializeSharedContainerUsage(tokenHash: tokenHash)
         
-        // ✅ FIX: Also add this app to allAppsSelection so report extension can track it
-        addAppToAllAppsSelection(selection: selection)
-        
         // Set up basic DeviceActivity monitoring
         setupBasicMonitoring(for: appGoal, selection: selection)
         
         print("✅ App added and monitoring started!")
-    }
-    
-    /// Add an app's tokens to allAppsSelection so report extension can provide per-app usage data
-    private func addAppToAllAppsSelection(selection: FamilyActivitySelection) {
-        // Get current allAppsSelection or create new one
-        var updatedSelection = allAppsSelection ?? FamilyActivitySelection()
-        
-        // Merge application tokens (Sets automatically handle duplicates)
-        updatedSelection.applicationTokens.formUnion(selection.applicationTokens)
-        
-        // Merge category tokens (Sets automatically handle duplicates)
-        updatedSelection.categoryTokens.formUnion(selection.categoryTokens)
-        
-        // Save updated selection
-        allAppsSelection = updatedSelection
-        print("✅ Added app to allAppsSelection: now has \(updatedSelection.applicationTokens.count) apps and \(updatedSelection.categoryTokens.count) categories")
     }
     
     // MARK: - Simple Monitoring Setup
@@ -222,7 +203,7 @@ final class ScreenTimeService: ObservableObject {
         do {
             let data = try PropertyListEncoder().encode(selection)
             sharedDefaults.set(data, forKey: "selection_\(tokenHash)")
-            // ✅ PERFORMANCE: Removed synchronize() - UserDefaults auto-syncs and this blocks I/O
+            sharedDefaults.synchronize()
             print("💾 Saved selection to shared container for: \(tokenHash)")
         } catch {
             print("❌ Failed to encode selection: \(error)")
@@ -261,34 +242,11 @@ final class ScreenTimeService: ObservableObject {
         ]
         
         do {
-            // Stop existing monitoring first (if any)
-            deviceActivityCenter.stopMonitoring([activityName])
-            
-            // Start with new limit
             try deviceActivityCenter.startMonitoring(activityName, during: schedule, events: events)
-            print("✅ DeviceActivity monitoring refreshed for: \(tokenHash) with limit: \(limitMinutes) minutes")
+            print("✅ DeviceActivity monitoring started for: \(tokenHash)")
         } catch {
             print("⚠️ DeviceActivity monitoring failed: \(error)")
         }
-    }
-    
-    /// Refresh monitoring for a specific app after limit change
-    /// - Parameter tokenHash: The token hash identifier for the app
-    func refreshMonitoring(for tokenHash: String) {
-        guard let selection = appSelections[tokenHash] else {
-            print("⚠️ Cannot refresh monitoring - no selection found for token hash: \(tokenHash)")
-            return
-        }
-        
-        let goals = coreDataManager.getActiveAppGoals()
-        guard let goal = goals.first(where: { $0.appBundleID == tokenHash }) else {
-            print("⚠️ Cannot refresh monitoring - no goal found for token hash: \(tokenHash)")
-            return
-        }
-        
-        // Re-setup monitoring with updated limit
-        setupBasicMonitoring(for: goal, selection: selection)
-        print("🔄 Refreshed monitoring for token hash: \(tokenHash)")
     }
     
     /// Fetch usage for all monitored apps when app becomes active
@@ -339,7 +297,7 @@ final class ScreenTimeService: ObservableObject {
         let key = "usage_\(tokenHash)"
         if sharedDefaults.object(forKey: key) == nil {
             sharedDefaults.set(0, forKey: key)
-            // ✅ PERFORMANCE: Removed synchronize() - UserDefaults auto-syncs and this blocks I/O
+            sharedDefaults.synchronize()
             print("💾 Initialized shared container usage to 0 for \(tokenHash)")
         }
     }
@@ -1088,7 +1046,7 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Force refresh from disk
-            // ✅ PERFORMANCE: Removed synchronize() - UserDefaults auto-syncs and this blocks I/O
+            sharedDefaults.synchronize()
             
             // Read total usage directly
             let totalUsage = sharedDefaults.integer(forKey: "total_usage")
@@ -1201,7 +1159,7 @@ final class ScreenTimeService: ObservableObject {
             let data = try PropertyListEncoder().encode(selection)
             UserDefaults.standard.set(data, forKey: allAppsSelectionKey)
             // Force UserDefaults to sync immediately for critical onboarding data
-            // ✅ PERFORMANCE: Removed synchronize() - UserDefaults auto-syncs
+            UserDefaults.standard.synchronize()
             print("💾 Saved all apps selection with \(selection.applicationTokens.count) apps and \(selection.categoryTokens.count) categories to UserDefaults")
             
             // Verify the save by immediately reading it back
@@ -1336,7 +1294,8 @@ final class ScreenTimeService: ObservableObject {
             let appName = goal.appName ?? "App"
             let limitMinutes = Int(goal.dailyLimitMinutes)
             
-            // Block the app using tokens directly (blockApp handles all fallback logic)
+            // ✅ NEW: Don't block immediately - show puzzle instead
+            // Block the app temporarily to prevent usage while puzzle is shown
             self.blockApp(bundleID)
             
             // Update usage
@@ -1348,18 +1307,49 @@ final class ScreenTimeService: ObservableObject {
                 minutes: limitMinutes
             )
         
-            // Send notification
-        NotificationService.shared.sendAppBlockedNotification(appName: appName)
-        
-            // Post notification for UI
+            // Post notification for UI to show puzzle view
             NotificationCenter.default.post(
                 name: .appBlocked,
                 object: nil,
                 userInfo: ["appName": appName, "bundleID": bundleID]
             )
         
-            print("🚫 Limit reached - blocked \(appName)")
+            print("🚫 Limit reached for \(appName) - showing puzzle")
         }
+    }
+    
+    /// Grant temporary extension after puzzle completion
+    func grantTemporaryExtension(for bundleID: String, minutes: Int) {
+        // Unblock the app
+        unblockApp(bundleID)
+        
+        // Store extension end time
+        let extensionEndTime = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        UserDefaults.standard.set(extensionEndTime, forKey: "extension_end_\(bundleID)")
+        
+        print("✅ Granted \(minutes) minute extension for \(bundleID) until \(extensionEndTime)")
+    }
+    
+    /// Check if app has active extension
+    func hasActiveExtension(for bundleID: String) -> Bool {
+        guard let extensionEndTime = UserDefaults.standard.object(forKey: "extension_end_\(bundleID)") as? Date else {
+            return false
+        }
+        return Date() < extensionEndTime
+    }
+    
+    /// Get effective limit (base limit + puzzle extensions)
+    func getEffectiveLimit(for bundleID: String) -> Int {
+        let goals = coreDataManager.getActiveAppGoals()
+        guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else {
+            return 0
+        }
+        
+        let baseLimit = Int(goal.dailyLimitMinutes)
+        let puzzleManager = PuzzleManager.shared
+        let extensionMinutes = puzzleManager.getTotalExtensionMinutes(for: bundleID)
+        
+        return baseLimit + extensionMinutes
     }
     
     func handleUsageUpdate(for bundleID: String) {
@@ -1457,9 +1447,13 @@ final class ScreenTimeService: ObservableObject {
             // This method is mainly for triggering UI updates
             let usage = getUsageMinutes(for: bundleID)
             
-            // Check if limit exceeded
-            if usage >= Int(goal.dailyLimitMinutes) {
-                blockApp(bundleID)
+            // Check if limit exceeded (accounting for puzzle extensions)
+            let effectiveLimit = getEffectiveLimit(for: bundleID)
+            if usage >= effectiveLimit {
+                // Only block if extension has expired
+                if !hasActiveExtension(for: bundleID) {
+                    handleLimitReached(for: bundleID)
+                }
             }
         }
         

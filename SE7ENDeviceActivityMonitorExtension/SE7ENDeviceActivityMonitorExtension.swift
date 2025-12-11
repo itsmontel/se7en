@@ -26,26 +26,23 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
         
-        // Use rawValue to reliably parse the event name (format: update.<tokenHash> / limit.<tokenHash>)
-        let eventRawValue = event.rawValue
+        let eventString = String(describing: event)
         
-        // Extract token hash from rawValue
-        guard let tokenHash = extractTokenHash(from: eventRawValue) else { return }
+        // Extract token hash
+        guard let tokenHash = extractTokenHash(from: eventString) else { return }
         
-        if eventRawValue.contains("update") {
+        if eventString.contains("update") {
             incrementUsage(for: tokenHash)
-        } else if eventRawValue.contains("limit") {
+        } else if eventString.contains("limit") {
             markLimitReached(for: tokenHash)
         }
     }
     
     // MARK: - Minimal Helpers
     
-    private func extractTokenHash(from eventRawValue: String) -> String? {
-        // Expect formats like "update.<tokenHash>" or "limit.<tokenHash>"
-        let parts = eventRawValue.split(separator: ".", maxSplits: 1)
-        guard parts.count == 2 else { return nil }
-        return String(parts[1])
+    private func extractTokenHash(from eventString: String) -> String? {
+        let parts = eventString.split(separator: ".")
+        return parts.count >= 2 ? String(parts[1]) : nil
     }
     
     private func incrementUsage(for tokenHash: String) {

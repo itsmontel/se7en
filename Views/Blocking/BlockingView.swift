@@ -483,9 +483,8 @@ struct EditLimitSheet: View {
         self._currentLimit = State(initialValue: currentLimit)
         self._newLimit = State(initialValue: currentLimit)
         
-        // ✅ FIX: Use tokenHash instead of constructing bundleID
-        let tokenHash = app.tokenHash ?? "app.name." + app.name.lowercased().replacingOccurrences(of: " ", with: ".")
-        let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(tokenHash)")
+        let bundleID = "app.name." + app.name.lowercased().replacingOccurrences(of: " ", with: ".")
+        let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(bundleID)")
         if let data = scheduleData,
            let decoded = try? JSONDecoder().decode(LimitSchedule.self, from: data) {
             self._schedule = State(initialValue: decoded)
@@ -997,41 +996,17 @@ struct EditLimitSheet: View {
         let coreDataManager = CoreDataManager.shared
         let goals = coreDataManager.getActiveAppGoals()
         
-        // ✅ FIX: Use tokenHash to find the goal instead of app name
-        guard let tokenHash = app.tokenHash else {
-            print("❌ Cannot save limit - no token hash for app: \(app.name)")
-            dismiss()
-            return
+        if let goal = goals.first(where: { $0.appName == app.name }) {
+            appState.updateAppGoal(goal.id ?? UUID(), dailyLimitMinutes: newLimit)
+            
+            let bundleID = "app.name." + app.name.lowercased().replacingOccurrences(of: " ", with: ".")
+            if let scheduleData = try? JSONEncoder().encode(schedule) {
+                UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(bundleID)")
+            }
+            
+            HapticFeedback.success.trigger()
         }
         
-        // Find goal by token hash (stored in appBundleID field)
-        guard let goal = goals.first(where: { $0.appBundleID == tokenHash }) else {
-            print("❌ Cannot find goal for token hash: \(tokenHash)")
-            dismiss()
-            return
-        }
-        
-        print("📝 Updating limit for app: \(app.name) (token hash: \(tokenHash))")
-        print("   Old limit: \(goal.dailyLimitMinutes) minutes")
-        print("   New limit: \(newLimit) minutes")
-        
-        // Update the goal
-        appState.updateAppGoal(goal.id ?? UUID(), dailyLimitMinutes: newLimit)
-        
-        // ✅ FIX: Save schedule using token hash (not constructed bundleID)
-        if let scheduleData = try? JSONEncoder().encode(schedule) {
-            UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
-            print("💾 Saved schedule for token hash: \(tokenHash)")
-        }
-        
-        // ✅ FIX: Refresh monitoring setup with new limit
-        let screenTimeService = ScreenTimeService.shared
-        screenTimeService.refreshMonitoring(for: tokenHash)
-        
-        // Reload app goals to refresh UI
-        appState.loadAppGoals()
-        
-        HapticFeedback.success.trigger()
         dismiss()
     }
     
@@ -1590,22 +1565,23 @@ struct SetLimitSheet: View {
         // ✅ bundleID is now the token hash
         let tokenHash = bundleID
         
-        // Create a selection with just this token from the full selection
+        // ✅ FIX: Create selection directly from fullSelection.applicationTokens
+        // Use the token from fullSelection directly (it's already ApplicationToken type)
         var appSelection = FamilyActivitySelection()
         
-        // Find and use the exact token from fullSelection
-        for existingToken in fullSelection.applicationTokens {
-            if String(existingToken.hashValue) == tokenHash {
-                appSelection.applicationTokens = [existingToken]
-                print("✅ Found matching token in fullSelection")
-                break
-            }
-        }
-        
-        // If we didn't find it in applicationTokens, check categoryTokens
-        if appSelection.applicationTokens.isEmpty && !fullSelection.categoryTokens.isEmpty {
-            print("⚠️ Token not found in applicationTokens, using full selection")
+        // Use the first token from fullSelection since that's what was selected
+        // Don't rely on hash comparison which is unreliable
+        if let firstToken = fullSelection.applicationTokens.first {
+            appSelection.applicationTokens = [firstToken]
+            print("✅ Created selection with token from fullSelection")
+        } else if !fullSelection.categoryTokens.isEmpty {
+            // Fallback: use category tokens if available
+            appSelection.categoryTokens = fullSelection.categoryTokens
+            print("⚠️ Using category tokens from full selection")
+        } else {
+            // Last resort: use the full selection
             appSelection = fullSelection
+            print("⚠️ Using full selection as fallback")
         }
         
         guard !appSelection.applicationTokens.isEmpty else {

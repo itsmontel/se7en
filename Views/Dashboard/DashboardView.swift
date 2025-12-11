@@ -21,9 +21,10 @@ struct DashboardView: View {
     @State private var showingDatePicker = false
     @State private var showingUnblockConfirmation = false
     @State private var appToUnblock: MonitoredApp?
-    @State private var showingBlockedAppModal = false
-    @State private var blockedAppName: String = ""
-    @State private var blockedAppBundleID: String? = nil
+    @State private var showingLimitReachedPuzzle = false
+    @State private var limitReachedAppName: String = ""
+    @State private var limitReachedBundleID: String = ""
+    @State private var showPuzzleOnAppear = true // ✅ TEST: Show puzzle modal on app launch
     @State private var showingExtendLimitSheet = false
     @State private var appToExtend: MonitoredApp? = nil
     @State private var showingSelectAllApps = false
@@ -567,11 +568,11 @@ struct DashboardView: View {
                     )
                 }
                 
-                if showingBlockedAppModal {
-                    BlockedAppModal(
-                        isPresented: $showingBlockedAppModal,
-                        appName: blockedAppName,
-                        bundleID: blockedAppBundleID
+                if showingLimitReachedPuzzle {
+                    LimitReachedPuzzleView(
+                        isPresented: $showingLimitReachedPuzzle,
+                        appName: limitReachedAppName,
+                        bundleID: limitReachedBundleID
                     )
                     .environmentObject(appState)
                     .transition(.scale.combined(with: .opacity))
@@ -649,9 +650,14 @@ struct DashboardView: View {
             .onAppear {
                 print("📱 DashboardView.onAppear: Starting data load")
                 
-                // ✅ PERFORMANCE: Only refresh top distractions if cache is empty or stale (first load)
-                if cachedTopDistractions.isEmpty || Date().timeIntervalSince(topDistractionsLastRefresh) > topDistractionsCacheTimeout {
-                    refreshTopDistractions()
+                // ✅ TEST: Show puzzle modal on app launch
+                if showPuzzleOnAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        limitReachedAppName = "Instagram"
+                        limitReachedBundleID = "test_bundle_id"
+                        showingLimitReachedPuzzle = true
+                        showPuzzleOnAppear = false // Only show once
+                    }
                 }
                 
                 // Ensure Screen Time is authorized
@@ -669,25 +675,35 @@ struct DashboardView: View {
                 }
                 
                 // Small delay before loading data to ensure monitoring is active
+                // Then refresh periodically to catch report extension updates
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     loadScreenTimeData()
                     appState.refreshScreenTimeData()
                 }
                 
-                // ✅ PERFORMANCE: Removed periodic refreshes - they cause performance issues
-                // Data will refresh when app enters foreground instead
+                // Periodic refresh to catch report extension updates (every 3 seconds for first 15 seconds)
+                for delay in [3.0, 6.0, 9.0, 12.0, 15.0] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        print("🔄 Periodic refresh: Re-reading shared container...")
+                        let sharedUsage = readUsageFromSharedContainer()
+                        let sharedApps = readAppsCountFromSharedContainer()
+                        if sharedUsage > 0 || sharedApps > 0 {
+                            print("✅ Periodic refresh found data: \(sharedUsage) minutes, \(sharedApps) apps")
+                            totalScreenTimeMinutes = sharedUsage
+                            appsUsedToday = sharedApps
+                        }
+                    }
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                // ✅ PERFORMANCE: Only refresh when app enters foreground (user reopens app)
-                print("📱 App entered foreground - refreshing data")
+                // Refresh monitoring and data when app enters foreground
+                print("📱 App entered foreground - refreshing monitoring")
                 screenTimeService.refreshAllMonitoring()
                 loadScreenTimeData()
-                refreshTopDistractions() // Refresh top distractions on foreground
             }
             .onChange(of: screenTimeService.allAppsSelection) { _ in
                 // Refresh when allAppsSelection changes (e.g., after onboarding)
                 loadScreenTimeData()
-                refreshTopDistractions() // Refresh when selection changes
             }
         }
     }
@@ -1101,23 +1117,10 @@ struct DashboardView: View {
         Group {
                         if !topDistractions.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Text("Top Distractions")
-                                        .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.textPrimary)
-                                    
-                                    Spacer()
-                                    
-                                    // ✅ Manual refresh button
-                                    Button(action: {
-                                        refreshTopDistractions()
-                                    }) {
-                                        Image(systemName: "arrow.clockwise")
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(.textSecondary)
-                                    }
-                                }
-                                .padding(.horizontal, 20)
+                                Text("Top Distractions")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.textPrimary)
+                                    .padding(.horizontal, 20)
                                 
                                 VStack(spacing: 8) {
                                     // Ensure exactly 10 items are shown
@@ -1304,10 +1307,10 @@ struct DashboardView: View {
     }
     
     private func showBlockedAppModal(appName: String, bundleID: String) {
-        blockedAppName = appName
-        blockedAppBundleID = bundleID
+        limitReachedAppName = appName
+        limitReachedBundleID = bundleID
         withAnimation {
-            showingBlockedAppModal = true
+            showingLimitReachedPuzzle = true
         }
     }
 }

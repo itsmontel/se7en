@@ -338,10 +338,14 @@ class CoreDataManager: ObservableObject {
         
         let baseLimit = Int(goal.dailyLimitMinutes)
         
-        // Check if there's an extension for today
+        // ✅ NEW: Add puzzle extensions
+        let puzzleExtensionMinutes = PuzzleManager.shared.getTotalExtensionMinutes(for: bundleID)
+        
+        // Check if there's an extension for today (legacy system)
+        var extendedLimit = baseLimit + puzzleExtensionMinutes
         if let usageRecord = getTodaysUsageRecord(for: bundleID),
            usageRecord.extendedLimitMinutes > 0 {
-            return Int(usageRecord.extendedLimitMinutes)
+            extendedLimit = max(extendedLimit, Int(usageRecord.extendedLimitMinutes))
         }
         
         // Check restriction period settings
@@ -354,8 +358,8 @@ class CoreDataManager: ObservableObject {
             let now = Date()
             
             if now < endDate {
-                // Restriction is still active, use restriction limit
-                return restrictionLimit
+                // Restriction is still active, use restriction limit (but add puzzle extensions)
+                return restrictionLimit + puzzleExtensionMinutes
             } else {
                 // Restriction has expired, check if we should revert to base limit
                 if restrictionPeriod == "One-time" {
@@ -366,7 +370,7 @@ class CoreDataManager: ObservableObject {
                     UserDefaults.standard.removeObject(forKey: "restrictionStartDate_\(bundleID)")
                     UserDefaults.standard.removeObject(forKey: "restrictionEndDate_\(bundleID)")
                     print("🔄 One-time restriction expired for \(bundleID), reverting to base limit")
-                    return baseLimit
+                    return baseLimit + puzzleExtensionMinutes
                 } else if restrictionPeriod == "Weekly" {
                     // Weekly restrictions expire after 7 days
                     UserDefaults.standard.removeObject(forKey: "restrictionPeriod_\(bundleID)")
@@ -374,14 +378,14 @@ class CoreDataManager: ObservableObject {
                     UserDefaults.standard.removeObject(forKey: "restrictionStartDate_\(bundleID)")
                     UserDefaults.standard.removeObject(forKey: "restrictionEndDate_\(bundleID)")
                     print("🔄 Weekly restriction expired for \(bundleID), reverting to base limit")
-                    return baseLimit
+                    return baseLimit + puzzleExtensionMinutes
                 }
                 // Daily restrictions don't expire, but use restriction limit if set
-                return restrictionLimit
+                return restrictionLimit + puzzleExtensionMinutes
             }
         }
         
-        return baseLimit
+        return extendedLimit
     }
     
     // MARK: - Credit Transaction Methods

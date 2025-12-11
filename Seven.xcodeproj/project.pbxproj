@@ -73,10 +73,15 @@
 		1081 /* bunnyintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3029 /* bunnyintro.mp4 */; };
 		1082 /* hamsterintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3030 /* hamsterintro.mp4 */; };
 		1083 /* horseintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3031 /* horseintro.mp4 */; };
-		1084 /* Views/Components/BlockedAppModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3032 /* Views/Components/BlockedAppModal.swift */; };
 		3035 /* Components/StreakCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3034 /* Components/StreakCelebrationView.swift */; };
 		3036 /* Components/AchievementCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3037 /* Components/AchievementCelebrationView.swift */; };
 		4001 /* Views/Dashboard/ExtendLimitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4000 /* Views/Dashboard/ExtendLimitSheet.swift */; };
+		7101 /* Models/PuzzleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7002 /* Models/PuzzleModels.swift */; };
+		7102 /* Services/PuzzleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7001 /* Services/PuzzleManager.swift */; };
+		7103 /* Views/Puzzles/SudokuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7003 /* Views/Puzzles/SudokuView.swift */; };
+		7104 /* Views/Puzzles/MemoryGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7004 /* Views/Puzzles/MemoryGameView.swift */; };
+		7105 /* Views/Puzzles/PatternGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7005 /* Views/Puzzles/PatternGameView.swift */; };
+		7106 /* Views/Puzzles/LimitReachedPuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7006 /* Views/Puzzles/LimitReachedPuzzleView.swift */; };
 		8FB3DA092EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8FB3DA3A2EE38ECD005BC03C /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */; };
 		8FB3DA422EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -194,11 +199,16 @@
 		3029 /* bunnyintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = bunnyintro.mp4; sourceTree = "<group>"; };
 		3030 /* hamsterintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = hamsterintro.mp4; sourceTree = "<group>"; };
 		3031 /* horseintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = horseintro.mp4; sourceTree = "<group>"; };
-		3032 /* Views/Components/BlockedAppModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/BlockedAppModal.swift; sourceTree = "<group>"; };
 		3034 /* Components/StreakCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakCelebrationView.swift; sourceTree = "<group>"; };
 		3037 /* Components/AchievementCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementCelebrationView.swift; sourceTree = "<group>"; };
 		4000 /* Views/Dashboard/ExtendLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/ExtendLimitSheet.swift; sourceTree = "<group>"; };
 		4002 /* Views/Blocking/BlockingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Blocking/BlockingView.swift; sourceTree = "<group>"; };
+		7001 /* Services/PuzzleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/PuzzleManager.swift; sourceTree = "<group>"; };
+		7002 /* Models/PuzzleModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/PuzzleModels.swift; sourceTree = "<group>"; };
+		7003 /* SudokuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SudokuView.swift; sourceTree = "<group>"; };
+		7004 /* MemoryGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryGameView.swift; sourceTree = "<group>"; };
+		7005 /* PatternGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternGameView.swift; sourceTree = "<group>"; };
+		7006 /* LimitReachedPuzzleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimitReachedPuzzleView.swift; sourceTree = "<group>"; };
 		8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = SE7ENDeviceActivityReportExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SE7ENDeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
@@ -340,7 +350,20 @@
 			isa = PBXGroup;
 			children = (
 				4002 /* Views/Blocking/BlockingView.swift */,
+				110 /* Puzzles */,
 			);
+			sourceTree = "<group>";
+		};
+		110 = {
+			isa = PBXGroup;
+			children = (
+				7003 /* SudokuView.swift */,
+				7004 /* MemoryGameView.swift */,
+				7005 /* PatternGameView.swift */,
+				7006 /* LimitReachedPuzzleView.swift */,
+			);
+			name = Puzzles;
+			path = "Views/Puzzles";
 			sourceTree = "<group>";
 		};
 		199 = {
@@ -407,6 +430,7 @@
 			children = (
 				2003 /* Models/AppState.swift */,
 				2004 /* Models/Models.swift */,
+				7002 /* Models/PuzzleModels.swift */,
 				101,
 			);
 			sourceTree = "<group>";
@@ -432,7 +456,6 @@
 				2024 /* Components/CreditLossAlert.swift */,
 				2025 /* Components/LoadingView.swift */,
 				2026 /* Components/SuccessToast.swift */,
-				3032 /* Views/Components/BlockedAppModal.swift */,
 				2027 /* Components/AnimatedNumber.swift */,
 				2028 /* Components/Se7enWordmark.swift */,
 				2029 /* Components/StreakView.swift */,
@@ -461,6 +484,7 @@
 				2039 /* Services/StoreKitService.swift */,
 				2044 /* Services/AppDiscoveryService.swift */,
 				2060 /* Services/RealAppDiscoveryService.swift */,
+				7001 /* Services/PuzzleManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -674,7 +698,6 @@
 				1024 /* Components/CreditLossAlert.swift in Sources */,
 				1025 /* Components/LoadingView.swift in Sources */,
 				1026 /* Components/SuccessToast.swift in Sources */,
-				1084 /* Views/Components/BlockedAppModal.swift in Sources */,
 				1027 /* Components/AnimatedNumber.swift in Sources */,
 				1028 /* Components/Se7enWordmark.swift in Sources */,
 				1029 /* Components/StreakView.swift in Sources */,
@@ -698,6 +721,12 @@
 				1042 /* Services/RealAppDiscoveryService.swift in Sources */,
 				1043 /* Views/Dashboard/CategoryAppSelectionView.swift in Sources */,
 				1060 /* Views/Dashboard/SelectAllAppsView.swift in Sources */,
+				7101 /* Models/PuzzleModels.swift in Sources */,
+				7102 /* Services/PuzzleManager.swift in Sources */,
+				7103 /* Views/Puzzles/SudokuView.swift in Sources */,
+				7104 /* Views/Puzzles/MemoryGameView.swift in Sources */,
+				7105 /* Views/Puzzles/PatternGameView.swift in Sources */,
+				7106 /* Views/Puzzles/LimitReachedPuzzleView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
