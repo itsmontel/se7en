@@ -124,6 +124,21 @@ final class ScreenTimeService: ObservableObject {
     
     // MARK: - App Selection Management
     
+    /// Encode a FamilyActivitySelection containing a single token to a stable base64 string
+    /// This produces the same encoding as the report extension, allowing cross-process matching
+    func encodeToken(_ token: ApplicationToken) -> String? {
+        // Wrap token in a FamilyActivitySelection for encoding (same as report extension)
+        var selection = FamilyActivitySelection()
+        selection.applicationTokens = [token]
+        do {
+            let data = try PropertyListEncoder().encode(selection)
+            return data.base64EncodedString()
+        } catch {
+            print("❌ Failed to encode token: \(error)")
+            return nil
+        }
+    }
+    
     /// Add an app for monitoring from FamilyActivitySelection
     /// - Parameters:
     ///   - selection: The FamilyActivitySelection containing the app's token
@@ -146,33 +161,38 @@ final class ScreenTimeService: ObservableObject {
             return
         }
         
-        // ✅ Use token hash as the unique identifier
-        let tokenHash = String(firstToken.hashValue)
+        // ✅ CRITICAL FIX: Use encoded token (base64) as stable identifier
+        // Hash values are NOT stable across processes, but encoded data IS
+        guard let encodedToken = encodeToken(firstToken) else {
+            print("❌ Cannot add app - failed to encode token")
+            return
+        }
         
         print("\n" + String(repeating: "=", count: 60))
         print("📱 ADDING APP FOR MONITORING")
-        print("   Token hash: \(tokenHash)")
+        print("   Encoded token (first 30 chars): \(String(encodedToken.prefix(30)))...")
+        print("   Token hash: \(firstToken.hashValue)")
         print("   Custom name: '\(appName)'")
         print("   Limit: \(dailyLimitMinutes) minutes")
         print(String(repeating: "=", count: 60))
         
-        // Store the selection with token hash as key
-        appSelections[tokenHash] = selection
-        saveSelection(selection, forBundleID: tokenHash)
+        // Store the selection with encoded token as key (consistent with goal bundleID)
+        appSelections[encodedToken] = selection
+        saveSelection(selection, forBundleID: encodedToken)
         
         // 🔥 CRITICAL: Save to shared container IMMEDIATELY for extension access
-        saveSelectionToSharedContainer(selection: selection, tokenHash: tokenHash)
+        saveSelectionToSharedContainer(selection: selection, tokenHash: encodedToken)
         
-        // Create app goal in Core Data using token hash as identifier
+        // Create app goal in Core Data using encoded token as identifier
         let appGoal = coreDataManager.createAppGoal(
             appName: appName.isEmpty ? "" : appName,
-            bundleID: tokenHash,
+            bundleID: encodedToken,
             dailyLimitMinutes: dailyLimitMinutes
         )
         
         // 🔥 Initialize usage record AND shared container to 0 IMMEDIATELY
         let today = Calendar.current.startOfDay(for: Date())
-        if coreDataManager.getTodaysUsageRecord(for: tokenHash) == nil {
+        if coreDataManager.getTodaysUsageRecord(for: encodedToken) == nil {
             _ = coreDataManager.createUsageRecord(
                 for: appGoal,
                 date: today,
@@ -183,7 +203,7 @@ final class ScreenTimeService: ObservableObject {
         }
         
         // Initialize shared container
-        initializeSharedContainerUsage(tokenHash: tokenHash)
+        initializeSharedContainerUsage(tokenHash: encodedToken)
         
         // Set up basic DeviceActivity monitoring
         setupBasicMonitoring(for: appGoal, selection: selection)
@@ -203,8 +223,15 @@ final class ScreenTimeService: ObservableObject {
         do {
             let data = try PropertyListEncoder().encode(selection)
             sharedDefaults.set(data, forKey: "selection_\(tokenHash)")
+            
+            // ✅ CRITICAL: Save to pending_app_selections for report extension to match tokens
+            var pendingSelections = sharedDefaults.dictionary(forKey: "pending_app_selections") as? [String: Data] ?? [:]
+            pendingSelections[tokenHash] = data
+            sharedDefaults.set(pendingSelections, forKey: "pending_app_selections")
+            
             sharedDefaults.synchronize()
-            print("💾 Saved selection to shared container for: \(tokenHash)")
+            print("💾 Saved selection to shared container for: \(String(tokenHash.prefix(30)))...")
+            print("   • Total pending selections: \(pendingSelections.count)")
         } catch {
             print("❌ Failed to encode selection: \(error)")
         }
@@ -670,8 +697,8 @@ final class ScreenTimeService: ObservableObject {
         return usage
     }
     
-    /// Sync usage data from shared container (written by report extension and monitor extension) to Core Data
-    /// Prioritizes report extension data (per-app usage by name) over monitor extension data (per token hash)
+    /// Sync usage data from shared container (written by report extension) to Core Data
+    /// Uses token-based lookup (most reliable)
     func syncUsageFromSharedContainer() {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
@@ -680,65 +707,46 @@ final class ScreenTimeService: ObservableObject {
         
         sharedDefaults.synchronize()
         
-        // First, try to read per-app usage from report extension (keyed by app name)
-        let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+        // ✅ Read token-based usage (matched by report extension)
+        let tokenKeyToUsage = sharedDefaults.dictionary(forKey: "token_key_to_usage") as? [String: Int] ?? [:]
+        let tokenKeyToAppName = sharedDefaults.dictionary(forKey: "token_key_to_app_name") as? [String: String] ?? [:]
         
         let goals = coreDataManager.getActiveAppGoals()
         
         for goal in goals {
-            guard let tokenHash = goal.appBundleID,
-                  let appName = goal.appName else { continue }
+            guard let tokenKey = goal.appBundleID else { continue }
             
-            var usageMinutes: Int = 0
-            
-            // Priority 1: Try to match by app name from report extension data
-            // Normalize names for matching (case-insensitive, trimmed)
-            let normalizedGoalName = appName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            for (reportAppName, reportUsage) in perAppUsage {
-                let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                if normalizedGoalName == normalizedReportName {
-                    usageMinutes = reportUsage
-                    print("📊 Matched usage by name: \(appName) = \(usageMinutes) minutes")
-                    break
-                }
+            // ✅ Direct lookup by token key
+            guard let usageMinutes = tokenKeyToUsage[tokenKey], usageMinutes > 0 else {
+                continue
             }
             
-            // Priority 2: Fallback to monitor extension data (keyed by token hash)
-            if usageMinutes == 0 {
-                let key = "usage_\(tokenHash)"
-                usageMinutes = sharedDefaults.integer(forKey: key)
-                if usageMinutes > 0 {
-                    print("📊 Matched usage by token hash: \(tokenHash) = \(usageMinutes) minutes")
-                }
+            // ✅ Also update goal name if we have it from the report
+            if let realAppName = tokenKeyToAppName[tokenKey], 
+               (goal.appName?.isEmpty ?? true) || goal.appName?.hasPrefix("App (hash:") == true {
+                goal.appName = realAppName
             }
             
-            // Update if we have usage data
-            if usageMinutes > 0 {
-                let today = Calendar.current.startOfDay(for: Date())
-                
-                if let record = coreDataManager.getTodaysUsageRecord(for: tokenHash) {
-                    // Update if changed
-                    if usageMinutes != Int(record.actualUsageMinutes) {
-                        record.actualUsageMinutes = Int32(usageMinutes)
-                        record.didExceedLimit = usageMinutes >= Int(goal.dailyLimitMinutes)
-                        coreDataManager.save()
-                        print("📊 Updated usage for \(appName): \(usageMinutes) minutes")
-                    }
-                } else {
-                    // Create new record
-                    _ = coreDataManager.createUsageRecord(
-                        for: goal,
-                        date: today,
-                        actualUsageMinutes: usageMinutes,
-                        didExceedLimit: usageMinutes >= Int(goal.dailyLimitMinutes)
-                    )
+            // Update Core Data usage record
+            let today = Calendar.current.startOfDay(for: Date())
+            
+            if let record = coreDataManager.getTodaysUsageRecord(for: tokenKey) {
+                if usageMinutes != Int(record.actualUsageMinutes) {
+                    record.actualUsageMinutes = Int32(usageMinutes)
+                    record.didExceedLimit = usageMinutes >= Int(goal.dailyLimitMinutes)
                     coreDataManager.save()
-                    print("📊 Created usage record for \(appName): \(usageMinutes) minutes")
                 }
+            } else {
+                _ = coreDataManager.createUsageRecord(
+                    for: goal,
+                    date: today,
+                    actualUsageMinutes: usageMinutes,
+                    didExceedLimit: usageMinutes >= Int(goal.dailyLimitMinutes)
+                )
+                coreDataManager.save()
             }
         }
     }
-    
     
     /// Update usage data from reports for all apps (allAppsSelection or monitored apps)
     /// This should be called periodically to refresh usage data
