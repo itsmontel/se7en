@@ -292,32 +292,43 @@ class AppState: ObservableObject {
     }
     
     private func getCurrentUsage(for goal: AppGoal) -> Int {
+        let tokenHash = goal.appBundleID ?? ""
+        
+        // Always read fresh from shared container (where monitor extension writes)
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            // Fallback to Core Data if shared container unavailable
+            if let usageRecord = screenTimeService.getAppUsageToday(for: tokenHash) {
+                return Int(usageRecord.actualUsageMinutes)
+            }
             return 0
         }
         
-        let tokenKey = goal.appBundleID ?? ""
+        // Force read fresh data from disk
+        sharedDefaults.synchronize()
         
-        // ✅ Priority 1: Direct lookup by token key (most reliable)
-        // The report extension matches tokens and saves usage keyed by our token key
-        let tokenKeyToUsage = sharedDefaults.dictionary(forKey: "token_key_to_usage") as? [String: Int] ?? [:]
-        if let usage = tokenKeyToUsage[tokenKey], usage > 0 {
-            return usage
+        // Priority 1: Read from monitor extension (by token hash)
+        let tokenUsage = sharedDefaults.integer(forKey: "usage_\(tokenHash)")
+        if tokenUsage > 0 {
+            return tokenUsage
         }
         
-        // Priority 2: Try to match by app name if we have one
+        // Priority 2: Try per-app usage from report extension (by name)
         let appName = goal.appName ?? ""
-        if !appName.isEmpty {
+        let normalizedGoalName = appName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !normalizedGoalName.isEmpty {
             let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
-            let normalizedGoalName = appName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            
             for (reportAppName, reportUsage) in perAppUsage {
                 let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                 if normalizedGoalName == normalizedReportName {
                     return reportUsage
                 }
             }
+        }
+        
+        // Priority 3: Fallback to Core Data
+        if let usageRecord = screenTimeService.getAppUsageToday(for: tokenHash) {
+            return Int(usageRecord.actualUsageMinutes)
         }
         
         return 0

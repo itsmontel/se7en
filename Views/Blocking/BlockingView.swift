@@ -55,11 +55,8 @@ struct BlockingView: View {
     @State private var familySelection = FamilyActivitySelection()
     @State private var showingLimitSheet = false
     @State private var selectedAppName: String = ""
-    @State private var selectedBundleID: String = "" // This will be the encoded token
+    @State private var selectedBundleID: String = "" // This will be the stable internal ID, not a real bundle ID
     @State private var selectedToken: AnyHashable?
-    @State private var appToDelete: MonitoredApp?
-    @State private var showingDeleteConfirmation = false
-    @State private var deletingAppId: UUID? = nil // Track which app is being deleted for animation
     
     var body: some View {
         NavigationStack {
@@ -112,19 +109,11 @@ struct BlockingView: View {
                             emptyStateView
                         } else {
                             VStack(spacing: 14) {
-                                ForEach(appState.monitoredApps.filter { app in
-                                    // Filter out app being deleted (for animation)
-                                    app.id != deletingAppId
-                                }) { app in
+                                ForEach(appState.monitoredApps) { app in
                                     appLimitRow(app)
-                                        .transition(.asymmetric(
-                                            insertion: .opacity.combined(with: .move(edge: .leading)),
-                                            removal: .opacity.combined(with: .move(edge: .trailing))
-                                        ))
                                 }
                             }
                             .padding(.horizontal, 20)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: deletingAppId)
                         }
                         
                         // Elegant Add App button
@@ -166,32 +155,29 @@ struct BlockingView: View {
                 if screenTimeService.isAuthorized {
                     FamilyActivityPicker(selection: $familySelection)
                         .onChange(of: familySelection) { newSelection in
-                            // ✅ ONLY accept individual apps, NOT categories
-                            // Limits page is for individual app limits only
+                            // ✅ Accept app as long as we have tokens - no extraction needed!
                             if let firstToken = newSelection.applicationTokens.first {
                                 selectedToken = firstToken
                                 
-                                // ✅ Use ENCODED token as identifier (same as ScreenTimeService)
-                                // Encode directly using ScreenTimeService (handles ApplicationToken type)
-                                let encodedToken = screenTimeService.encodeToken(firstToken) ?? String(firstToken.hashValue)
+                                // ✅ Use token hash as identifier (not bundle ID!)
+                                let tokenHash = String(firstToken.hashValue)
                                 
                                 print("🎯 Selected app from picker:")
-                                print("   Token hash: \(firstToken.hashValue)")
-                                print("   Encoded token (first 30 chars): \(String(encodedToken.prefix(30)))...")
-                                print("   App tokens: \(newSelection.applicationTokens.count)")
-                                print("   Category tokens: \(newSelection.categoryTokens.count) (ignored for limits)")
+                                print("   Token hash: \(tokenHash)")
+                                print("   Tokens: \(newSelection.applicationTokens.count)")
                                 
+                                // ✅ Label(token) will automatically show the app name and icon
+                                // We don't need to extract anything - just store the token hash
                                 selectedAppName = ""  // Will be shown via Label(token) in UI
-                                selectedBundleID = encodedToken  // Store encoded token as identifier
+                                selectedBundleID = tokenHash  // Store token hash as identifier
                                 
                                 // Close picker and show limit sheet
+                                // We always accept the app as long as we have a token
                                 showingFamilyPicker = false
                                 showingLimitSheet = true
-                            } else {
-                                print("❌ No individual app selected - only categories found")
-                                print("   App tokens: \(newSelection.applicationTokens.count)")
-                                print("   Category tokens: \(newSelection.categoryTokens.count)")
-                                print("⚠️ Limits page requires individual app selection, not categories")
+                            } else if !newSelection.categoryTokens.isEmpty {
+                                // Handle category-based selection
+                                print("📱 Category-based selection with \(newSelection.categoryTokens.count) categories")
                             }
                         }
                 }
@@ -210,21 +196,6 @@ struct BlockingView: View {
                     EditLimitSheet(app: app, currentLimit: editedLimit)
                         .environmentObject(appState)
                 }
-            }
-            .confirmationDialog(
-                "Delete Limit",
-                isPresented: $showingDeleteConfirmation,
-                presenting: appToDelete
-            ) { app in
-                Button("Delete", role: .destructive) {
-                    deleteApp(app)
-                }
-                Button("Cancel", role: .cancel) {
-                    appToDelete = nil
-                }
-            } message: { app in
-                let appDisplayName = app.name.isEmpty ? "this app" : app.name
-                Text("Are you sure you want to delete the limit for \(appDisplayName)? This action cannot be undone.")
             }
             .onAppear {
                 // Refresh usage data from shared container when Limits page appears
@@ -261,41 +232,6 @@ struct BlockingView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 100)
-    }
-    
-    private func deleteApp(_ app: MonitoredApp) {
-        // Find the goal ID for this app
-        let goals = CoreDataManager.shared.getActiveAppGoals()
-        guard let goal = goals.first(where: { goal in
-            // Match by token hash (stored in appBundleID)
-            if let tokenHash = app.tokenHash {
-                return goal.appBundleID == tokenHash
-            }
-            // Fallback: match by name
-            return goal.appName == app.name
-        }), let goalId = goal.id else {
-            print("⚠️ Could not find goal to delete for app: \(app.name)")
-            appToDelete = nil
-            return
-        }
-        
-        // Set the deleting app ID to trigger animation (this filters it out of the list)
-        deletingAppId = app.id
-        
-        // Haptic feedback
-        HapticFeedback.light.trigger()
-        
-        // Wait for animation to complete, then actually delete from CoreData
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            // Actually delete the goal (this will update monitoredApps)
-            appState.deleteAppGoal(goalId)
-            
-            // Clear the deleting state after a brief delay to ensure smooth transition
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                deletingAppId = nil
-                appToDelete = nil
-            }
-        }
     }
     
     @ViewBuilder
@@ -384,28 +320,15 @@ struct BlockingView: View {
                 
                 Spacer()
                 
-                // Action buttons
-                HStack(spacing: 12) {
-                    // Delete button
-                    Button(action: {
-                        appToDelete = app
-                        showingDeleteConfirmation = true
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.red.opacity(0.7))
-                    }
-                    
-                    // Edit button
-                    Button(action: {
-                        appToEdit = app
-                        editedLimit = app.dailyLimit
-                        showingEditSheet = true
-                    }) {
-                        Image(systemName: "pencil.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.primary.opacity(0.7))
-                    }
+                // Edit button
+                                    Button(action: {
+                    appToEdit = app
+                    editedLimit = app.dailyLimit
+                    showingEditSheet = true
+                }) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.primary.opacity(0.7))
                 }
             }
             .padding(22)
@@ -1639,64 +1562,62 @@ struct SetLimitSheet: View {
             return
         }
         
-        // ✅ bundleID is now the encoded token (same format as ScreenTimeService uses)
-        let encodedToken = bundleID
+        // ✅ bundleID is now the token hash
+        let tokenHash = bundleID
         
         // ✅ FIX: Create selection directly from fullSelection.applicationTokens
         // Use the token from fullSelection directly (it's already ApplicationToken type)
         var appSelection = FamilyActivitySelection()
         
-        // ✅ ONLY use app tokens - no category fallback for limits
-        // Limits are for individual apps only
+        // Use the first token from fullSelection since that's what was selected
+        // Don't rely on hash comparison which is unreliable
         if let firstToken = fullSelection.applicationTokens.first {
             appSelection.applicationTokens = [firstToken]
-            print("✅ Created selection with app token from fullSelection")
+            print("✅ Created selection with token from fullSelection")
+        } else if !fullSelection.categoryTokens.isEmpty {
+            // Fallback: use category tokens if available
+            appSelection.categoryTokens = fullSelection.categoryTokens
+            print("⚠️ Using category tokens from full selection")
         } else {
-            print("❌ Cannot add limit - no app tokens in selection")
-            print("   App tokens: \(fullSelection.applicationTokens.count)")
-            print("   Category tokens: \(fullSelection.categoryTokens.count)")
-            return
+            // Last resort: use the full selection
+            appSelection = fullSelection
+            print("⚠️ Using full selection as fallback")
         }
         
         guard !appSelection.applicationTokens.isEmpty else {
-            print("❌ Cannot add app - no valid app tokens in selection")
+            print("❌ Cannot add app - no valid tokens in selection")
             return
         }
         
-        // ✅ CRITICAL: Use custom app name if provided, otherwise use empty string
-        // The UI will show the real name via Label(token), but we need a way to match usage data
-        // We'll use the bundle ID approach instead of trying to extract names here
-        let finalAppName = appName.isEmpty ? "" : appName
-        
         print("📱 Adding app with:")
-        print("   Encoded token (first 30 chars): \(String(encodedToken.prefix(30)))...")
-        print("   App name: '\(finalAppName)'")
+        print("   Token hash: \(tokenHash)")
+        print("   Custom name: '\(appName)'")
         print("   Limit: \(selectedLimit) minutes")
         print("   Tokens: \(appSelection.applicationTokens.count)")
         
-        // ✅ Add the app goal using encoded token as identifier
-        // This matches what ScreenTimeService expects
+        // ✅ Add the app goal using token hash as identifier
+        // Use empty string if no custom name (UI will use Label(token) to show real name)
         appState.addAppGoalFromFamilySelection(
             appSelection,
-            appName: finalAppName,
+            appName: appName.isEmpty ? "" : appName,  // Empty string if no custom name (UI uses Label(token))
             dailyLimitMinutes: selectedLimit,
-            bundleID: encodedToken  // ✅ Encoded token as identifier
+            bundleID: tokenHash  // ✅ Token hash is the identifier
         )
         
-        // Save schedule with encoded token
+        // Save schedule with token hash
         if let scheduleData = try? JSONEncoder().encode(schedule) {
-            UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(encodedToken)")
-            print("💾 Saved schedule for encoded token: \(String(encodedToken.prefix(30)))...")
+            UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
+            print("💾 Saved schedule for token hash: \(tokenHash)")
         }
         
         // 🔍 DEBUG: App added successfully
         print("\n🔍 DEBUG: App added successfully")
-        print("   Encoded token (first 30 chars): \(String(encodedToken.prefix(30)))...")
+        print("   Token hash: \(tokenHash)")
         print("   Custom name: \(appName)")
         print("   Limit: \(selectedLimit) minutes")
         // Force immediate check
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            let currentUsage = ScreenTimeService.shared.getUsageMinutes(for: encodedToken)
+            let currentUsage = ScreenTimeService.shared.getUsageMinutes(for: tokenHash)
             print("   Current usage after 2s: \(currentUsage) minutes")
         }
         

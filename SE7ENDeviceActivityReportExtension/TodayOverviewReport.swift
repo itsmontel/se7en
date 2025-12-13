@@ -33,14 +33,6 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         var categoryCount = 0
         var appCount = 0
         
-        // ✅ Load pending selections from main app for token matching
-        let pendingSelections = loadPendingSelections()
-        print("   📋 Loaded \(pendingSelections.count) pending selections from main app")
-        
-        // Map to store: main app's encoded key -> real app name and usage
-        var tokenKeyToAppName: [String: String] = [:]
-        var tokenKeyToUsage: [String: Int] = [:]
-        
         // ⚠️ Add iteration counter to see if loop runs
         var dataIterations = 0
         
@@ -61,23 +53,7 @@ struct TodayOverviewReport: DeviceActivityReportScene {
                     for await app in category.applications {
                         appCount += 1
                         let rawName = app.application.localizedDisplayName ?? "nil"
-                        let durationMinutes = Int(app.totalActivityDuration / 60)
                         print("         📱 App \(appCount): \(rawName) = \(Int(app.totalActivityDuration))s")
-                        
-                        // ✅ Try to match this app's token against pending selections from main app
-                        if let appToken = app.application.token {
-                            for (encodedKey, pendingSelection) in pendingSelections {
-                                // Direct token comparison - this works because tokens are Equatable
-                                if pendingSelection.applicationTokens.contains(appToken) {
-                                    if let validName = sanitizedAppName(rawName) {
-                                        tokenKeyToAppName[encodedKey] = validName
-                                        tokenKeyToUsage[encodedKey] = durationMinutes
-                                        print("         ✅ MATCHED: \(validName) -> key \(String(encodedKey.prefix(20)))...")
-                                    }
-                                    break // Only match once per app
-                                }
-                            }
-                        }
                         
                         // Filter out placeholder app names
                         guard let name = sanitizedAppName(app.application.localizedDisplayName) else {
@@ -91,8 +67,6 @@ struct TodayOverviewReport: DeviceActivityReportScene {
                 }
             }
         }
-        
-        print("   📊 Token matching results: \(tokenKeyToAppName.count) matches found")
         
         // ⚠️ FIX: Calculate totalDuration from perAppDuration to match displayed apps
         // This ensures the total matches the sum of all displayed apps (excluding filtered placeholder apps)
@@ -131,45 +105,17 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         )
         
         // Save summary to shared container
-        saveSummaryToSharedContainer(summary, perAppDuration: perAppDuration, tokenKeyToAppName: tokenKeyToAppName, tokenKeyToUsage: tokenKeyToUsage)
+        saveSummaryToSharedContainer(summary, perAppDuration: perAppDuration)
         
         return summary
     }
     
-    /// Load pending selections from main app (saved when limits are created)
-    private func loadPendingSelections() -> [String: FamilyActivitySelection] {
-        let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            print("❌ Failed to load pending selections: no shared defaults")
-            return [:]
-        }
-        
-        sharedDefaults.synchronize()
-        
-        guard let pendingData = sharedDefaults.dictionary(forKey: "pending_app_selections") as? [String: Data] else {
-            print("⚠️ No pending_app_selections found in shared container")
-            return [:]
-        }
-        
-        var result: [String: FamilyActivitySelection] = [:]
-        
-        for (encodedKey, data) in pendingData {
-            do {
-                let selection = try PropertyListDecoder().decode(FamilyActivitySelection.self, from: data)
-                result[encodedKey] = selection
-                print("   📦 Decoded pending selection: \(String(encodedKey.prefix(20)))... with \(selection.applicationTokens.count) app tokens")
-            } catch {
-                print("   ❌ Failed to decode pending selection: \(error)")
-            }
-        }
-        
-        return result
-    }
-    
     /// Save summary to shared app group
-    private func saveSummaryToSharedContainer(_ summary: UsageSummary, perAppDuration: [String: TimeInterval], tokenKeyToAppName: [String: String], tokenKeyToUsage: [String: Int]) {
+    private func saveSummaryToSharedContainer(_ summary: UsageSummary, perAppDuration: [String: TimeInterval]) {
         let appGroupID = "group.com.se7en.app"
         
+        // ⚠️ CRITICAL: Don't use DispatchQueue.main.async in extension
+        // Extensions run in their own process and async can cause timing issues
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             print("❌ TodayOverviewReport: Failed to open shared defaults")
             return
@@ -181,7 +127,7 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             ["name": $0.name, "minutes": Int($0.duration / 60)] 
         }
         
-        // Build per-app usage dictionary keyed by app name (for Dashboard)
+        // Build per-app usage dictionary keyed by app name (for Limits page)
         var perAppUsage: [String: Int] = [:]
         for (appName, duration) in perAppDuration {
             let minutes = Int(duration / 60)
@@ -195,20 +141,25 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         sharedDefaults.set(appsCount, forKey: "apps_count")
         sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
         sharedDefaults.set(topAppsPayload, forKey: "top_apps")
-        sharedDefaults.set(perAppUsage, forKey: "per_app_usage")
+        sharedDefaults.set(perAppUsage, forKey: "per_app_usage")  // New: per-app usage for Limits page
         
-        // ✅ CRITICAL: Save token-based mappings for Limits page
-        // These use the main app's encoded key, so the main app can look up by its own key
-        sharedDefaults.set(tokenKeyToAppName, forKey: "token_key_to_app_name")
-        sharedDefaults.set(tokenKeyToUsage, forKey: "token_key_to_usage")
+        // ⚠️ CRITICAL: Force synchronization immediately
+        let synced = sharedDefaults.synchronize()
         
-        sharedDefaults.synchronize()
-        
-        print("💾 TodayOverviewReport: Saved to shared container")
+        print("💾 TodayOverviewReport: Saved summary to shared container")
         print("   • Total minutes: \(totalMinutes)")
+        print("   • Apps count: \(appsCount)")
+        print("   • Top apps: \(topAppsPayload.count)")
         print("   • Per-app usage: \(perAppUsage.count) apps")
-        print("   • Token mappings: \(tokenKeyToAppName.count) entries")
-        print("   • Token usage: \(tokenKeyToUsage.count) entries")
+        print("   • Sync result: \(synced ? "✅ Success" : "❌ Failed")")
+        
+        // Verify the save by reading it back
+        let verification = sharedDefaults.integer(forKey: "total_usage")
+        if verification > 0 {
+            print("   ✅ Verification: Data successfully written (\(verification) minutes)")
+        } else {
+            print("   ❌ ERROR: Data not found after write! This is a critical issue.")
+        }
     }
     
     /// Filter out placeholder app names like "app 902388" or "Unknown"
