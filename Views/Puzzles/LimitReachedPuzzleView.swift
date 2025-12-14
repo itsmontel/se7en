@@ -10,6 +10,9 @@ struct LimitReachedPuzzleView: View {
     @State private var selectedPuzzleType: PuzzleType?
     @State private var showPuzzle = false
     @State private var puzzleStartTime: Date?
+    @State private var currentSudokuPuzzle: SudokuPuzzle?
+    @State private var currentMemoryGame: MemoryGame?
+    @State private var currentPatternSequence: PatternSequence?
     
     var body: some View {
         ZStack {
@@ -131,35 +134,41 @@ struct LimitReachedPuzzleView: View {
             Group {
                 switch puzzleType {
                 case .sudoku:
-                    SudokuView(
-                        puzzle: SudokuPuzzle.generate(),
-                        onComplete: {
-                            handlePuzzleComplete(puzzleType: puzzleType)
-                        },
-                        onDismiss: {
-                            showPuzzle = false
-                        }
-                    )
+                    if let puzzle = currentSudokuPuzzle {
+                        SudokuView(
+                            puzzle: puzzle,
+                            onComplete: {
+                                handlePuzzleComplete(puzzleType: puzzleType)
+                            },
+                            onDismiss: {
+                                showPuzzle = false
+                            }
+                        )
+                    }
                 case .memory:
-                    MemoryGameView(
-                        game: MemoryGame.generate(),
-                        onComplete: {
-                            handlePuzzleComplete(puzzleType: puzzleType)
-                        },
-                        onDismiss: {
-                            showPuzzle = false
-                        }
-                    )
+                    if let game = currentMemoryGame {
+                        MemoryGameView(
+                            game: game,
+                            onComplete: {
+                                handlePuzzleComplete(puzzleType: puzzleType)
+                            },
+                            onDismiss: {
+                                showPuzzle = false
+                            }
+                        )
+                    }
                 case .pattern:
-                    PatternGameView(
-                        sequence: PatternSequence.generate(length: 6),
-                        onComplete: {
-                            handlePuzzleComplete(puzzleType: puzzleType)
-                        },
-                        onDismiss: {
-                            showPuzzle = false
-                        }
-                    )
+                    if let sequence = currentPatternSequence {
+                        PatternGameView(
+                            sequence: sequence,
+                            onComplete: {
+                                handlePuzzleComplete(puzzleType: puzzleType)
+                            },
+                            onDismiss: {
+                                showPuzzle = false
+                            }
+                        )
+                    }
                 }
             }
             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -169,6 +178,18 @@ struct LimitReachedPuzzleView: View {
     private func startRandomPuzzle() {
         selectedPuzzleType = puzzleManager.selectRandomPuzzle()
         puzzleStartTime = Date()
+        
+        // Generate puzzles once and store them
+        if let puzzleType = selectedPuzzleType {
+            switch puzzleType {
+            case .sudoku:
+                currentSudokuPuzzle = SudokuPuzzle.generate()
+            case .memory:
+                currentMemoryGame = MemoryGame.generate()
+            case .pattern:
+                currentPatternSequence = PatternSequence.generate(length: 6)
+            }
+        }
         
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
             showPuzzle = true
@@ -196,3 +217,5 @@ struct LimitReachedPuzzleView: View {
         }
     }
 }
+
+

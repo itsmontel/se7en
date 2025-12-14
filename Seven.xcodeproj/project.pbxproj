@@ -73,10 +73,10 @@
 		4001 /* Views/Dashboard/ExtendLimitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4000 /* Views/Dashboard/ExtendLimitSheet.swift */; };
 		7101 /* Models/PuzzleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7002 /* Models/PuzzleModels.swift */; };
 		7102 /* Services/PuzzleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7001 /* Services/PuzzleManager.swift */; };
-		7103 /* Views/Puzzles/SudokuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7003 /* Views/Puzzles/SudokuView.swift */; };
-		7104 /* Views/Puzzles/MemoryGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7004 /* Views/Puzzles/MemoryGameView.swift */; };
-		7105 /* Views/Puzzles/PatternGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7005 /* Views/Puzzles/PatternGameView.swift */; };
-		7106 /* Views/Puzzles/LimitReachedPuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7006 /* Views/Puzzles/LimitReachedPuzzleView.swift */; };
+		7103 /* SudokuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7003 /* SudokuView.swift */; };
+		7104 /* MemoryGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7004 /* MemoryGameView.swift */; };
+		7105 /* PatternGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7005 /* PatternGameView.swift */; };
+		7106 /* LimitReachedPuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7006 /* LimitReachedPuzzleView.swift */; };
 		8FB3DA092EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8FB3DA3A2EE38ECD005BC03C /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */; };
 		8FB3DA422EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -340,7 +340,7 @@
 			);
 			sourceTree = "<group>";
 		};
-		110 = {
+		110 /* Puzzles */ = {
 			isa = PBXGroup;
 			children = (
 				7003 /* SudokuView.swift */,
@@ -349,7 +349,7 @@
 				7006 /* LimitReachedPuzzleView.swift */,
 			);
 			name = Puzzles;
-			path = "Views/Puzzles";
+			path = Views/Puzzles;
 			sourceTree = "<group>";
 		};
 		199 = {
@@ -703,10 +703,10 @@
 				1060 /* Views/Dashboard/SelectAllAppsView.swift in Sources */,
 				7101 /* Models/PuzzleModels.swift in Sources */,
 				7102 /* Services/PuzzleManager.swift in Sources */,
-				7103 /* Views/Puzzles/SudokuView.swift in Sources */,
-				7104 /* Views/Puzzles/MemoryGameView.swift in Sources */,
-				7105 /* Views/Puzzles/PatternGameView.swift in Sources */,
-				7106 /* Views/Puzzles/LimitReachedPuzzleView.swift in Sources */,
+				7103 /* SudokuView.swift in Sources */,
+				7104 /* MemoryGameView.swift in Sources */,
+				7105 /* PatternGameView.swift in Sources */,
+				7106 /* LimitReachedPuzzleView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
