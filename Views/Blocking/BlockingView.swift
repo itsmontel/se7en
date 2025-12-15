@@ -57,6 +57,8 @@ struct BlockingView: View {
     @State private var selectedAppName: String = ""
     @State private var selectedBundleID: String = "" // This will be the stable internal ID, not a real bundle ID
     @State private var selectedToken: AnyHashable?
+    @State private var appToDelete: MonitoredApp?
+    @State private var showingDeleteConfirmation = false
     
     var body: some View {
         NavigationStack {
@@ -111,9 +113,15 @@ struct BlockingView: View {
                             VStack(spacing: 14) {
                                 ForEach(appState.monitoredApps) { app in
                                     appLimitRow(app)
+                                        .id(app.id)
+                                        .transition(.asymmetric(
+                                            insertion: .opacity.combined(with: .move(edge: .leading)),
+                                            removal: .opacity.combined(with: .move(edge: .trailing))
+                                        ))
                                 }
                             }
                             .padding(.horizontal, 20)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: appState.monitoredApps.count)
                         }
                         
                         // Elegant Add App button
@@ -208,7 +216,57 @@ struct BlockingView: View {
                 screenTimeService.syncUsageFromSharedContainer()
                 appState.loadAppGoals()
             }
+            .alert("Delete Limit", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) {
+                    appToDelete = nil
+                }
+                Button("Delete", role: .destructive) {
+                    if let app = appToDelete {
+                        deleteLimit(app)
+                    }
+                }
+            } message: {
+                Text("Are you sure you want to delete this limit? This action can't be undone.")
+            }
         }
+    }
+    
+    private func deleteLimit(_ app: MonitoredApp) {
+        // Find the matching Core Data goal using the token hash (our stable identifier)
+        let coreDataManager = CoreDataManager.shared
+        let goals = coreDataManager.getActiveAppGoals()
+        
+        if let tokenHash = app.tokenHash,
+           let goal = goals.first(where: { $0.appBundleID == tokenHash }) {
+            
+            // Provide haptic feedback
+            HapticFeedback.medium.trigger()
+            
+            // Animate the deletion with a smooth fade and slide animation
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                if let goalId = goal.id {
+                    // Use AppState helper so Screen Time monitoring is also cleaned up
+                    appState.deleteAppGoal(goalId)
+                } else {
+                    // Fallback: delete directly if goal has no id for some reason
+                    coreDataManager.deleteAppGoal(goal)
+                    appState.loadAppGoals()
+                }
+            }
+        } else {
+            print("❌ deleteLimit: No matching goal found for app \(app.name) with tokenHash \(app.tokenHash ?? "nil")")
+        }
+        
+        // Clear the delete state
+        appToDelete = nil
+    }
+
+    /// Strip debug/hash parts from old placeholder names so alerts don't show hashes
+    private func cleanAppName(_ rawName: String) -> String {
+        if let range = rawName.range(of: " (hash:") {
+            return String(rawName[..<range.lowerBound])
+        }
+        return rawName.isEmpty ? "this app" : rawName
     }
     
     private var emptyStateView: some View {
@@ -320,15 +378,28 @@ struct BlockingView: View {
                 
                 Spacer()
                 
-                // Edit button
-                                    Button(action: {
-                    appToEdit = app
-                    editedLimit = app.dailyLimit
-                    showingEditSheet = true
-                }) {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.primary.opacity(0.7))
+                // Edit and Delete buttons in same row
+                HStack(spacing: 12) {
+                    // Edit button
+                    Button(action: {
+                        appToEdit = app
+                        editedLimit = app.dailyLimit
+                        showingEditSheet = true
+                    }) {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.primary.opacity(0.7))
+                    }
+                    
+                    // Delete button
+                    Button(action: {
+                        appToDelete = app
+                        showingDeleteConfirmation = true
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.red.opacity(0.7))
+                    }
                 }
             }
             .padding(22)
@@ -470,6 +541,7 @@ struct BlockingView: View {
 struct EditLimitSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var appState: AppState
+    @StateObject private var screenTimeService = ScreenTimeService.shared
     let app: MonitoredApp
     @State var currentLimit: Int
     @State private var newLimit: Int
@@ -483,8 +555,9 @@ struct EditLimitSheet: View {
         self._currentLimit = State(initialValue: currentLimit)
         self._newLimit = State(initialValue: currentLimit)
         
-        let bundleID = "app.name." + app.name.lowercased().replacingOccurrences(of: " ", with: ".")
-        let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(bundleID)")
+        // ✅ Use token hash as identifier (stored in appBundleID field)
+        let tokenHash = app.tokenHash ?? ""
+        let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(tokenHash)")
         if let data = scheduleData,
            let decoded = try? JSONDecoder().decode(LimitSchedule.self, from: data) {
             self._schedule = State(initialValue: decoded)
@@ -512,6 +585,10 @@ struct EditLimitSheet: View {
                     VStack(spacing: 32) {
                         // Elegant Header
                         VStack(spacing: 18) {
+                            // ✅ Get selection using token hash to display real app name and icon
+                            let selection = app.tokenHash.flatMap { screenTimeService.getSelection(for: $0) }
+                            let firstToken = selection?.applicationTokens.first
+                            
                             ZStack {
                                 RoundedRectangle(cornerRadius: 28)
                                     .fill(
@@ -526,16 +603,32 @@ struct EditLimitSheet: View {
                                     )
                                     .frame(width: 110, height: 110)
                                 
-                                Image(systemName: app.icon)
-                                    .font(.system(size: 52, weight: .semibold))
-                                    .foregroundColor(app.color)
+                                // ✅ Use Label(token) for real app icon, fallback to system icon
+                                if let token = firstToken {
+                                    Label(token)
+                                        .labelStyle(.iconOnly)
+                                        .scaleEffect(4.5)  // ✅ Scale up to fill 110x110 border
+                                        .frame(width: 110, height: 110)  // Match border size exactly
+                                } else {
+                                    Image(systemName: app.icon)
+                                        .font(.system(size: 52, weight: .semibold))
+                                        .foregroundColor(app.color)
+                                }
                             }
                             .shadow(color: app.color.opacity(0.25), radius: 20, x: 0, y: 10)
                             
                             VStack(spacing: 8) {
-                                Text(app.name)
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(.primary)
+                                // ✅ Use Label(token) for real app name, fallback to stored name
+                                if let token = firstToken {
+                                    Label(token)
+                                        .labelStyle(.titleOnly)
+                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                } else {
+                                    Text(app.name)
+                                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                }
                                 
                                 Text("Used \(formatMinutes(app.usedToday)) today")
                                                 .font(.system(size: 16, weight: .semibold))
@@ -996,12 +1089,19 @@ struct EditLimitSheet: View {
         let coreDataManager = CoreDataManager.shared
         let goals = coreDataManager.getActiveAppGoals()
         
-        if let goal = goals.first(where: { $0.appName == app.name }) {
+        // ✅ Use token hash as identifier (stored in appBundleID field)
+        guard let tokenHash = app.tokenHash else {
+            print("❌ Cannot save limit - no token hash for app")
+            dismiss()
+            return
+        }
+        
+        if let goal = goals.first(where: { $0.appBundleID == tokenHash }) {
             appState.updateAppGoal(goal.id ?? UUID(), dailyLimitMinutes: newLimit)
             
-            let bundleID = "app.name." + app.name.lowercased().replacingOccurrences(of: " ", with: ".")
+            // ✅ Save schedule using token hash
             if let scheduleData = try? JSONEncoder().encode(schedule) {
-                UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(bundleID)")
+                UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
             }
             
             HapticFeedback.success.trigger()
