@@ -160,7 +160,7 @@ struct MemoryGameView: View {
             
             // Check for match after a shorter delay for better responsiveness
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                checkForMatch()
+            checkForMatch()
             }
         }
     }
@@ -177,11 +177,11 @@ struct MemoryGameView: View {
         print("🔍 Checking match: '\(firstCard.value)' vs '\(secondCard.value)'")
         
         if firstCard.value == secondCard.value {
-            // Match found!
+                // Match found!
             print("✅ MATCH FOUND! Pair \(matchedPairs + 1)")
-            matchedPairs += 1
-            HapticFeedback.success.trigger()
-            
+                matchedPairs += 1
+                HapticFeedback.success.trigger()
+                
             // CRITICAL: Update cards by modifying structs in place
             // Create a new array reference to ensure SwiftUI detects the change
             var updatedCards = cards
@@ -214,19 +214,19 @@ struct MemoryGameView: View {
                 if matchedPairs == totalPairs {
                     print("🎉 GAME COMPLETE!")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showSuccess = true
-                        HapticFeedback.success.trigger()
+                    showSuccess = true
+                    HapticFeedback.success.trigger()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                            onComplete()
+                        onComplete()
                         }
                     }
+                    }
                 }
-            }
-        } else {
-            // No match - flip cards back
+            } else {
+                // No match - flip cards back
             print("❌ No match")
-            HapticFeedback.error.trigger()
-            
+                HapticFeedback.error.trigger()
+                
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 firstFlippedIndex = nil
                 secondFlippedIndex = nil
@@ -370,7 +370,7 @@ struct SuccessOverlay: View {
         }
         .onAppear {
             isAnimating = true
-        }
+    }
     }
     
     private let celebrationColors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple]

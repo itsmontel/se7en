@@ -750,7 +750,6 @@ final class ScreenTimeService: ObservableObject {
         
         // First, try to update from all apps selection (either apps OR categories)
         if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
-            let itemCount = allApps.applicationTokens.count + allApps.categoryTokens.count
             print("📱 Updating from allAppsSelection with \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories")
             await updateUsageFromAllAppsSelection(allApps)
         } else {
@@ -817,7 +816,7 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Store the full selection (with categories) for this tracking goal
-            if !hasSelection(for: categoryBundleID), let goal = categoryGoal {
+            if !hasSelection(for: categoryBundleID) {
                 saveSelection(selection, forBundleID: categoryBundleID)
                 appSelections[categoryBundleID] = selection
                 print("💾 Stored category selection for tracking")
@@ -874,7 +873,7 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Ensure we have a selection stored for this app (needed for fetching usage)
-            if !hasSelection(for: stableID), let goal = goal {
+            if !hasSelection(for: stableID) {
                 // Store the selection for this app
                 // Create a selection with just this token
                 var appSelection = FamilyActivitySelection()
@@ -886,9 +885,9 @@ final class ScreenTimeService: ObservableObject {
             // Ensure usage record exists
             if coreDataManager.getTodaysUsageRecord(for: stableID) == nil, let goal = goal {
                 let today = Calendar.current.startOfDay(for: Date())
-            _ = coreDataManager.createUsageRecord(
-                for: goal,
-                date: today,
+                _ = coreDataManager.createUsageRecord(
+                    for: goal,
+                    date: today,
                     actualUsageMinutes: 0,
                     didExceedLimit: false
                 )
@@ -920,11 +919,11 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Try to fetch usage from report if we have a selection
-            if hasSelection(for: stableID), let goal = goal {
+            if hasSelection(for: stableID) {
                 let fetchedUsage = await fetchUsageFromReport(for: stableID)
                 if fetchedUsage > 0 {
                     updateUsage(for: stableID, minutes: fetchedUsage)
-                    print("📊 Fetched and updated usage for \(goal.appName ?? stableID): \(fetchedUsage) minutes")
+                    print("📊 Fetched and updated usage for \(stableID): \(fetchedUsage) minutes")
                 }
             }
         }
@@ -1063,15 +1062,6 @@ final class ScreenTimeService: ObservableObject {
             print("📊 No category usage data yet from extension")
             return (0, 0)
         }
-        
-        // Fallback: estimate based on categories selected
-        // Each category typically has 10-20 apps, so estimate conservatively
-        let estimatedApps = selection.categoryTokens.count * 15
-        print("📊 Category fallback: Estimated \(estimatedApps) apps from \(selection.categoryTokens.count) categories")
-        print("📊 Note: DeviceActivityReport will provide real usage data when available")
-        
-        // Return estimated count with 0 usage (will be updated by DeviceActivityReport)
-        return (0, estimatedApps)
     }
     
     /// Get the app with the most usage today (from allAppsSelection or monitored apps)
@@ -1367,10 +1357,6 @@ final class ScreenTimeService: ObservableObject {
             let updateThreshold = 1 // minutes
             let currentUsage = self.getUsageMinutes(for: bundleID)
         
-            // Use the maximum of current usage or the threshold
-            // This ensures we don't go backwards, but also captures the threshold amount
-            let newUsage = max(currentUsage, updateThreshold)
-            
             // If this is the first update, set to threshold amount
             // Otherwise, increment by threshold (since event fires every 1 min)
             let finalUsage = currentUsage == 0 ? updateThreshold : currentUsage + updateThreshold
@@ -1524,7 +1510,6 @@ final class ScreenTimeService: ObservableObject {
         // Re-setup monitoring for all apps/categories in allAppsSelection
         if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
             Task {
-                let itemCount = allApps.applicationTokens.count + allApps.categoryTokens.count
                 print("📱 Refreshing monitoring for \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories in allAppsSelection")
                 await updateUsageFromAllAppsSelection(allApps)
                 print("✅ Refreshed monitoring for all apps")
@@ -1573,7 +1558,7 @@ final class ScreenTimeService: ObservableObject {
     private func processPendingMonitorEvents() {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID),
-              var events = sharedDefaults.array(forKey: "pendingEvents") as? [[String: String]],
+              let events = sharedDefaults.array(forKey: "pendingEvents") as? [[String: String]],
               !events.isEmpty else {
             return
         }

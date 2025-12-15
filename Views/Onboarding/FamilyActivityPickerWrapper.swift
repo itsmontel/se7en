@@ -84,6 +84,7 @@ struct FamilyActivityPickerWrapper: View {
             }
             .navigationTitle(isOnboarding ? "Select ALL Apps" : "Select Apps to Monitor")
             .navigationBarTitleDisplayMode(.inline)
+            .textCase(.none)
         }
     }
 }

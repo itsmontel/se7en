@@ -31,6 +31,7 @@ struct LimitReachedPuzzleView: View {
                 limitReachedView
             }
         }
+        .environment(\.textCase, .none)
     }
     
     private var limitReachedView: some View {
@@ -40,19 +41,28 @@ struct LimitReachedPuzzleView: View {
             VStack(spacing: 0) {
                 // Header
                 VStack(spacing: 16) {
-                    Image(systemName: "clock.fill")
+                    Image(systemName: "heart.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(.primary)
+                        .foregroundColor(.primary.opacity(0.8))
                     
-                    Text("Daily Limit Reached")
+                    Text("You've Reached Your Limit")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundColor(.textPrimary)
+                        .textCase(.none)
                     
-                    Text("You've reached your daily limit for **\(appName)**")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundColor(.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
+                    VStack(spacing: 8) {
+                        Text("That's okay—it happens to all of us! 😊")
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .foregroundColor(.textSecondary)
+                            .textCase(.none)
+                        
+                        Text("You've used your daily time for **\(appName)**, but don't worry—this isn't the end of the world.")
+                            .font(.system(size: 15, weight: .regular, design: .rounded))
+                            .foregroundColor(.textSecondary.opacity(0.9))
+                            .multilineTextAlignment(.center)
+                            .textCase(.none)
+                    }
+                    .padding(.horizontal, 20)
                 }
                 .padding(.top, 32)
                 .padding(.bottom, 24)
@@ -61,10 +71,18 @@ struct LimitReachedPuzzleView: View {
                 
                 // Puzzle option
                 VStack(spacing: 20) {
-                    Text("Solve a puzzle to earn 15 more minutes")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundColor(.textPrimary)
-                        .padding(.top, 24)
+                    VStack(spacing: 6) {
+                        Text("Want a little more time?")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundColor(.textPrimary)
+                            .textCase(.none)
+                        
+                        Text("Solve a quick puzzle to earn 15 more minutes")
+                            .font(.system(size: 15, weight: .regular, design: .rounded))
+                            .foregroundColor(.textSecondary)
+                            .textCase(.none)
+                    }
+                    .padding(.top, 24)
                     
                     Button(action: {
                         HapticFeedback.medium.trigger()
@@ -76,6 +94,7 @@ struct LimitReachedPuzzleView: View {
                             
                             Text("Start Puzzle")
                                 .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .textCase(.none)
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -92,10 +111,11 @@ struct LimitReachedPuzzleView: View {
                     }
                     .padding(.horizontal, 24)
                     
-                    Text("You can solve puzzles multiple times to extend your limit")
+                    Text("Or wait until tomorrow—your limit will reset automatically")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(.textSecondary)
+                        .foregroundColor(.textSecondary.opacity(0.8))
                         .multilineTextAlignment(.center)
+                        .textCase(.none)
                         .padding(.horizontal, 24)
                         .padding(.bottom, 8)
                 }
@@ -108,9 +128,10 @@ struct LimitReachedPuzzleView: View {
                     HapticFeedback.light.trigger()
                     dismiss()
                 }) {
-                    Text("I Can Wait Till Tomorrow")
+                    Text("I'll Wait Until Tomorrow")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundColor(.textSecondary)
+                        .textCase(.none)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                 }

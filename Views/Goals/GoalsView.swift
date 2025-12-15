@@ -1550,6 +1550,7 @@ struct RecommendationSheet: View {
             }
             .navigationTitle("Coach Insights")
             .navigationBarTitleDisplayMode(.inline)
+            .textCase(.none)
         }
     }
 }

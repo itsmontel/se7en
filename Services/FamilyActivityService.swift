@@ -97,6 +97,7 @@ struct FamilyActivityPickerView: View {
             FamilyActivityPicker(selection: $selection)
                 .navigationTitle("Select Apps")
                 .navigationBarTitleDisplayMode(.inline)
+                .textCase(.none)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button("Cancel") {

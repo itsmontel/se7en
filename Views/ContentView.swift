@@ -25,6 +25,7 @@ struct MainTabView: View {
                     VStack {
                         Image(systemName: "house.fill")
                         Text("Home")
+                            .textCase(.none)
                     }
                 }
                 .tag(0)
@@ -34,6 +35,7 @@ struct MainTabView: View {
                     VStack {
                         Image(systemName: "hand.raised.fill")
                         Text("Limits")
+                            .textCase(.none)
                     }
                 }
                 .tag(1)
@@ -43,6 +45,7 @@ struct MainTabView: View {
                     VStack {
                         Image(systemName: "chart.bar.fill")
                         Text("Stats")
+                            .textCase(.none)
                     }
                 }
                 .tag(2)
@@ -52,6 +55,7 @@ struct MainTabView: View {
                     VStack {
                         Image(systemName: "trophy.fill")
                         Text("Achievements")
+                            .textCase(.none)
                     }
                 }
                 .tag(3)
@@ -61,6 +65,7 @@ struct MainTabView: View {
                     VStack {
                         Image(systemName: "gearshape.fill")
                         Text("Settings")
+                            .textCase(.none)
                     }
                 }
                 .tag(4)

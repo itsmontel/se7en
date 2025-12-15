@@ -82,6 +82,7 @@ struct SelectAllAppsView: View {
             }
             .navigationTitle("Select All Apps")
             .navigationBarTitleDisplayMode(.inline)
+            .textCase(.none)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
