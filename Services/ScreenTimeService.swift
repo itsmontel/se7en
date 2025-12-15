@@ -642,6 +642,44 @@ final class ScreenTimeService: ObservableObject {
         return 0
     }
     
+    /// Get total screen time today (synchronous)
+    /// Uses the EXACT same logic as DashboardView: reads from shared container "total_usage" key first
+    /// This matches how the dashboard gets its screen time data
+    func getTotalScreenTimeTodaySync() -> Int {
+        let appGroupID = "group.com.se7en.app"
+        
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ getTotalScreenTimeTodaySync: Failed to access shared container")
+            return 0
+        }
+        
+        // ✅ EXACT SAME LOGIC AS DASHBOARD: Read from "total_usage" key first
+        // This is the same as DashboardView.readUsageFromSharedContainer()
+        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+        
+        if totalUsage > 0 {
+            print("📊 getTotalScreenTimeTodaySync: Using shared container total_usage: \(totalUsage) minutes")
+            return totalUsage
+        }
+        
+        // Fallback: Sum up usage from monitored apps (same as async version fallback)
+        let goals = coreDataManager.getActiveAppGoals()
+        var totalMinutes = 0
+        
+        for goal in goals {
+            guard let bundleID = goal.appBundleID,
+                  hasSelection(for: bundleID) else {
+                continue
+            }
+            
+            let usage = getUsageMinutes(for: bundleID)
+            totalMinutes += usage
+        }
+        
+        print("📊 getTotalScreenTimeTodaySync: Fallback - summed from monitored apps: \(totalMinutes) minutes")
+        return totalMinutes
+    }
+    
     /// Fetch usage data from DeviceActivityReport for a specific app
     /// This attempts to get real-time usage data
     func fetchUsageFromReport(for bundleID: String) async -> Int {

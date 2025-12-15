@@ -197,6 +197,12 @@ struct DashboardView: View {
                 self.isLoadingScreenTime = false
                 self.hasLoadedInitialData = true // Mark that we've loaded initial data
                 
+                // ✅ CRITICAL: Update AppState with screen time so health calculation can use it
+                print("📊 Dashboard: Setting todayScreenTimeMinutes to \(totalMinutes) minutes")
+                self.appState.todayScreenTimeMinutes = totalMinutes
+                print("📊 Dashboard: Calling updatePetHealth() with \(totalMinutes) minutes")
+                self.appState.updatePetHealth() // Update health with new screen time data
+                
                 // Only show informational message if we have connected apps but no usage yet
                 // Usage records are initialized immediately, so 0 means no usage yet (which is normal)
                 if totalMinutes == 0 && appsUsed == 0 && !connectedGoals.isEmpty {
@@ -937,6 +943,12 @@ struct DashboardView: View {
                     if sharedUsage > 0 || sharedApps > 0 {
                         totalScreenTimeMinutes = sharedUsage
                         appsUsedToday = sharedApps
+                        
+                        // ✅ CRITICAL: Update AppState with screen time so health calculation can use it
+                        print("📊 Dashboard (onAppear): Setting todayScreenTimeMinutes to \(sharedUsage) minutes")
+                        appState.todayScreenTimeMinutes = sharedUsage
+                        print("📊 Dashboard (onAppear): Calling updatePetHealth() with \(sharedUsage) minutes")
+                        appState.updatePetHealth()
                     }
                 }
             }

@@ -29,6 +29,7 @@ class AppState: ObservableObject {
     @Published var userPet: Pet?
     @Published var downloadMotivations: [DownloadMotivation] = []
     @Published var averageScreenTimeHours: Int = 0
+    @Published var todayScreenTimeMinutes: Int = 0  // Shared screen time from dashboard (source of truth)
     @Published var userName: String = ""
     @Published var hasActiveSubscription = false
     @Published var shouldShowStreakCelebration = false
@@ -176,7 +177,8 @@ class AppState: ObservableObject {
         coreDataManager.performDailyResetIfNeeded()
         
         let weeklyPlan = coreDataManager.getOrCreateCurrentWeeklyPlan()
-        updatePetHealth() // Update pet health based on usage
+        // Don't update pet health here - wait for dashboard to load screen time data first
+        // Health will be updated when dashboard sets todayScreenTimeMinutes
         
         // Re-setup monitoring (individual apps will be blocked if limits exceeded)
         if isScreenTimeAuthorized && !isOnboarding {
@@ -564,6 +566,9 @@ class AppState: ObservableObject {
         loadDailyHistory()
         checkAchievements()
         
+        // Update pet health whenever data refreshes
+        updatePetHealth()
+        
         // Refresh Screen Time usage data if authorized - move to background
         if isScreenTimeAuthorized {
             Task {
@@ -573,6 +578,7 @@ class AppState: ObservableObject {
                 // Reload app goals after usage refresh on main thread
                 await MainActor.run {
                     self.loadAppGoals()
+                    self.updatePetHealth() // Update health again after usage refresh
                 }
             }
         }
@@ -606,7 +612,7 @@ class AppState: ObservableObject {
     func updatePetHealth() {
         guard var pet = userPet else { return }
         
-        // Calculate pet health based on app usage percentages
+        // Calculate pet health based on total screen time
         let healthPercentage = calculatePetHealthPercentage()
         
         // Convert health percentage to PetHealthState
@@ -624,10 +630,14 @@ class AppState: ObservableObject {
             newHealthState = .sick
         }
         
-        // Only update if health state changed
-        if pet.healthState != newHealthState {
-            pet.healthState = newHealthState
-            userPet = pet
+        // Always update health state (even if unchanged) to ensure UI reflects current screen time
+        // This ensures the health bar and pet state are always accurate
+        let previousState = pet.healthState
+        pet.healthState = newHealthState
+        userPet = pet
+        
+        // Only save and notify if state actually changed
+        if previousState != newHealthState {
             saveUserPreferences() // Persist pet health state
             
             // Send notification about pet health change
@@ -640,51 +650,77 @@ class AppState: ObservableObject {
         }
     }
     
-    /// Calculate pet health percentage based on the lowest app's remaining time percentage
+    /// Calculate pet health percentage based on today's total screen time
+    /// Uses todayScreenTimeMinutes which is set by the dashboard (same source as the displayed screen time)
+    /// Falls back to reading from shared container if dashboard hasn't set it yet
     /// - Returns: Health percentage from 0-100
     func calculatePetHealthPercentage() -> Int {
-        // If no monitored apps, pet is at full health
-        guard !monitoredApps.isEmpty else { return 100 }
+        // ✅ Use the same screen time value that the dashboard displays
+        // This is set by DashboardView when it loads screen time data
+        var totalMinutes = todayScreenTimeMinutes
         
-        // Find the lowest percentage of time remaining across all apps
-        var lowestPercentRemaining: Double = 100
-        
-        for app in monitoredApps where app.isEnabled && app.dailyLimit > 0 {
-            // Calculate percentage of time remaining (not used)
-            let percentUsed = app.percentageUsed * 100 // Convert to 0-100 scale
-            let percentRemaining = max(0, 100 - percentUsed)
-            
-            if percentRemaining < lowestPercentRemaining {
-                lowestPercentRemaining = percentRemaining
+        // ✅ FALLBACK: If dashboard hasn't set it yet, read from shared container (same as dashboard does)
+        if totalMinutes == 0 {
+            let appGroupID = "group.com.se7en.app"
+            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                totalMinutes = sharedDefaults.integer(forKey: "total_usage")
+                if totalMinutes > 0 {
+                    print("🏥 calculatePetHealthPercentage: Using fallback from shared container: \(totalMinutes) minutes")
+                }
             }
         }
         
-        // Calculate health based on the lowest percentage remaining
-        // Formula:
-        // - If 60%+ remaining: health = 100 (full health)
-        // - If 40-60% remaining: health decreases by 1 per percent below 60
-        // - If below 40% remaining: health decreases by 2 per percent below 40
+        // Convert to hours for easier calculation
+        let totalHours = Double(totalMinutes) / 60.0
+        
+        print("🏥 calculatePetHealthPercentage: \(totalMinutes) minutes (\(String(format: "%.2f", totalHours)) hours)")
+        
+        // Calculate health based on screen time ranges
+        // 0-2 hours: 100 health
+        // 2-3 hours: starts at 100, drops to 80 at 3h (linear)
+        // 3-4 hours: starts at 80, drops to 70
+        // 4-5 hours: starts at 70, drops to 60
+        // 5-6 hours: starts at 60, drops to 40
+        // 6-8 hours: starts at 40, drops to 20
+        // 8+ hours: starts at 20, anything over 10h makes it 0
         
         let healthPercentage: Int
         
-        if lowestPercentRemaining >= 60 {
-            // Over 60% time remaining = perfect health
+        if totalHours <= 2.0 {
+            // 0-2 hours: full health
             healthPercentage = 100
-        } else if lowestPercentRemaining >= 40 {
-            // Between 40-60%: health = 40 + percentRemaining (linear decrease of 1 per %)
-            // At 60%: health = 40 + 60 = 100
-            // At 40%: health = 40 + 40 = 80
-            healthPercentage = 40 + Int(lowestPercentRemaining)
+        } else if totalHours <= 3.0 {
+            // 2-3 hours: linear from 100 to 80
+            let progress = (totalHours - 2.0) / 1.0 // 0.0 to 1.0
+            healthPercentage = 100 - Int(progress * 20) // 100 down to 80
+        } else if totalHours <= 4.0 {
+            // 3-4 hours: linear from 80 to 70
+            let progress = (totalHours - 3.0) / 1.0 // 0.0 to 1.0
+            healthPercentage = 80 - Int(progress * 10) // 80 down to 70
+        } else if totalHours <= 5.0 {
+            // 4-5 hours: linear from 70 to 60
+            let progress = (totalHours - 4.0) / 1.0 // 0.0 to 1.0
+            healthPercentage = 70 - Int(progress * 10) // 70 down to 60
+        } else if totalHours <= 6.0 {
+            // 5-6 hours: linear from 60 to 40
+            let progress = (totalHours - 5.0) / 1.0 // 0.0 to 1.0
+            healthPercentage = 60 - Int(progress * 20) // 60 down to 40
+        } else if totalHours <= 8.0 {
+            // 6-8 hours: linear from 40 to 20
+            let progress = (totalHours - 6.0) / 2.0 // 0.0 to 1.0
+            healthPercentage = 40 - Int(progress * 20) // 40 down to 20
+        } else if totalHours <= 10.0 {
+            // 8-10 hours: linear from 20 to 0
+            let progress = (totalHours - 8.0) / 2.0 // 0.0 to 1.0
+            healthPercentage = 20 - Int(progress * 20) // 20 down to 0
         } else {
-            // Below 40%: health = 2 * percentRemaining (steeper decrease of 2 per %)
-            // At 40%: health = 80
-            // At 30%: health = 60
-            // At 10%: health = 20
-            // At 0%: health = 0
-            healthPercentage = Int(lowestPercentRemaining * 2)
+            // Over 10 hours: 0 health
+            healthPercentage = 0
         }
         
-        return max(0, min(100, healthPercentage))
+        let finalHealth = max(0, min(100, healthPercentage))
+        print("🏥 calculatePetHealthPercentage: Result = \(finalHealth)%")
+        return finalHealth
     }
     
     func setUserPet(_ pet: Pet) {

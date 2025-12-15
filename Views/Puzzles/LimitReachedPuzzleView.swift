@@ -35,115 +35,146 @@ struct LimitReachedPuzzleView: View {
     }
     
     private var limitReachedView: some View {
-        VStack {
-            Spacer()
-            
-            VStack(spacing: 0) {
-                // Header
-                VStack(spacing: 16) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(.primary.opacity(0.8))
-                    
-                    Text("You've Reached Your Limit")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(.textPrimary)
-                        .textCase(.none)
-                    
-                    VStack(spacing: 8) {
-                        Text("That's okay—it happens to all of us! 😊")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                            .foregroundColor(.textSecondary)
-                            .textCase(.none)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Header with icon
+                    VStack(spacing: 14) {
+                        // Icon with subtle background
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.primary.opacity(0.1),
+                                            Color.primary.opacity(0.05)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 72, height: 72)
+                            
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 36, weight: .medium))
+                                .foregroundColor(.primary.opacity(0.85))
+                        }
                         
-                        Text("You've used your daily time for **\(appName)**, but don't worry—this isn't the end of the world.")
-                            .font(.system(size: 15, weight: .regular, design: .rounded))
-                            .foregroundColor(.textSecondary.opacity(0.9))
-                            .multilineTextAlignment(.center)
-                            .textCase(.none)
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .padding(.top, 32)
-                .padding(.bottom, 24)
-                
-                Divider()
-                
-                // Puzzle option
-                VStack(spacing: 20) {
-                    VStack(spacing: 6) {
-                        Text("Want a little more time?")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        Text("You've Reached Your Daily Limit")
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .textCase(.none)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                         
-                        Text("Solve a quick puzzle to earn 15 more minutes")
-                            .font(.system(size: 15, weight: .regular, design: .rounded))
+                        VStack(spacing: 6) {
+                            Text("That's okay it happens 😊")
+                                .font(.system(size: 15, weight: .regular, design: .rounded))
+                                .foregroundColor(.textSecondary)
+                                .textCase(.none)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: false, vertical: true)
+                            
+                            Text("Don't worry, you can solve a puzzle for more time or wait until tomorrow.")
+                                .font(.system(size: 15, weight: .regular, design: .rounded))
+                                .foregroundColor(.textSecondary)
+                                .textCase(.none)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(3)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .padding(.top, 28)
+                    .padding(.bottom, 20)
+                    
+                    // Subtle divider
+                    Divider()
+                        .padding(.horizontal, 0)
+                    
+                    // Puzzle option
+                    VStack(spacing: 16) {
+                        Text("Solve a puzzle to earn 15 more minutes")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(.textPrimary)
+                            .textCase(.none)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 20)
+                            .padding(.horizontal, 24)
+                        
+                        Button(action: {
+                            HapticFeedback.medium.trigger()
+                            startRandomPuzzle()
+                        }) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "puzzlepiece.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                
+                                Text("Start Puzzle")
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                    .textCase(.none)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.primary, Color.primary.opacity(0.85)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: Color.primary.opacity(0.25), radius: 6, x: 0, y: 3)
+                        }
+                        .padding(.horizontal, 24)
+                        
+                        Text("Or wait until tomorrow")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundColor(.textSecondary.opacity(0.75))
+                            .multilineTextAlignment(.center)
+                            .textCase(.none)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 4)
+                    }
+                    .padding(.bottom, 20)
+                    
+                    // Subtle divider
+                    Divider()
+                        .padding(.horizontal, 0)
+                    
+                    // Cancel button
+                    Button(action: {
+                        HapticFeedback.light.trigger()
+                        dismiss()
+                    }) {
+                        Text("I'll Wait Until Tomorrow")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
                             .foregroundColor(.textSecondary)
                             .textCase(.none)
-                    }
-                    .padding(.top, 24)
-                    
-                    Button(action: {
-                        HapticFeedback.medium.trigger()
-                        startRandomPuzzle()
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "puzzlepiece.fill")
-                                .font(.system(size: 20, weight: .semibold))
-                            
-                            Text("Start Puzzle")
-                                .font(.system(size: 18, weight: .bold, design: .rounded))
-                                .textCase(.none)
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.primary, Color.primary.opacity(0.8)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(12)
-                        .shadow(color: Color.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
                     }
                     .padding(.horizontal, 24)
-                    
-                    Text("Or wait until tomorrow—your limit will reset automatically")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(.textSecondary.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                        .textCase(.none)
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 8)
+                    .padding(.top, 16)
+                    .padding(.bottom, 20)
                 }
-                .padding(.bottom, 24)
-                
-                Divider()
-                
-                // Cancel button
-                Button(action: {
-                    HapticFeedback.light.trigger()
-                    dismiss()
-                }) {
-                    Text("I'll Wait Until Tomorrow")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(.textSecondary)
-                        .textCase(.none)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
+                .frame(maxWidth: min(geometry.size.width - 40, 520))
+                .background(Color.cardBackground)
+                .cornerRadius(20)
+                .shadow(color: Color.black.opacity(0.25), radius: 30, x: 0, y: 15)
             }
-            .frame(maxWidth: 600)
-            .background(Color.cardBackground)
-            .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.3), radius: 40, x: 0, y: 20)
-            
-            Spacer()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
