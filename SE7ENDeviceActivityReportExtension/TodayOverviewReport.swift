@@ -8,6 +8,96 @@ import SwiftUI
 import Foundation
 import FamilyControls
 
+// MARK: - Shared Types (for extension access)
+struct StoredAppLimit: Codable, Identifiable {
+    let id: UUID
+    let appName: String
+    var dailyLimitMinutes: Int
+    var usageMinutes: Int
+    var isActive: Bool
+    let createdAt: Date
+    let selectionData: Data
+    
+    init(id: UUID = UUID(), appName: String, dailyLimitMinutes: Int, selection: FamilyActivitySelection) {
+        self.id = id
+        self.appName = appName
+        self.dailyLimitMinutes = dailyLimitMinutes
+        self.usageMinutes = 0
+        self.isActive = true
+        self.createdAt = Date()
+        self.selectionData = (try? PropertyListEncoder().encode(selection)) ?? Data()
+    }
+    
+    func getSelection() -> FamilyActivitySelection? {
+        return try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: selectionData)
+    }
+    
+    func containsToken(_ token: AnyHashable) -> Bool {
+        guard let selection = getSelection() else { return false }
+        // Compare tokens by hash value (tokens are Hashable)
+        let tokenHash = token.hashValue
+        return selection.applicationTokens.contains { ($0 as AnyHashable).hashValue == tokenHash }
+    }
+}
+
+final class LimitStorageManager {
+    static let shared = LimitStorageManager()
+    
+    private let appGroupID = "group.com.se7en.app"
+    private let limitsKey = "stored_app_limits_v2"
+    private let usagePrefix = "usage_v2_"
+    
+    private var sharedDefaults: UserDefaults? {
+        UserDefaults(suiteName: appGroupID)
+    }
+    
+    private init() {}
+    
+    func saveLimits(_ limits: [StoredAppLimit]) {
+        guard let defaults = sharedDefaults,
+              let data = try? JSONEncoder().encode(limits) else { return }
+        defaults.set(data, forKey: limitsKey)
+        defaults.synchronize()
+    }
+    
+    func loadLimits() -> [StoredAppLimit] {
+        guard let defaults = sharedDefaults,
+              let data = defaults.data(forKey: limitsKey),
+              let limits = try? JSONDecoder().decode([StoredAppLimit].self, from: data) else {
+            return []
+        }
+        return limits
+    }
+    
+    func setUsage(for limitID: UUID, minutes: Int) {
+        guard let defaults = sharedDefaults else { return }
+        defaults.set(minutes, forKey: usagePrefix + limitID.uuidString)
+        
+        var limits = loadLimits()
+        if let index = limits.firstIndex(where: { $0.id == limitID }) {
+            limits[index].usageMinutes = minutes
+            saveLimits(limits)
+        }
+        
+        defaults.synchronize()
+    }
+    
+    func getUsage(for limitID: UUID) -> Int {
+        guard let defaults = sharedDefaults else { return 0 }
+        return defaults.integer(forKey: usagePrefix + limitID.uuidString)
+    }
+    
+    func findLimit(for token: AnyHashable) -> StoredAppLimit? {
+        let limits = loadLimits()
+        for limit in limits {
+            if limit.containsToken(token) {
+                return limit
+            }
+        }
+        return nil
+    }
+}
+
 extension DeviceActivityReport.Context {
     static let todayOverview = Self("todayOverview")
 }
@@ -23,7 +113,12 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         var perAppDuration: [String: TimeInterval] = [:]
         var uniqueApps: Set<String> = []
         
-        let monitoredSelections = loadMonitoredSelectionsFromSharedContainer()
+        // ✅ NEW: Load limits using the new storage manager
+        let storageManager = LimitStorageManager.shared
+        let storedLimits = storageManager.loadLimits()
+        
+        print("📊 TodayOverviewReport: Processing data")
+        print("   Stored limits count: \(storedLimits.count)")
         
         // Process device activity data
         for await deviceActivityData in data {
@@ -36,31 +131,39 @@ struct TodayOverviewReport: DeviceActivityReportScene {
                         }
                         
                         let duration = app.totalActivityDuration
+                        let minutes = Int(duration / 60)
+                        
                         uniqueApps.insert(name)
                         perAppDuration[name, default: 0] += duration
                         
-                        // Match tokens for monitored apps - use token direct comparison
-                        for monitored in monitoredSelections {
-                            if monitored.selection.applicationTokens.contains(where: { $0 == appToken }) {
-                                let minutes = Int(duration / 60)
+                        // ✅ NEW: Match using direct token comparison
+                        for limit in storedLimits {
+                            guard let selection = limit.getSelection() else { continue }
+                            
+                            // Direct token comparison - THE RELIABLE WAY
+                            // Compare tokens using hash value (tokens are Hashable)
+                            let appTokenHash = (appToken as AnyHashable).hashValue
+                            let foundMatch = selection.applicationTokens.contains { ($0 as AnyHashable).hashValue == appTokenHash }
+                            
+                            if foundMatch {
+                                // Found a match! Update usage
+                                let currentUsage = storageManager.getUsage(for: limit.id)
+                                let newUsage = max(currentUsage, minutes)
                                 
-                                // ✅ CRITICAL: Compute hash from matched token to ensure consistency
-                                let matchedTokenHash = String(appToken.hashValue)
-                                
-                                // Write usage with BOTH hashes for bulletproof matching
-                                writeUsageToSharedContainer(
-                                    appName: name,
-                                    storedTokenHash: monitored.tokenHash, // Hash from goal creation
-                                    matchedTokenHash: matchedTokenHash,   // Hash from matched token
-                                    minutes: minutes
-                                )
-                                
-                                if monitored.appName.isEmpty {
-                                    updateGoalAppName(tokenHash: monitored.tokenHash, appName: name)
+                                if newUsage > currentUsage {
+                                    storageManager.setUsage(for: limit.id, minutes: newUsage)
+                                    print("✅ Updated usage for '\(limit.appName)': \(newUsage) min (ID: \(limit.id.uuidString.prefix(8)))")
                                 }
+                                
+                                // Also write to per_app_usage for backward compatibility
+                                writeUsageByName(appName: name, minutes: minutes)
+                                
                                 break
                             }
                         }
+                        
+                        // Fallback: Also write by name for any app (for dashboard display)
+                        writeUsageByName(appName: name, minutes: minutes)
                     }
                 }
             }
@@ -77,45 +180,29 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             .prefix(10)
             .map { AppUsage(name: $0.key, duration: $0.value) }
         
-        let summary = UsageSummary(
+        return UsageSummary(
             totalDuration: totalDuration,
             appCount: uniqueApps.count,
             topApps: topApps
         )
-        
-        saveToSharedContainer(summary: summary, perAppDuration: perAppDuration)
-        
-        return summary
     }
     
-    /// Save summary to shared app group
-    private func saveToSharedContainer(summary: UsageSummary, perAppDuration: [String: TimeInterval]) {
+    // MARK: - Helper Methods
+    
+    private func writeUsageByName(appName: String, minutes: Int) {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        let totalMinutes = Int(summary.totalDuration / 60)
-        let appsCount = summary.appCount
-        let topAppsPayload = summary.topApps.map { 
-            ["name": $0.name, "minutes": Int($0.duration / 60)] 
-        }
+        let normalizedName = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         
-        var perAppUsage: [String: Int] = [:]
-        for (appName, duration) in perAppDuration {
-            let minutes = Int(duration / 60)
-            if minutes > 0 {
-                perAppUsage[appName] = minutes
-            }
-        }
-        
-        sharedDefaults.set(totalMinutes, forKey: "total_usage")
-        sharedDefaults.set(appsCount, forKey: "apps_count")
-        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
-        sharedDefaults.set(topAppsPayload, forKey: "top_apps")
+        // Write to per_app_usage dictionary
+        var perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+        perAppUsage[normalizedName] = minutes
+        perAppUsage[appName] = minutes  // Also original case
         sharedDefaults.set(perAppUsage, forKey: "per_app_usage")
         sharedDefaults.synchronize()
     }
     
-    /// Filter out placeholder app names like "app 902388" or "Unknown"
     private func sanitizedAppName(_ raw: String?) -> String? {
         guard let name = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
               !name.isEmpty else {
@@ -123,16 +210,10 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         }
         
         let lower = name.lowercased()
-        if lower == "unknown" {
-            return nil
-        }
+        if lower == "unknown" { return nil }
+        if lower.contains("familycontrols") || lower.contains("authentication") { return nil }
         
-        // Filter out system/auth helper labels that should not surface to users
-        if lower.contains("familycontrols") || lower.contains("authentication") {
-            return nil
-        }
-        
-        // Match patterns like "app 902388" or "app902388"
+        // Filter out "app 12345" patterns
         if let regex = try? NSRegularExpression(pattern: #"^app\s*\d{2,}$"#, options: [.caseInsensitive]) {
             let range = NSRange(location: 0, length: name.utf16.count)
             if regex.firstMatch(in: name, options: [], range: range) != nil {
@@ -141,97 +222,6 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         }
         
         return name
-    }
-    
-    // MARK: - Token Matching Helpers
-    
-    /// ✅ NEW: Struct to hold monitored selection info
-    struct MonitoredAppInfo {
-        let tokenHash: String
-        let appName: String
-        let limitMinutes: Int
-        let selection: FamilyActivitySelection
-    }
-    
-    /// Load monitored selections from shared container (individual apps only, no categories)
-    private func loadMonitoredSelectionsFromSharedContainer() -> [MonitoredAppInfo] {
-        let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return [] }
-        
-        guard let monitoredApps = sharedDefaults.array(forKey: "monitored_app_selections") as? [[String: Any]] else {
-            return []
-        }
-        
-        var results: [MonitoredAppInfo] = []
-        
-        for appInfo in monitoredApps {
-            guard let tokenHash = appInfo["tokenHash"] as? String,
-                  let selectionData = appInfo["selectionData"] as? Data,
-                  let selection = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: selectionData),
-                  !selection.applicationTokens.isEmpty,
-                  selection.categoryTokens.isEmpty else {
-                continue
-            }
-            
-            let appName = appInfo["appName"] as? String ?? ""
-            let limitMinutes = appInfo["limitMinutes"] as? Int ?? 0
-            
-            results.append(MonitoredAppInfo(
-                tokenHash: tokenHash,
-                appName: appName,
-                limitMinutes: limitMinutes,
-                selection: selection
-            ))
-        }
-        
-        return results
-    }
-    
-    /// Write usage by token hash - writes with BOTH stored and matched hash for bulletproof matching
-    private func writeUsageToSharedContainer(appName: String, storedTokenHash: String, matchedTokenHash: String, minutes: Int) {
-        let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
-        
-        // Write with stored hash (from goal creation)
-        sharedDefaults.set(minutes, forKey: "usage_\(storedTokenHash)")
-        
-        // Write with matched hash (computed from actual token) - fallback if hash differs
-        if matchedTokenHash != storedTokenHash {
-            sharedDefaults.set(minutes, forKey: "usage_\(matchedTokenHash)")
-        }
-        
-        // Update per-token-hash dictionary with BOTH hashes
-        var perTokenUsage = sharedDefaults.dictionary(forKey: "per_token_hash_usage") as? [String: Int] ?? [:]
-        perTokenUsage[storedTokenHash] = minutes
-        if matchedTokenHash != storedTokenHash {
-            perTokenUsage[matchedTokenHash] = minutes
-        }
-        sharedDefaults.set(perTokenUsage, forKey: "per_token_hash_usage")
-        
-        // Store hash mapping for lookup fallback
-        var hashMapping = sharedDefaults.dictionary(forKey: "token_hash_mapping") as? [String: String] ?? [:]
-        hashMapping[matchedTokenHash] = storedTokenHash
-        hashMapping[storedTokenHash] = matchedTokenHash
-        sharedDefaults.set(hashMapping, forKey: "token_hash_mapping")
-        
-        // Also store by app name as final fallback
-        let normalizedName = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        var nameToHash = sharedDefaults.dictionary(forKey: "app_name_to_hash") as? [String: String] ?? [:]
-        nameToHash[normalizedName] = storedTokenHash
-        sharedDefaults.set(nameToHash, forKey: "app_name_to_hash")
-        
-        sharedDefaults.synchronize()
-    }
-    
-    /// Update goal app name if it was empty
-    private func updateGoalAppName(tokenHash: String, appName: String) {
-        let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
-        
-        var pendingNameUpdates = sharedDefaults.dictionary(forKey: "pending_goal_name_updates") as? [String: String] ?? [:]
-        pendingNameUpdates[tokenHash] = appName
-        sharedDefaults.set(pendingNameUpdates, forKey: "pending_goal_name_updates")
-        sharedDefaults.synchronize()
     }
 }
 

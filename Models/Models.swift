@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import FamilyControls
 
 // MARK: - Monitored App
 struct MonitoredApp: Identifiable, Equatable {
@@ -10,7 +11,7 @@ struct MonitoredApp: Identifiable, Equatable {
     var usedToday: Int // in minutes
     var color: Color
     var isEnabled: Bool = true
-    var tokenHash: String? // ✅ Token hash identifier for retrieving selection
+    let limitID: UUID?  // ✅ Changed from tokenHash to limitID
     
     var remainingMinutes: Int {
         max(0, dailyLimit - usedToday)
@@ -46,7 +47,7 @@ struct MonitoredApp: Identifiable, Equatable {
                lhs.dailyLimit == rhs.dailyLimit &&
                lhs.usedToday == rhs.usedToday &&
                lhs.isEnabled == rhs.isEnabled &&
-               lhs.tokenHash == rhs.tokenHash &&
+               lhs.limitID == rhs.limitID &&
                colorComponentsEqual(lhs.color, rhs.color)
     }
     
@@ -1557,4 +1558,129 @@ enum DownloadMotivation: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Limit Storage Types (for UUID-based limit tracking)
 
+struct StoredAppLimit: Codable, Identifiable {
+    let id: UUID
+    let appName: String
+    var dailyLimitMinutes: Int
+    var usageMinutes: Int
+    var isActive: Bool
+    let createdAt: Date
+    let selectionData: Data
+    
+    init(id: UUID = UUID(), appName: String, dailyLimitMinutes: Int, selection: FamilyActivitySelection) {
+        self.id = id
+        self.appName = appName
+        self.dailyLimitMinutes = dailyLimitMinutes
+        self.usageMinutes = 0
+        self.isActive = true
+        self.createdAt = Date()
+        self.selectionData = (try? PropertyListEncoder().encode(selection)) ?? Data()
+    }
+    
+    func getSelection() -> FamilyActivitySelection? {
+        return try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: selectionData)
+    }
+    
+    func containsToken(_ token: AnyHashable) -> Bool {
+        guard let selection = getSelection() else { return false }
+        let tokenHash = token.hashValue
+        return selection.applicationTokens.contains { ($0 as AnyHashable).hashValue == tokenHash }
+    }
+}
+
+final class LimitStorageManager {
+    static let shared = LimitStorageManager()
+    
+    private let appGroupID = "group.com.se7en.app"
+    private let limitsKey = "stored_app_limits_v2"
+    private let usagePrefix = "usage_v2_"
+    
+    private var sharedDefaults: UserDefaults? {
+        UserDefaults(suiteName: appGroupID)
+    }
+    
+    private init() {}
+    
+    func saveLimits(_ limits: [StoredAppLimit]) {
+        guard let defaults = sharedDefaults,
+              let data = try? JSONEncoder().encode(limits) else { return }
+        defaults.set(data, forKey: limitsKey)
+        defaults.synchronize()
+    }
+    
+    func loadLimits() -> [StoredAppLimit] {
+        guard let defaults = sharedDefaults,
+              let data = defaults.data(forKey: limitsKey),
+              let limits = try? JSONDecoder().decode([StoredAppLimit].self, from: data) else {
+            return []
+        }
+        return limits
+    }
+    
+    func addLimit(_ limit: StoredAppLimit) {
+        var limits = loadLimits()
+        limits.removeAll { $0.appName.lowercased() == limit.appName.lowercased() }
+        limits.append(limit)
+        saveLimits(limits)
+    }
+    
+    func removeLimit(id: UUID) {
+        var limits = loadLimits()
+        limits.removeAll { $0.id == id }
+        saveLimits(limits)
+        sharedDefaults?.removeObject(forKey: usagePrefix + id.uuidString)
+        sharedDefaults?.synchronize()
+    }
+    
+    func updateLimit(id: UUID, dailyLimitMinutes: Int? = nil, isActive: Bool? = nil) {
+        var limits = loadLimits()
+        if let index = limits.firstIndex(where: { $0.id == id }) {
+            if let minutes = dailyLimitMinutes {
+                limits[index].dailyLimitMinutes = minutes
+            }
+            if let active = isActive {
+                limits[index].isActive = active
+            }
+            saveLimits(limits)
+        }
+    }
+    
+    func setUsage(for limitID: UUID, minutes: Int) {
+        guard let defaults = sharedDefaults else { return }
+        defaults.set(minutes, forKey: usagePrefix + limitID.uuidString)
+        var limits = loadLimits()
+        if let index = limits.firstIndex(where: { $0.id == limitID }) {
+            limits[index].usageMinutes = minutes
+            saveLimits(limits)
+        }
+        defaults.synchronize()
+    }
+    
+    func getUsage(for limitID: UUID) -> Int {
+        guard let defaults = sharedDefaults else { return 0 }
+        return defaults.integer(forKey: usagePrefix + limitID.uuidString)
+    }
+    
+    func findLimit(for token: AnyHashable) -> StoredAppLimit? {
+        let limits = loadLimits()
+        for limit in limits {
+            if limit.containsToken(token) {
+                return limit
+            }
+        }
+        return nil
+    }
+    
+    func findLimit(byAppName name: String) -> StoredAppLimit? {
+        let normalizedName = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        return loadLimits().first {
+            $0.appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) == normalizedName
+        }
+    }
+    
+    func getActiveLimits() -> [StoredAppLimit] {
+        return loadLimits().filter { $0.isActive }
+    }
+}

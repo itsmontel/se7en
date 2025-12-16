@@ -126,7 +126,7 @@ struct DashboardView: View {
             print("📊 All apps selection: \(hasAllApps ? "Yes" : "No"), Monitored apps: \(connectedGoals.count)")
             
             // First, ensure allAppsSelection is properly set up with goals and records
-            if hasAllApps, let allApps = screenTimeService.allAppsSelection {
+            if hasAllApps, screenTimeService.allAppsSelection != nil {
                 print("📱 Ensuring all apps in selection have goals and records...")
                 // This will be handled by updateUsageFromReport, but we can also ensure setup here
             }
@@ -377,7 +377,8 @@ struct DashboardView: View {
                 dailyLimit: 0,
                 usedToday: minutes,
                 color: Color(category.color),
-                isEnabled: false
+                isEnabled: false,
+                limitID: nil
             ))
         }
         
@@ -504,7 +505,8 @@ struct DashboardView: View {
                 dailyLimit: 0, // No limit for all apps view
                 usedToday: app.minutes,
                 color: app.color,
-                isEnabled: false // Not actively monitored
+                isEnabled: false, // Not actively monitored
+                limitID: nil
             )
         }
     }

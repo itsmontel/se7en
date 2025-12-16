@@ -271,8 +271,9 @@ struct BlockingView: View {
         let coreDataManager = CoreDataManager.shared
         let goals = coreDataManager.getActiveAppGoals()
         
-        if let tokenHash = app.tokenHash,
-           let goal = goals.first(where: { $0.appBundleID == tokenHash }) {
+        let identifier = app.limitID?.uuidString ?? ""
+        if !identifier.isEmpty,
+           let goal = goals.first(where: { $0.appBundleID == identifier }) {
             
             // Provide haptic feedback
             HapticFeedback.medium.trigger()
@@ -289,7 +290,7 @@ struct BlockingView: View {
                 }
             }
         } else {
-            print("❌ deleteLimit: No matching goal found for app \(app.name) with tokenHash \(app.tokenHash ?? "nil")")
+            print("❌ deleteLimit: No matching goal found for app \(app.name) with limitID \(app.limitID?.uuidString ?? "nil")")
         }
         
         // Clear the delete state
@@ -330,7 +331,8 @@ struct BlockingView: View {
     @ViewBuilder
     private func appLimitRow(_ app: MonitoredApp) -> some View {
         // ✅ Get selection using token hash to display real app name and icon
-        let selection = app.tokenHash.flatMap { screenTimeService.getSelection(for: $0) }
+                            let identifier = app.limitID?.uuidString ?? ""
+                            let selection = screenTimeService.getSelection(for: identifier)
         // applicationTokens.first is already ApplicationToken type, no cast needed
         let firstToken = selection?.applicationTokens.first
         
@@ -530,8 +532,9 @@ struct BlockingView: View {
     
     private func getScheduleInfo(for app: MonitoredApp) -> String? {
         // ✅ Use token hash as identifier (stored in appBundleID field)
-        guard let tokenHash = app.tokenHash,
-              let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(tokenHash)"),
+        let identifier = app.limitID?.uuidString ?? ""
+        guard !identifier.isEmpty,
+              let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(identifier)"),
               let schedule = try? JSONDecoder().decode(LimitSchedule.self, from: scheduleData) else {
             return nil
         }
@@ -590,9 +593,9 @@ struct EditLimitSheet: View {
         self._currentLimit = State(initialValue: currentLimit)
         self._newLimit = State(initialValue: currentLimit)
         
-        // ✅ Use token hash as identifier (stored in appBundleID field)
-        let tokenHash = app.tokenHash ?? ""
-        let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(tokenHash)")
+        // ✅ Use limitID as identifier (stored in appBundleID field)
+        let identifier = app.limitID?.uuidString ?? ""
+        let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(identifier)")
         if let data = scheduleData,
            let decoded = try? JSONDecoder().decode(LimitSchedule.self, from: data) {
             self._schedule = State(initialValue: decoded)
@@ -621,7 +624,8 @@ struct EditLimitSheet: View {
                         // Elegant Header
                         VStack(spacing: 18) {
                             // ✅ Get selection using token hash to display real app name and icon
-                            let selection = app.tokenHash.flatMap { screenTimeService.getSelection(for: $0) }
+                            let identifier = app.limitID?.uuidString ?? ""
+            let selection = screenTimeService.getSelection(for: identifier)
                             let firstToken = selection?.applicationTokens.first
                             
                             ZStack {
@@ -1125,18 +1129,19 @@ struct EditLimitSheet: View {
         let goals = coreDataManager.getActiveAppGoals()
         
         // ✅ Use token hash as identifier (stored in appBundleID field)
-        guard let tokenHash = app.tokenHash else {
+        let identifier = app.limitID?.uuidString ?? ""
+        guard !identifier.isEmpty else {
             print("❌ Cannot save limit - no token hash for app")
             dismiss()
             return
         }
         
-        if let goal = goals.first(where: { $0.appBundleID == tokenHash }) {
+        if let goal = goals.first(where: { $0.appBundleID == identifier }) {
             appState.updateAppGoal(goal.id ?? UUID(), dailyLimitMinutes: newLimit)
             
-            // ✅ Save schedule using token hash
+            // ✅ Save schedule using identifier
             if let scheduleData = try? JSONEncoder().encode(schedule) {
-                UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
+                UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(identifier)")
             }
             
             HapticFeedback.success.trigger()
@@ -1370,7 +1375,7 @@ struct SetLimitSheet: View {
                         
                         Spacer(minLength: 20)
                         
-                        Button(action: addApp) {
+                        Button(action: addLimit) {
                             HStack(spacing: 14) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.system(size: 22, weight: .semibold))
@@ -1691,65 +1696,44 @@ struct SetLimitSheet: View {
         }
     }
     
-    private func addApp() {
-        // ✅ Ensure we have an app name - prompt user or use what we have
-        var finalAppName = appName
+    private func addLimit() {
+        // Get the app name - use provided name or empty (UI shows real name via Label)
+        var finalAppName = appName.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // If name is empty, we should have prompted the user in the UI
-        // For now, use a placeholder that includes the token hash for debugging
-        if finalAppName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            print("⚠️ SetLimitSheet: App name is empty, using placeholder")
-            // The UI should have Label(token) showing the real name
-            // Store empty for now - matching will use per_app_usage
+        if finalAppName.isEmpty {
+            // Try to get name from token label (if available)
+            // Check if we have a token (name will be populated by extension)
+            if !fullSelection.applicationTokens.isEmpty {
+                finalAppName = "App"
+            }
         }
         
-        let tokenHash = bundleID  // bundleID is actually the token hash
-        
-        // ✅ FIX: Create selection directly from fullSelection.applicationTokens
+        // Create selection with just the first app token
         var appSelection = FamilyActivitySelection()
-        
         if let firstToken = fullSelection.applicationTokens.first {
             appSelection.applicationTokens = [firstToken]
-            print("✅ Created selection with token from fullSelection")
         } else if !fullSelection.categoryTokens.isEmpty {
             appSelection.categoryTokens = fullSelection.categoryTokens
-            print("⚠️ Using category tokens from full selection")
         } else {
             appSelection = fullSelection
-            print("⚠️ Using full selection as fallback")
         }
         
         guard !appSelection.applicationTokens.isEmpty || !appSelection.categoryTokens.isEmpty else {
-            print("❌ Cannot add app - no valid tokens in selection")
+            print("❌ Cannot add app - no valid tokens")
             return
         }
         
-        print("📱 Adding app with:")
-        print("   Token hash: \(tokenHash)")
+        print("📱 Adding app with RELIABLE method:")
         print("   App name: '\(finalAppName)'")
         print("   Limit: \(selectedLimit) minutes")
         print("   Tokens: \(appSelection.applicationTokens.count)")
         
-        // ✅ Add the app goal using token hash as identifier
-        appState.addAppGoalFromFamilySelection(
-            appSelection,
+        // ✅ Use the new reliable method
+        appState.addAppGoalReliable(
+            selection: appSelection,
             appName: finalAppName,
-            dailyLimitMinutes: selectedLimit,
-            bundleID: tokenHash
+            dailyLimitMinutes: selectedLimit
         )
-        
-        // Save schedule with token hash
-        if let scheduleData = try? JSONEncoder().encode(schedule) {
-            UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
-            print("💾 Saved schedule for token hash: \(tokenHash)")
-        }
-        
-        // ✅ NEW: Trigger immediate sync to try to get real app name
-        // The report extension will write the real name to per_app_usage
-        // Next time we load, we can try to match and cache the name
-        Task {
-            await ScreenTimeService.shared.updateUsageFromReport()
-        }
         
         HapticFeedback.success.trigger()
         dismiss()

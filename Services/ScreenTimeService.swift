@@ -205,6 +205,135 @@ final class ScreenTimeService: ObservableObject {
         print("✅ App added and monitoring started!")
     }
     
+    // MARK: - New UUID-Based Limit Management
+
+    /// Add an app for monitoring using the new reliable storage
+    func addAppLimitReliable(
+        selection: FamilyActivitySelection,
+        appName: String,
+        dailyLimitMinutes: Int
+    ) {
+        guard isAuthorized else {
+            print("❌ Cannot add app - not authorized")
+            return
+        }
+        
+        guard !selection.applicationTokens.isEmpty else {
+            print("❌ Cannot add app - no tokens in selection")
+            return
+        }
+        
+        // ✅ Create with stable UUID (not hash!)
+        let limit = StoredAppLimit(
+            appName: appName,
+            dailyLimitMinutes: dailyLimitMinutes,
+            selection: selection
+        )
+        
+        print("\n" + String(repeating: "=", count: 60))
+        print("📱 ADDING APP LIMIT (UUID-based)")
+        print("   ID: \(limit.id.uuidString)")
+        print("   Name: '\(appName)'")
+        print("   Limit: \(dailyLimitMinutes) minutes")
+        print("   Tokens: \(selection.applicationTokens.count)")
+        print(String(repeating: "=", count: 60))
+        
+        // Save to shared storage
+        LimitStorageManager.shared.addLimit(limit)
+        
+        // Also create Core Data goal for backward compatibility
+        let tokenHash = limit.id.uuidString  // Use UUID as the "bundleID" field
+        _ = coreDataManager.createAppGoal(
+            appName: appName,
+            bundleID: tokenHash,
+            dailyLimitMinutes: dailyLimitMinutes
+        )
+        
+        // Store selection with UUID key
+        appSelections[tokenHash] = selection
+        saveSelection(selection, forBundleID: tokenHash)
+        
+        // Set up monitoring
+        setupCombinedMonitoringReliable(limitID: limit.id, selection: selection, limitMinutes: dailyLimitMinutes)
+        
+        print("✅ App limit added successfully!")
+    }
+
+    /// Set up monitoring using UUID-based identification
+    private func setupCombinedMonitoringReliable(limitID: UUID, selection: FamilyActivitySelection, limitMinutes: Int) {
+        let idString = limitID.uuidString
+        let warningMinutes = max(1, Int(Double(limitMinutes) * 0.8))
+        
+        print("\n🔧 SETTING UP MONITORING (UUID-based):")
+        print("   Limit ID: \(idString.prefix(8))...")
+        print("   Warning at: \(warningMinutes) min")
+        print("   Limit at: \(limitMinutes) min")
+        
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: 0, minute: 0),
+            intervalEnd: DateComponents(hour: 23, minute: 59),
+            repeats: true
+        )
+        
+        // Events use UUID, not hash
+        let warningEvent = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            threshold: DateComponents(minute: warningMinutes)
+        )
+        
+        let limitEvent = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            threshold: DateComponents(minute: limitMinutes)
+        )
+        
+        let activityName = DeviceActivityName("se7en.limit.\(idString)")
+        
+        let events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [
+            DeviceActivityEvent.Name("warning.\(idString)"): warningEvent,
+            DeviceActivityEvent.Name("limit.\(idString)"): limitEvent
+        ]
+        
+        do {
+            try deviceActivityCenter.startMonitoring(activityName, during: schedule, events: events)
+            print("✅ Monitoring started successfully!")
+        } catch {
+            print("❌ Failed to start monitoring: \(error)")
+        }
+    }
+
+    /// Get usage for a limit by its UUID
+    func getUsageReliable(for limitID: UUID) -> Int {
+        return LimitStorageManager.shared.getUsage(for: limitID)
+    }
+
+    /// Get all stored limits
+    func getAllLimits() -> [StoredAppLimit] {
+        return LimitStorageManager.shared.loadLimits()
+    }
+
+    /// Remove a limit by UUID
+    func removeLimitReliable(id: UUID) {
+        // Stop monitoring
+        let activityName = DeviceActivityName("se7en.limit.\(id.uuidString)")
+        deviceActivityCenter.stopMonitoring([activityName])
+        
+        // Remove from storage
+        LimitStorageManager.shared.removeLimit(id: id)
+        
+        // Also remove from Core Data
+        let goals = coreDataManager.getActiveAppGoals()
+        if let goal = goals.first(where: { $0.appBundleID == id.uuidString }) {
+            coreDataManager.deleteAppGoal(goal)
+        }
+        
+        // Remove from in-memory cache
+        appSelections.removeValue(forKey: id.uuidString)
+        
+        print("🗑️ Removed limit: \(id.uuidString.prefix(8))...")
+    }
+    
     // MARK: - Simple Monitoring Setup
     
     private func saveSelectionToSharedContainer(selection: FamilyActivitySelection, tokenHash: String) {
