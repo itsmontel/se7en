@@ -439,7 +439,6 @@ class CoreDataManager: ObservableObject {
         let calendar = Calendar.current
         let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) ?? Date()
         let startOfYesterday = calendar.startOfDay(for: yesterday)
-        let endOfYesterday = calendar.date(byAdding: .day, value: 1, to: startOfYesterday) ?? Date()
         
         var hasExceededLimit = false
         

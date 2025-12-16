@@ -159,6 +159,7 @@ struct BlockingView: View {
             }
             .navigationTitle("Limits")
             .navigationBarTitleDisplayMode(.inline)
+            .textCase(.none)
             .sheet(isPresented: $showingFamilyPicker) {
                 if screenTimeService.isAuthorized {
                     FamilyActivityPicker(selection: $familySelection)

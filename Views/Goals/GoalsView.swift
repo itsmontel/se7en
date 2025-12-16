@@ -483,48 +483,27 @@ struct WeeklyHealthReport: View {
             return (0, .content)
         }
         
-        // For today, use actual data
+        // For today, use the same screen time-based calculation as the main health system
         if isToday {
-            // For new users with no apps or no usage, return 0
-            guard !appState.monitoredApps.isEmpty else {
-                return (0, .sick)
-            }
+            // Use the same calculation as AppState.calculatePetHealthPercentage()
+            let healthPercentage = appState.calculatePetHealthPercentage()
             
-            let totalUsage = appState.monitoredApps.reduce(0) { $0 + $1.usedToday }
-            let totalLimits = appState.monitoredApps.reduce(0) { $0 + $1.dailyLimit }
-            
-            guard totalLimits > 0 else {
-                return (0, .sick)
-            }
-            
-            // If no usage yet today, return 0 (not 100)
-            guard totalUsage > 0 else {
-                return (0, .sick)
-            }
-            
-            let usagePercentage = Double(totalUsage) / Double(totalLimits)
-            let score: Int
+            // Convert health percentage to PetHealthState (same logic as updatePetHealth)
             let mood: PetHealthState
-            
-            switch usagePercentage {
-            case 0...0.5:
-                score = 100
+            switch healthPercentage {
+            case 90...100:
                 mood = .fullHealth
-            case 0.5...0.7:
-                score = 80
+            case 70..<90:
                 mood = .happy
-            case 0.7...0.9:
-                score = 60
+            case 50..<70:
                 mood = .content
-            case 0.9...1.1:
-                score = 40
+            case 20..<50:
                 mood = .sad
             default:
-                score = 20
                 mood = .sick
             }
             
-            return (score, mood)
+            return (healthPercentage, mood)
         }
         
         // For past days, return 0 if no actual data exists
@@ -1550,6 +1529,7 @@ struct RecommendationSheet: View {
             }
             .navigationTitle("Coach Insights")
             .navigationBarTitleDisplayMode(.inline)
+            .textCase(.none)
         }
     }
 }

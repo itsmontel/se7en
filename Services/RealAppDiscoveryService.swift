@@ -1,5 +1,5 @@
 import Foundation
-import FamilyControls
+@preconcurrency import FamilyControls
 import ManagedSettings
 import UIKit
 
@@ -153,11 +153,9 @@ class RealAppDiscoveryService: ObservableObject {
         isLoading = true
         currentSelection = selection
         
-        // Process on background queue to avoid blocking UI
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-        
-        var apps: [RealInstalledApp] = []
+        // Process on main actor to avoid Sendable warnings
+        Task { @MainActor in
+            var apps: [RealInstalledApp] = []
             var tokenHashMap: [String: AnyHashable] = [:]
             
             print("📱 Processing selection:")
@@ -166,7 +164,7 @@ class RealAppDiscoveryService: ObservableObject {
             print("   Web domain tokens: \(selection.webDomainTokens.count)")
             
             // ✅ Process ApplicationToken (individual apps)
-        for token in selection.applicationTokens {
+            for token in selection.applicationTokens {
                 let tokenHash = String(token.hashValue)
                 tokenHashMap[tokenHash] = token
                 
@@ -197,37 +195,35 @@ class RealAppDiscoveryService: ObservableObject {
             for token in selection.webDomainTokens {
                 let tokenHash = String(token.hashValue)
                 tokenHashMap[tokenHash] = token
-            
-            let app = RealInstalledApp(
-                token: token,
+                
+                let app = RealInstalledApp(
+                    token: token,
                     tokenType: .webDomain
-            )
-            apps.append(app)
+                )
+                apps.append(app)
                 
                 print("   ✅ Web domain token: hash=\(tokenHash)")
-        }
-        
-        // Categorize apps
-        var categorized: [AppCategory: [RealInstalledApp]] = [:]
-        for app in apps {
-            if categorized[app.category] == nil {
-                categorized[app.category] = []
             }
-            categorized[app.category]?.append(app)
-        }
-        
-        // Sort within each category
-        for category in categorized.keys {
+            
+            // Categorize apps
+            var categorized: [AppCategory: [RealInstalledApp]] = [:]
+            for app in apps {
+                if categorized[app.category] == nil {
+                    categorized[app.category] = []
+                }
+                categorized[app.category]?.append(app)
+            }
+            
+            // Sort within each category
+            for category in categorized.keys {
                 categorized[category]?.sort { $0.tokenHash < $1.tokenHash }
-        }
-        
-            // Update UI on main thread
-        DispatchQueue.main.async {
+            }
+            
+            // Update UI state
             self.categorizedApps = categorized
             self.selectedApps = selection.applicationTokens
-                self.tokenHashToTokenMap = tokenHashMap
+            self.tokenHashToTokenMap = tokenHashMap
             self.isLoading = false
-        }
             
             print("✅ Processed \(apps.count) items into \(categorized.keys.count) categories")
         }
