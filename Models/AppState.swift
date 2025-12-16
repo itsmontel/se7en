@@ -93,6 +93,8 @@ class AppState: ObservableObject {
                 if UIApplication.shared.applicationState == .active {
                     ScreenTimeService.shared.syncUsageFromSharedContainer()
                     self?.loadAppGoals()
+                    // ✅ Update pet health whenever we sync screen time data
+                    self?.updatePetHealth()
                 }
             }
             .store(in: &cancellables)
@@ -100,6 +102,8 @@ class AppState: ObservableObject {
         // Listen for Screen Time data updates (removed duplicate)
         NotificationCenter.default.publisher(for: .screenTimeDataUpdated)
             .sink { [weak self] _ in
+                // ✅ Immediately update health when screen time data changes
+                self?.updatePetHealth()
                 self?.refreshData()
             }
             .store(in: &cancellables)
@@ -651,23 +655,36 @@ class AppState: ObservableObject {
     }
     
     /// Calculate pet health percentage based on today's total screen time
-    /// Uses todayScreenTimeMinutes which is set by the dashboard (same source as the displayed screen time)
-    /// Falls back to reading from shared container if dashboard hasn't set it yet
+    /// Always reads directly from shared container or ScreenTimeService to ensure latest data
+    /// This ensures health updates even when DashboardView hasn't loaded yet
     /// - Returns: Health percentage from 0-100
     func calculatePetHealthPercentage() -> Int {
-        // ✅ Use the same screen time value that the dashboard displays
-        // This is set by DashboardView when it loads screen time data
-        var totalMinutes = todayScreenTimeMinutes
+        // ✅ ALWAYS read directly from shared container first (source of truth from report extension)
+        // This ensures health reflects current screen time even if DashboardView hasn't loaded
+        let appGroupID = "group.com.se7en.app"
+        var totalMinutes = 0
         
-        // ✅ FALLBACK: If dashboard hasn't set it yet, read from shared container (same as dashboard does)
-        if totalMinutes == 0 {
-            let appGroupID = "group.com.se7en.app"
-            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-                totalMinutes = sharedDefaults.integer(forKey: "total_usage")
-                if totalMinutes > 0 {
-                    print("🏥 calculatePetHealthPercentage: Using fallback from shared container: \(totalMinutes) minutes")
-                }
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            // Force sync to get latest data
+            sharedDefaults.synchronize()
+            totalMinutes = sharedDefaults.integer(forKey: "total_usage")
+            if totalMinutes > 0 {
+                print("🏥 calculatePetHealthPercentage: Using shared container: \(totalMinutes) minutes")
             }
+        }
+        
+        // ✅ FALLBACK: If shared container is empty, try ScreenTimeService
+        if totalMinutes == 0 {
+            totalMinutes = ScreenTimeService.shared.getTotalScreenTimeTodaySync()
+            if totalMinutes > 0 {
+                print("🏥 calculatePetHealthPercentage: Using ScreenTimeService: \(totalMinutes) minutes")
+            }
+        }
+        
+        // ✅ FINAL FALLBACK: Use todayScreenTimeMinutes if set (for backwards compatibility)
+        if totalMinutes == 0 && todayScreenTimeMinutes > 0 {
+            totalMinutes = todayScreenTimeMinutes
+            print("🏥 calculatePetHealthPercentage: Using todayScreenTimeMinutes: \(totalMinutes) minutes")
         }
         
         // Convert to hours for easier calculation
