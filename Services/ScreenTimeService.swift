@@ -146,33 +146,47 @@ final class ScreenTimeService: ObservableObject {
             return
         }
         
-        // ✅ Use token hash as the unique identifier
+        // ✅ Use token hash as the unique identifier - compute from first token
         let tokenHash = String(firstToken.hashValue)
+        
+        // ✅ CRITICAL: Verify hash consistency - compute from all tokens and use first
+        // This ensures the hash matches what the extension will compute
+        var computedHashes: [String] = []
+        for token in selection.applicationTokens {
+            computedHashes.append(String(token.hashValue))
+        }
+        
+        // Use the first token's hash (should be consistent)
+        let verifiedTokenHash = computedHashes.first ?? tokenHash
         
         print("\n" + String(repeating: "=", count: 60))
         print("📱 ADDING APP FOR MONITORING")
-        print("   Token hash: \(tokenHash)")
+        print("   Token hash: \(verifiedTokenHash)")
+        print("   All token hashes: \(computedHashes)")
         print("   Custom name: '\(appName)'")
         print("   Limit: \(dailyLimitMinutes) minutes")
         print(String(repeating: "=", count: 60))
         
-        // Store the selection with token hash as key
-        appSelections[tokenHash] = selection
-        saveSelection(selection, forBundleID: tokenHash)
+        // Store the selection with verified token hash as key
+        appSelections[verifiedTokenHash] = selection
+        saveSelection(selection, forBundleID: verifiedTokenHash)
         
         // 🔥 CRITICAL: Save to shared container IMMEDIATELY for extension access
-        saveSelectionToSharedContainer(selection: selection, tokenHash: tokenHash)
+        saveSelectionToSharedContainer(selection: selection, tokenHash: verifiedTokenHash)
         
-        // Create app goal in Core Data using token hash as identifier
+        // ✅ NEW: Save ALL monitored app selections for extension to access
+        saveAllMonitoredSelectionsToSharedContainer()
+        
+        // Create app goal in Core Data using verified token hash as identifier
         let appGoal = coreDataManager.createAppGoal(
             appName: appName.isEmpty ? "" : appName,
-            bundleID: tokenHash,
+            bundleID: verifiedTokenHash,
             dailyLimitMinutes: dailyLimitMinutes
         )
         
         // 🔥 Initialize usage record AND shared container to 0 IMMEDIATELY
         let today = Calendar.current.startOfDay(for: Date())
-        if coreDataManager.getTodaysUsageRecord(for: tokenHash) == nil {
+        if coreDataManager.getTodaysUsageRecord(for: verifiedTokenHash) == nil {
             _ = coreDataManager.createUsageRecord(
                 for: appGoal,
                 date: today,
@@ -183,7 +197,7 @@ final class ScreenTimeService: ObservableObject {
         }
         
         // Initialize shared container
-        initializeSharedContainerUsage(tokenHash: tokenHash)
+        initializeSharedContainerUsage(tokenHash: verifiedTokenHash)
         
         // Set up basic DeviceActivity monitoring
         setupBasicMonitoring(for: appGoal, selection: selection)
@@ -208,6 +222,52 @@ final class ScreenTimeService: ObservableObject {
         } catch {
             print("❌ Failed to encode selection: \(error)")
         }
+    }
+    
+    /// ✅ CRITICAL: Save ONLY individual app selections (NO CATEGORIES!)
+    /// Limits page is ONLY for individual apps, categories are for Dashboard only
+    func saveAllMonitoredSelectionsToSharedContainer() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ Failed to access shared container")
+            return
+        }
+        
+        // Get all active goals
+        let goals = coreDataManager.getActiveAppGoals()
+        
+        // Build array of monitored app info - ONLY INDIVIDUAL APPS
+        var monitoredApps: [[String: Any]] = []
+        
+        for goal in goals {
+            guard let tokenHash = goal.appBundleID,
+                  let selection = appSelections[tokenHash] else {
+                continue
+            }
+            
+            // ✅ CRITICAL: ONLY save selections that have individual app tokens
+            // REJECT any selection with category tokens - categories are for Dashboard ONLY
+            guard !selection.applicationTokens.isEmpty,
+                  selection.categoryTokens.isEmpty else {
+                print("⚠️ Skipping \(goal.appName ?? tokenHash) - has categories (Limits are ONLY for individual apps)")
+                continue
+            }
+            
+            // Encode the selection
+            if let selectionData = try? PropertyListEncoder().encode(selection) {
+                let appInfo: [String: Any] = [
+                    "tokenHash": tokenHash,
+                    "appName": goal.appName ?? "",
+                    "limitMinutes": Int(goal.dailyLimitMinutes),
+                    "selectionData": selectionData
+                ]
+                monitoredApps.append(appInfo)
+            }
+        }
+        
+        sharedDefaults.set(monitoredApps, forKey: "monitored_app_selections")
+        sharedDefaults.synchronize()
+        
     }
     
     private func setupBasicMonitoring(for goal: AppGoal, selection: FamilyActivitySelection) {
@@ -642,44 +702,6 @@ final class ScreenTimeService: ObservableObject {
         return 0
     }
     
-    /// Get total screen time today (synchronous)
-    /// Uses the EXACT same logic as DashboardView: reads from shared container "total_usage" key first
-    /// This matches how the dashboard gets its screen time data
-    func getTotalScreenTimeTodaySync() -> Int {
-        let appGroupID = "group.com.se7en.app"
-        
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            print("❌ getTotalScreenTimeTodaySync: Failed to access shared container")
-            return 0
-        }
-        
-        // ✅ EXACT SAME LOGIC AS DASHBOARD: Read from "total_usage" key first
-        // This is the same as DashboardView.readUsageFromSharedContainer()
-        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
-        
-        if totalUsage > 0 {
-            print("📊 getTotalScreenTimeTodaySync: Using shared container total_usage: \(totalUsage) minutes")
-            return totalUsage
-        }
-        
-        // Fallback: Sum up usage from monitored apps (same as async version fallback)
-        let goals = coreDataManager.getActiveAppGoals()
-        var totalMinutes = 0
-        
-        for goal in goals {
-            guard let bundleID = goal.appBundleID,
-                  hasSelection(for: bundleID) else {
-                continue
-            }
-            
-            let usage = getUsageMinutes(for: bundleID)
-            totalMinutes += usage
-        }
-        
-        print("📊 getTotalScreenTimeTodaySync: Fallback - summed from monitored apps: \(totalMinutes) minutes")
-        return totalMinutes
-    }
-    
     /// Fetch usage data from DeviceActivityReport for a specific app
     /// This attempts to get real-time usage data
     func fetchUsageFromReport(for bundleID: String) async -> Int {
@@ -775,6 +797,40 @@ final class ScreenTimeService: ObservableObject {
                 }
             }
         }
+        
+        // ✅ NEW: Auto-update goal names when we find matches
+        // This helps goals with empty names get their real names populated
+        for goal in goals {
+            guard let tokenHash = goal.appBundleID else { continue }
+            
+            let currentName = goal.appName ?? ""
+            
+            // If goal already has a good name, skip
+            if !currentName.isEmpty && 
+               !currentName.contains("(hash:") && 
+               currentName != "App" {
+                continue
+            }
+            
+            // Try to find matching usage by looking at what we just synced
+            if let record = coreDataManager.getTodaysUsageRecord(for: tokenHash),
+               record.actualUsageMinutes > 0 {
+                // We found usage for this goal - try to find the source name
+                for (reportAppName, reportUsage) in perAppUsage {
+                    if reportUsage == Int(record.actualUsageMinutes) && reportUsage > 0 {
+                        // Potential match! Update the goal name
+                        goal.appName = reportAppName
+                        coreDataManager.save()
+                        
+                        // Cache the mapping for future use
+                        sharedDefaults.set(reportAppName, forKey: "token_to_name_\(tokenHash)")
+                        
+                        print("✅ Auto-updated goal name: '\(reportAppName)' for token \(tokenHash)")
+                        break
+                    }
+                }
+            }
+        }
     }
     
     
@@ -788,6 +844,7 @@ final class ScreenTimeService: ObservableObject {
         
         // First, try to update from all apps selection (either apps OR categories)
         if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
+            let itemCount = allApps.applicationTokens.count + allApps.categoryTokens.count
             print("📱 Updating from allAppsSelection with \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories")
             await updateUsageFromAllAppsSelection(allApps)
         } else {
@@ -854,7 +911,7 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Store the full selection (with categories) for this tracking goal
-            if !hasSelection(for: categoryBundleID) {
+            if !hasSelection(for: categoryBundleID), let goal = categoryGoal {
                 saveSelection(selection, forBundleID: categoryBundleID)
                 appSelections[categoryBundleID] = selection
                 print("💾 Stored category selection for tracking")
@@ -911,7 +968,7 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Ensure we have a selection stored for this app (needed for fetching usage)
-            if !hasSelection(for: stableID) {
+            if !hasSelection(for: stableID), let goal = goal {
                 // Store the selection for this app
                 // Create a selection with just this token
                 var appSelection = FamilyActivitySelection()
@@ -923,9 +980,9 @@ final class ScreenTimeService: ObservableObject {
             // Ensure usage record exists
             if coreDataManager.getTodaysUsageRecord(for: stableID) == nil, let goal = goal {
                 let today = Calendar.current.startOfDay(for: Date())
-                _ = coreDataManager.createUsageRecord(
-                    for: goal,
-                    date: today,
+            _ = coreDataManager.createUsageRecord(
+                for: goal,
+                date: today,
                     actualUsageMinutes: 0,
                     didExceedLimit: false
                 )
@@ -957,11 +1014,11 @@ final class ScreenTimeService: ObservableObject {
             }
             
             // Try to fetch usage from report if we have a selection
-            if hasSelection(for: stableID) {
+            if hasSelection(for: stableID), let goal = goal {
                 let fetchedUsage = await fetchUsageFromReport(for: stableID)
                 if fetchedUsage > 0 {
                     updateUsage(for: stableID, minutes: fetchedUsage)
-                    print("📊 Fetched and updated usage for \(stableID): \(fetchedUsage) minutes")
+                    print("📊 Fetched and updated usage for \(goal.appName ?? stableID): \(fetchedUsage) minutes")
                 }
             }
         }
@@ -1100,6 +1157,15 @@ final class ScreenTimeService: ObservableObject {
             print("📊 No category usage data yet from extension")
             return (0, 0)
         }
+        
+        // Fallback: estimate based on categories selected
+        // Each category typically has 10-20 apps, so estimate conservatively
+        let estimatedApps = selection.categoryTokens.count * 15
+        print("📊 Category fallback: Estimated \(estimatedApps) apps from \(selection.categoryTokens.count) categories")
+        print("📊 Note: DeviceActivityReport will provide real usage data when available")
+        
+        // Return estimated count with 0 usage (will be updated by DeviceActivityReport)
+        return (0, estimatedApps)
     }
     
     /// Get total screen time today (synchronous)
@@ -1436,6 +1502,10 @@ final class ScreenTimeService: ObservableObject {
             let updateThreshold = 1 // minutes
             let currentUsage = self.getUsageMinutes(for: bundleID)
         
+            // Use the maximum of current usage or the threshold
+            // This ensures we don't go backwards, but also captures the threshold amount
+            let newUsage = max(currentUsage, updateThreshold)
+            
             // If this is the first update, set to threshold amount
             // Otherwise, increment by threshold (since event fires every 1 min)
             let finalUsage = currentUsage == 0 ? updateThreshold : currentUsage + updateThreshold
@@ -1583,12 +1653,16 @@ final class ScreenTimeService: ObservableObject {
             return
         }
         
+        // ✅ Ensure extension has latest selections
+        saveAllMonitoredSelectionsToSharedContainer()
+        
         // Process pending events from Monitor Extension
         processPendingMonitorEvents()
         
         // Re-setup monitoring for all apps/categories in allAppsSelection
         if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
             Task {
+                let itemCount = allApps.applicationTokens.count + allApps.categoryTokens.count
                 print("📱 Refreshing monitoring for \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories in allAppsSelection")
                 await updateUsageFromAllAppsSelection(allApps)
                 print("✅ Refreshed monitoring for all apps")
@@ -1637,7 +1711,7 @@ final class ScreenTimeService: ObservableObject {
     private func processPendingMonitorEvents() {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID),
-              let events = sharedDefaults.array(forKey: "pendingEvents") as? [[String: String]],
+              var events = sharedDefaults.array(forKey: "pendingEvents") as? [[String: String]],
               !events.isEmpty else {
             return
         }

@@ -53,44 +53,13 @@ class AppState: ObservableObject {
     private var lastLoadAppGoalsTime: Date = Date.distantPast
     private let loadAppGoalsThrottleInterval: TimeInterval = 2.0 // Minimum 2 seconds between calls
     
-    /// Preload screen time from shared container - tries UserDefaults AND file backup
+    /// Preload screen time from shared container
     private func preloadScreenTimeFromSharedContainer() {
         let appGroupID = "group.com.se7en.app"
-        var totalUsage = 0
-        var lastUpdated: Double = 0
-        var source = "none"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        // METHOD 1: Try UserDefaults
-        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-            sharedDefaults.synchronize()
-            let usage = sharedDefaults.integer(forKey: "total_usage")
-            let updated = sharedDefaults.double(forKey: "last_updated")
-            if usage > 0 || updated > 0 {
-                totalUsage = usage
-                lastUpdated = updated
-                source = "UserDefaults"
-            }
-        }
-        
-        // METHOD 2: Try file backup if UserDefaults failed
-        if totalUsage == 0 {
-            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-                let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
-                if let data = try? Data(contentsOf: fileURL),
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    if let usage = json["total_usage"] as? Int {
-                        totalUsage = usage
-                        lastUpdated = json["last_updated"] as? Double ?? 0
-                        source = "File"
-                    }
-                }
-            }
-        }
-        
-        print("📊 V6 preload:")
-        print("   • total_usage: \(totalUsage) minutes")
-        print("   • last_updated: \(lastUpdated > 0 ? "YES" : "NEVER")")
-        print("   • source: \(source)")
+        sharedDefaults.synchronize()
+        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
         
         if totalUsage > 0 {
             self.todayScreenTimeMinutes = totalUsage
@@ -251,6 +220,9 @@ class AppState: ObservableObject {
         }
         lastLoadAppGoalsTime = now
         
+        // ✅ Apply any pending name updates from extension FIRST
+        applyPendingGoalNameUpdates()
+        
         // Clean up expired restrictions before loading
         cleanupExpiredRestrictions()
         
@@ -260,6 +232,9 @@ class AppState: ObservableObject {
         // ✅ Sync usage from shared container (written by monitor extension) BEFORE loading goals
         // This ensures we have the latest usage data when displaying limits
         screenTimeService.syncUsageFromSharedContainer()
+        
+        // ✅ Ensure extension has our selections
+        screenTimeService.saveAllMonitoredSelectionsToSharedContainer()
         
         let goals = coreDataManager.getActiveAppGoals()
         
@@ -309,8 +284,7 @@ class AppState: ObservableObject {
             )
         }
         
-        // Only log summary, not per-app details
-        print("📊 Loaded \(userGoals.count) goals, \(monitoredApps.count) monitored apps")
+        // Data loaded
         
         // Convert to AppUsage format for dashboard display
         appUsage = userGoals.map { goal in
@@ -337,47 +311,108 @@ class AppState: ObservableObject {
         }
     }
     
+    /// Get current usage for a goal - bulletproof matching with multiple fallbacks
     private func getCurrentUsage(for goal: AppGoal) -> Int {
         let tokenHash = goal.appBundleID ?? ""
-        
-        // Always read fresh from shared container (where monitor extension writes)
-        let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            // Fallback to Core Data if shared container unavailable
-            if let usageRecord = screenTimeService.getAppUsageToday(for: tokenHash) {
-                return Int(usageRecord.actualUsageMinutes)
-            }
-            return 0
-        }
-        
-        // Force read fresh data from disk
-        sharedDefaults.synchronize()
-        
-        // Priority 1: Read from monitor extension (by token hash)
-        let tokenUsage = sharedDefaults.integer(forKey: "usage_\(tokenHash)")
-        if tokenUsage > 0 {
-            return tokenUsage
-        }
-        
-        // Priority 2: Try per-app usage from report extension (by name)
         let appName = goal.appName ?? ""
-        let normalizedGoalName = appName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if !normalizedGoalName.isEmpty {
-            let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
-            for (reportAppName, reportUsage) in perAppUsage {
-                let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                if normalizedGoalName == normalizedReportName {
-                    return reportUsage
+        guard !tokenHash.isEmpty else { return 0 }
+        
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return 0 }
+        
+        sharedDefaults.synchronize()
+        applyPendingGoalNameUpdates()
+        
+        // PRIORITY 1: Direct lookup with stored token hash
+        var usage = sharedDefaults.integer(forKey: "usage_\(tokenHash)")
+        if usage > 0 { return usage }
+        
+        // PRIORITY 2: Check hash mapping (if hash differs, extension mapped it)
+        if let hashMapping = sharedDefaults.dictionary(forKey: "token_hash_mapping") as? [String: String],
+           let mappedHash = hashMapping[tokenHash] {
+            usage = sharedDefaults.integer(forKey: "usage_\(mappedHash)")
+            if usage > 0 { return usage }
+        }
+        
+        // PRIORITY 3: per_token_hash_usage dictionary
+        if let perTokenUsage = sharedDefaults.dictionary(forKey: "per_token_hash_usage") as? [String: Int] {
+            if let tokenUsage = perTokenUsage[tokenHash], tokenUsage > 0 {
+                return tokenUsage
+            }
+            
+            // Try mapped hash in dictionary
+            if let hashMapping = sharedDefaults.dictionary(forKey: "token_hash_mapping") as? [String: String],
+               let mappedHash = hashMapping[tokenHash],
+               let mappedUsage = perTokenUsage[mappedHash], mappedUsage > 0 {
+                return mappedUsage
+            }
+        }
+        
+        // PRIORITY 4: Match by app name (fallback)
+        if !appName.isEmpty {
+            let normalizedName = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Try name-to-hash mapping
+            if let nameToHash = sharedDefaults.dictionary(forKey: "app_name_to_hash") as? [String: String],
+               let nameHash = nameToHash[normalizedName] {
+                usage = sharedDefaults.integer(forKey: "usage_\(nameHash)")
+                if usage > 0 { return usage }
+            }
+            
+            // Try per_app_usage dictionary
+            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
+                for (reportAppName, reportUsage) in perAppUsage {
+                    let normalizedReportName = reportAppName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                    if normalizedReportName == normalizedName || normalizedReportName.contains(normalizedName) || normalizedName.contains(normalizedReportName) {
+                        return reportUsage
+                    }
                 }
             }
         }
         
-        // Priority 3: Fallback to Core Data
-        if let usageRecord = screenTimeService.getAppUsageToday(for: tokenHash) {
-            return Int(usageRecord.actualUsageMinutes)
+        // PRIORITY 5: Try to compute hash from stored selection and match
+        if let selection = screenTimeService.getSelection(for: tokenHash),
+           let firstToken = selection.applicationTokens.first {
+            let computedHash = String(firstToken.hashValue)
+            if computedHash != tokenHash {
+                usage = sharedDefaults.integer(forKey: "usage_\(computedHash)")
+                if usage > 0 { return usage }
+            }
         }
         
         return 0
+    }
+    
+    /// ✅ NEW: Apply pending name updates from extension
+    private func applyPendingGoalNameUpdates() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return
+        }
+        
+        guard let pendingUpdates = sharedDefaults.dictionary(forKey: "pending_goal_name_updates") as? [String: String],
+              !pendingUpdates.isEmpty else {
+            return
+        }
+        
+        let goals = coreDataManager.getActiveAppGoals()
+        var applied = false
+        
+        for (tokenHash, appName) in pendingUpdates {
+            if let goal = goals.first(where: { $0.appBundleID == tokenHash }) {
+                if goal.appName?.isEmpty ?? true {
+                    goal.appName = appName
+                    applied = true
+                }
+            }
+        }
+        
+        if applied {
+            coreDataManager.save()
+            // Clear pending updates
+            sharedDefaults.removeObject(forKey: "pending_goal_name_updates")
+            sharedDefaults.synchronize()
+        }
     }
     
     private func getAppIcon(for appName: String) -> String {
@@ -713,39 +748,22 @@ class AppState: ObservableObject {
         }
     }
     
+    /// Calculate pet health based on daily screen time
     func calculatePetHealthPercentage() -> Int {
         var totalMinutes = todayScreenTimeMinutes
         
-        // Try to get from shared container if not set
         if totalMinutes == 0 {
             let appGroupID = "group.com.se7en.app"
-            
-            // Try UserDefaults first
             if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
                 sharedDefaults.synchronize()
                 totalMinutes = sharedDefaults.integer(forKey: "total_usage")
-            }
-            
-            // Try file backup
-            if totalMinutes == 0 {
-                if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-                    let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
-                    if let data = try? Data(contentsOf: fileURL),
-                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let usage = json["total_usage"] as? Int {
-                        totalMinutes = usage
-                    }
+                if totalMinutes > 0 {
+                    self.todayScreenTimeMinutes = totalMinutes
                 }
-            }
-            
-            if totalMinutes > 0 {
-                print("🏥 V5: Got \(totalMinutes) minutes from shared container")
-                self.todayScreenTimeMinutes = totalMinutes
             }
         }
         
         let totalHours = Double(totalMinutes) / 60.0
-        print("🏥 calculatePetHealthPercentage: \(totalMinutes) minutes (\(String(format: "%.2f", totalHours)) hours)")
         
         let healthPercentage: Int
         switch totalHours {

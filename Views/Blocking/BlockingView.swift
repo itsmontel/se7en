@@ -153,6 +153,10 @@ struct BlockingView: View {
                         .padding(.top, 12)
                         
                         Spacer(minLength: 60)
+                        
+                        #if DEBUG
+                        debugView
+                        #endif
                     }
                     .padding(.top, 12)
                 }
@@ -164,29 +168,17 @@ struct BlockingView: View {
                 if screenTimeService.isAuthorized {
                     FamilyActivityPicker(selection: $familySelection)
                         .onChange(of: familySelection) { newSelection in
-                            // ✅ Accept app as long as we have tokens - no extraction needed!
-                            if let firstToken = newSelection.applicationTokens.first {
-                                selectedToken = firstToken
-                                
-                                // ✅ Use token hash as identifier (not bundle ID!)
-                                let tokenHash = String(firstToken.hashValue)
-                                
-                                print("🎯 Selected app from picker:")
-                                print("   Token hash: \(tokenHash)")
-                                print("   Tokens: \(newSelection.applicationTokens.count)")
-                                
-                                // ✅ Label(token) will automatically show the app name and icon
-                                // We don't need to extract anything - just store the token hash
-                                selectedAppName = ""  // Will be shown via Label(token) in UI
-                                selectedBundleID = tokenHash  // Store token hash as identifier
-                                
-                                // Close picker and show limit sheet
-                                // We always accept the app as long as we have a token
-                                showingFamilyPicker = false
-                                showingLimitSheet = true
-                            } else if !newSelection.categoryTokens.isEmpty {
-                                // Handle category-based selection
-                                print("📱 Category-based selection with \(newSelection.categoryTokens.count) categories")
+                            // Only allow individual app selection (no categories for limits)
+                            if newSelection.applicationTokens.count == 1 && newSelection.categoryTokens.isEmpty {
+                                if let firstToken = newSelection.applicationTokens.first {
+                                    selectedToken = firstToken
+                                    let tokenHash = String(firstToken.hashValue)
+                                    selectedBundleID = tokenHash
+                                    selectedAppName = "" // Name will be set by extension
+                                    
+                                    showingFamilyPicker = false
+                                    showingLimitSheet = true
+                                }
                             }
                         }
                 }
@@ -207,15 +199,24 @@ struct BlockingView: View {
                 }
             }
             .onAppear {
-                // Refresh usage data from shared container when Limits page appears
-                // This ensures we get the latest data from the report extension
-                screenTimeService.syncUsageFromSharedContainer()
-                appState.loadAppGoals()  // Reload to update monitoredApps with fresh usage
+                Task {
+                    screenTimeService.syncUsageFromSharedContainer()
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    await MainActor.run {
+                        appState.loadAppGoals()
+                    }
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                // Also refresh when app returns from background
-                screenTimeService.syncUsageFromSharedContainer()
-                appState.loadAppGoals()
+                // ⚠️ FIX: Also refresh when app returns from background
+                print("🔄 BlockingView: Returning from background - forcing sync")
+                Task {
+                    screenTimeService.syncUsageFromSharedContainer()
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    await MainActor.run {
+                        appState.loadAppGoals()
+                    }
+                }
             }
             .alert("Delete Limit", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {
@@ -231,6 +232,39 @@ struct BlockingView: View {
             }
         }
     }
+    
+    #if DEBUG
+    private var debugView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("🐛 DEBUG INFO")
+                .font(.headline)
+            
+            if let sharedDefaults = UserDefaults(suiteName: "group.com.se7en.app") {
+                let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+                
+                Text("per_app_usage keys:")
+                    .font(.caption)
+                ForEach(Array(perAppUsage.keys.sorted()), id: \.self) { key in
+                    Text("  '\(key)': \(perAppUsage[key] ?? 0) min")
+                        .font(.caption2)
+                }
+                
+                Divider()
+                
+                Text("Goal names:")
+                    .font(.caption)
+                ForEach(appState.monitoredApps, id: \.id) { app in
+                    Text("  '\(app.name)': used=\(app.usedToday), limit=\(app.dailyLimit)")
+                        .font(.caption2)
+                }
+            }
+        }
+        .padding()
+        .background(Color.yellow.opacity(0.2))
+        .cornerRadius(8)
+        .padding()
+    }
+    #endif
     
     private func deleteLimit(_ app: MonitoredApp) {
         // Find the matching Core Data goal using the token hash (our stable identifier)
@@ -1658,51 +1692,50 @@ struct SetLimitSheet: View {
     }
     
     private func addApp() {
-        guard let token = token else {
-            print("❌ No token available")
-            return
+        // ✅ Ensure we have an app name - prompt user or use what we have
+        var finalAppName = appName
+        
+        // If name is empty, we should have prompted the user in the UI
+        // For now, use a placeholder that includes the token hash for debugging
+        if finalAppName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            print("⚠️ SetLimitSheet: App name is empty, using placeholder")
+            // The UI should have Label(token) showing the real name
+            // Store empty for now - matching will use per_app_usage
         }
         
-        // ✅ bundleID is now the token hash
-        let tokenHash = bundleID
+        let tokenHash = bundleID  // bundleID is actually the token hash
         
         // ✅ FIX: Create selection directly from fullSelection.applicationTokens
-        // Use the token from fullSelection directly (it's already ApplicationToken type)
         var appSelection = FamilyActivitySelection()
         
-        // Use the first token from fullSelection since that's what was selected
-        // Don't rely on hash comparison which is unreliable
         if let firstToken = fullSelection.applicationTokens.first {
             appSelection.applicationTokens = [firstToken]
             print("✅ Created selection with token from fullSelection")
         } else if !fullSelection.categoryTokens.isEmpty {
-            // Fallback: use category tokens if available
             appSelection.categoryTokens = fullSelection.categoryTokens
             print("⚠️ Using category tokens from full selection")
         } else {
-            // Last resort: use the full selection
             appSelection = fullSelection
             print("⚠️ Using full selection as fallback")
         }
         
-        guard !appSelection.applicationTokens.isEmpty else {
+        guard !appSelection.applicationTokens.isEmpty || !appSelection.categoryTokens.isEmpty else {
             print("❌ Cannot add app - no valid tokens in selection")
             return
         }
         
         print("📱 Adding app with:")
         print("   Token hash: \(tokenHash)")
-        print("   Custom name: '\(appName)'")
+        print("   App name: '\(finalAppName)'")
         print("   Limit: \(selectedLimit) minutes")
         print("   Tokens: \(appSelection.applicationTokens.count)")
         
         // ✅ Add the app goal using token hash as identifier
-        // Use empty string if no custom name (UI will use Label(token) to show real name)
         appState.addAppGoalFromFamilySelection(
             appSelection,
-            appName: appName.isEmpty ? "" : appName,  // Empty string if no custom name (UI uses Label(token))
+            appName: finalAppName,
             dailyLimitMinutes: selectedLimit,
-            bundleID: tokenHash  // ✅ Token hash is the identifier
+            bundleID: tokenHash
         )
         
         // Save schedule with token hash
@@ -1711,15 +1744,11 @@ struct SetLimitSheet: View {
             print("💾 Saved schedule for token hash: \(tokenHash)")
         }
         
-        // 🔍 DEBUG: App added successfully
-        print("\n🔍 DEBUG: App added successfully")
-        print("   Token hash: \(tokenHash)")
-        print("   Custom name: \(appName)")
-        print("   Limit: \(selectedLimit) minutes")
-        // Force immediate check
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            let currentUsage = ScreenTimeService.shared.getUsageMinutes(for: tokenHash)
-            print("   Current usage after 2s: \(currentUsage) minutes")
+        // ✅ NEW: Trigger immediate sync to try to get real app name
+        // The report extension will write the real name to per_app_usage
+        // Next time we load, we can try to match and cache the name
+        Task {
+            await ScreenTimeService.shared.updateUsageFromReport()
         }
         
         HapticFeedback.success.trigger()

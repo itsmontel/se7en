@@ -226,9 +226,9 @@ struct DashboardView: View {
         
         // Try UserDefaults
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-            sharedDefaults.synchronize()
+        sharedDefaults.synchronize()
             totalUsage = sharedDefaults.integer(forKey: "total_usage")
-            if totalUsage > 0 {
+        if totalUsage > 0 {
                 source = "UserDefaults"
             }
         }
@@ -905,8 +905,8 @@ struct DashboardView: View {
                 // Only show border in light mode, remove in dark mode
                 Group {
                     if colorScheme == .light {
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.cardBackground, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.cardBackground, lineWidth: 1)
                     }
                 }
             )
