@@ -248,41 +248,63 @@ class AppState: ObservableObject {
             )
         }
         
-        // Convert to MonitoredApp format for dashboard compatibility
-        // ONLY include apps that have Screen Time tokens (are actually connected via Screen Time API)
-        // EXCLUDE category-based tracking (All Categories Tracking) - limits are only for individual apps
-        // ✅ Now using token hash as identifier (stored in appBundleID field)
+        // ✅ NEW: Load from AppLimitStorage (ApplicationToken-based system)
+        let storage = AppLimitStorage.shared
+        let appLimits = storage.loadAppLimits()
+        
+        // Convert AppLimits to MonitoredApp format
+        var newMonitoredApps: [MonitoredApp] = []
+        
+        for limit in appLimits where limit.isEnabled {
+            let usageMinutes = storage.getUsageMinutes(limitId: limit.id)
+            
+            newMonitoredApps.append(MonitoredApp(
+                name: limit.appName.isEmpty ? "App" : limit.appName,
+                icon: "app.fill",
+                dailyLimit: limit.dailyLimitMinutes,
+                usedToday: usageMinutes,
+                color: getAppColor(for: limit.appName),
+                isEnabled: limit.isEnabled,
+                tokenHash: limit.id.uuidString,
+                limitId: limit.id
+            ))
+        }
+        
+        // Also include legacy Core Data goals for backward compatibility
         let screenTimeService = ScreenTimeService.shared
-        monitoredApps = goals.compactMap { goal in
-            let tokenHash = goal.appBundleID ?? "" // ✅ This is now the token hash
+        for goal in goals {
+            let identifier = goal.appBundleID ?? ""
             
-            // EXCLUDE "All Categories Tracking" - limits are only for individual apps
-            if tokenHash == "com.se7en.allcategories" {
-                return nil
+            // Skip if already loaded from AppLimitStorage
+            if UUID(uuidString: identifier) != nil {
+                continue
             }
             
-            // ONLY show apps that have Screen Time tokens (are connected via FamilyActivityPicker)
-            // We check by token hash
-            guard !tokenHash.isEmpty, screenTimeService.hasSelection(for: tokenHash) else {
-                return nil
+            // EXCLUDE "All Categories Tracking"
+            if identifier == "com.se7en.allcategories" {
+                continue
             }
             
-            // Get effective daily limit (includes extensions for today)
-            let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: tokenHash)
+            // ONLY show apps that have Screen Time tokens
+            guard !identifier.isEmpty, screenTimeService.hasSelection(for: identifier) else {
+                continue
+            }
             
-            // ✅ Use custom name if provided, otherwise will be shown via Label(token) in UI
+            let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: identifier)
             let customName = goal.appName ?? ""
             
-            return MonitoredApp(
-                name: customName.isEmpty ? "App" : customName,  // Fallback name (real name shown via Label)
-                icon: "app.fill",  // Fallback icon (real icon shown via Label)
+            newMonitoredApps.append(MonitoredApp(
+                name: customName.isEmpty ? "App" : customName,
+                icon: "app.fill",
                 dailyLimit: effectiveLimit,
                 usedToday: getCurrentUsage(for: goal),
                 color: getAppColor(for: customName),
                 isEnabled: goal.isActive,
-                tokenHash: tokenHash  // ✅ Store token hash for retrieving selection
-            )
+                tokenHash: identifier
+            ))
         }
+        
+        monitoredApps = newMonitoredApps
         
         // Data loaded
         
@@ -311,44 +333,44 @@ class AppState: ObservableObject {
         }
     }
     
-    /// Get current usage for a goal - bulletproof matching with multiple fallbacks
+    /// Get current usage for a goal - uses AppLimitStorage with ApplicationToken
     private func getCurrentUsage(for goal: AppGoal) -> Int {
-        let tokenHash = goal.appBundleID ?? ""
-        let appName = goal.appName ?? ""
-        guard !tokenHash.isEmpty else { return 0 }
+        let identifier = goal.appBundleID ?? ""
+        guard !identifier.isEmpty else { return 0 }
         
+        // ✅ PRIORITY 1: Try to get usage from AppLimitStorage (new system with UUID)
+        if let limitId = UUID(uuidString: identifier) {
+            let usage = AppLimitStorage.shared.getUsageMinutes(limitId: limitId)
+            if usage > 0 { return usage }
+        }
+        
+        // ✅ PRIORITY 2: Fallback to legacy hash-based system
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return 0 }
         
         sharedDefaults.synchronize()
         applyPendingGoalNameUpdates()
         
-        // PRIORITY 1: Direct lookup with stored token hash
-        var usage = sharedDefaults.integer(forKey: "usage_\(tokenHash)")
+        // Try direct lookup with stored token hash
+        var usage = sharedDefaults.integer(forKey: "usage_\(identifier)")
         if usage > 0 { return usage }
         
-        // PRIORITY 2: Check hash mapping (if hash differs, extension mapped it)
+        // Try hash mapping
         if let hashMapping = sharedDefaults.dictionary(forKey: "token_hash_mapping") as? [String: String],
-           let mappedHash = hashMapping[tokenHash] {
+           let mappedHash = hashMapping[identifier] {
             usage = sharedDefaults.integer(forKey: "usage_\(mappedHash)")
             if usage > 0 { return usage }
         }
         
-        // PRIORITY 3: per_token_hash_usage dictionary
+        // Try per_token_hash_usage dictionary
         if let perTokenUsage = sharedDefaults.dictionary(forKey: "per_token_hash_usage") as? [String: Int] {
-            if let tokenUsage = perTokenUsage[tokenHash], tokenUsage > 0 {
+            if let tokenUsage = perTokenUsage[identifier], tokenUsage > 0 {
                 return tokenUsage
-            }
-            
-            // Try mapped hash in dictionary
-            if let hashMapping = sharedDefaults.dictionary(forKey: "token_hash_mapping") as? [String: String],
-               let mappedHash = hashMapping[tokenHash],
-               let mappedUsage = perTokenUsage[mappedHash], mappedUsage > 0 {
-                return mappedUsage
             }
         }
         
-        // PRIORITY 4: Match by app name (fallback)
+        // ✅ PRIORITY 3: Match by app name (fallback)
+        let appName = goal.appName ?? ""
         if !appName.isEmpty {
             let normalizedName = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             
@@ -370,11 +392,11 @@ class AppState: ObservableObject {
             }
         }
         
-        // PRIORITY 5: Try to compute hash from stored selection and match
-        if let selection = screenTimeService.getSelection(for: tokenHash),
+        // PRIORITY 4: Try to compute hash from stored selection and match
+        if let selection = screenTimeService.getSelection(for: identifier),
            let firstToken = selection.applicationTokens.first {
             let computedHash = String(firstToken.hashValue)
-            if computedHash != tokenHash {
+            if computedHash != identifier {
                 usage = sharedDefaults.integer(forKey: "usage_\(computedHash)")
                 if usage > 0 { return usage }
             }

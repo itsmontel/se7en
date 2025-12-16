@@ -267,32 +267,51 @@ struct BlockingView: View {
     #endif
     
     private func deleteLimit(_ app: MonitoredApp) {
-        // Find the matching Core Data goal using the token hash (our stable identifier)
+        let storage = AppLimitStorage.shared
+        
+        HapticFeedback.medium.trigger()
+        
+        // ✅ Try new AppLimitStorage system first
+        if let limitId = app.limitId {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                storage.removeAppLimit(id: limitId)
+                ScreenTimeService.shared.removeAppLimit(limitId)
+                appState.loadAppGoals()
+            }
+            appToDelete = nil
+            return
+        }
+        
+        // Try UUID from tokenHash
+        if let tokenHash = app.tokenHash, let limitId = UUID(uuidString: tokenHash) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                storage.removeAppLimit(id: limitId)
+                ScreenTimeService.shared.removeAppLimit(limitId)
+                appState.loadAppGoals()
+            }
+            appToDelete = nil
+            return
+        }
+        
+        // ✅ Fallback to legacy Core Data system
         let coreDataManager = CoreDataManager.shared
         let goals = coreDataManager.getActiveAppGoals()
         
         if let tokenHash = app.tokenHash,
            let goal = goals.first(where: { $0.appBundleID == tokenHash }) {
             
-            // Provide haptic feedback
-            HapticFeedback.medium.trigger()
-            
-            // Animate the deletion with a smooth fade and slide animation
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 if let goalId = goal.id {
-                    // Use AppState helper so Screen Time monitoring is also cleaned up
                     appState.deleteAppGoal(goalId)
                 } else {
-                    // Fallback: delete directly if goal has no id for some reason
                     coreDataManager.deleteAppGoal(goal)
                     appState.loadAppGoals()
                 }
             }
         } else {
-            print("❌ deleteLimit: No matching goal found for app \(app.name) with tokenHash \(app.tokenHash ?? "nil")")
+            print("❌ deleteLimit: No matching goal found for app \(app.name)")
         }
         
-        // Clear the delete state
         appToDelete = nil
     }
 
@@ -1121,20 +1140,51 @@ struct EditLimitSheet: View {
     }
     
     private func saveLimit() {
-        let coreDataManager = CoreDataManager.shared
-        let goals = coreDataManager.getActiveAppGoals()
+        let storage = AppLimitStorage.shared
         
-        // ✅ Use token hash as identifier (stored in appBundleID field)
-        guard let tokenHash = app.tokenHash else {
-            print("❌ Cannot save limit - no token hash for app")
+        // ✅ Try to update using new AppLimitStorage system first
+        if let limitId = app.limitId {
+            storage.updateAppLimit(id: limitId, dailyLimitMinutes: newLimit, isEnabled: nil)
+            
+            // Save schedule
+            if let scheduleData = try? JSONEncoder().encode(schedule) {
+                UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(limitId.uuidString)")
+            }
+            
+            HapticFeedback.success.trigger()
+            appState.loadAppGoals()
             dismiss()
             return
         }
         
+        // ✅ Fallback to legacy system
+        guard let tokenHash = app.tokenHash else {
+            print("❌ Cannot save limit - no identifier for app")
+            dismiss()
+            return
+        }
+        
+        // Try UUID first (new system)
+        if let limitId = UUID(uuidString: tokenHash) {
+            storage.updateAppLimit(id: limitId, dailyLimitMinutes: newLimit, isEnabled: nil)
+            
+            if let scheduleData = try? JSONEncoder().encode(schedule) {
+                UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
+            }
+            
+            HapticFeedback.success.trigger()
+            appState.loadAppGoals()
+            dismiss()
+            return
+        }
+        
+        // Legacy Core Data system
+        let coreDataManager = CoreDataManager.shared
+        let goals = coreDataManager.getActiveAppGoals()
+        
         if let goal = goals.first(where: { $0.appBundleID == tokenHash }) {
             appState.updateAppGoal(goal.id ?? UUID(), dailyLimitMinutes: newLimit)
             
-            // ✅ Save schedule using token hash
             if let scheduleData = try? JSONEncoder().encode(schedule) {
                 UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
             }
@@ -1692,64 +1742,54 @@ struct SetLimitSheet: View {
     }
     
     private func addApp() {
-        // ✅ Ensure we have an app name - prompt user or use what we have
-        var finalAppName = appName
-        
-        // If name is empty, we should have prompted the user in the UI
-        // For now, use a placeholder that includes the token hash for debugging
-        if finalAppName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            print("⚠️ SetLimitSheet: App name is empty, using placeholder")
-            // The UI should have Label(token) showing the real name
-            // Store empty for now - matching will use per_app_usage
-        }
-        
-        let tokenHash = bundleID  // bundleID is actually the token hash
-        
-        // ✅ FIX: Create selection directly from fullSelection.applicationTokens
-        var appSelection = FamilyActivitySelection()
-        
-        if let firstToken = fullSelection.applicationTokens.first {
-            appSelection.applicationTokens = [firstToken]
-            print("✅ Created selection with token from fullSelection")
-        } else if !fullSelection.categoryTokens.isEmpty {
-            appSelection.categoryTokens = fullSelection.categoryTokens
-            print("⚠️ Using category tokens from full selection")
-        } else {
-            appSelection = fullSelection
-            print("⚠️ Using full selection as fallback")
-        }
-        
-        guard !appSelection.applicationTokens.isEmpty || !appSelection.categoryTokens.isEmpty else {
-            print("❌ Cannot add app - no valid tokens in selection")
+        // ✅ Get the ApplicationToken from the selection
+        guard let firstToken = fullSelection.applicationTokens.first else {
+            print("❌ Cannot add app - no application token in selection")
             return
         }
         
-        print("📱 Adding app with:")
-        print("   Token hash: \(tokenHash)")
-        print("   App name: '\(finalAppName)'")
-        print("   Limit: \(selectedLimit) minutes")
-        print("   Tokens: \(appSelection.applicationTokens.count)")
+        // ✅ Use AppLimitStorage directly with ApplicationToken
+        let storage = AppLimitStorage.shared
         
-        // ✅ Add the app goal using token hash as identifier
-        appState.addAppGoalFromFamilySelection(
-            appSelection,
-            appName: finalAppName,
-            dailyLimitMinutes: selectedLimit,
-            bundleID: tokenHash
+        // Check if limit already exists
+        if storage.findLimit(for: firstToken) != nil {
+            print("⚠️ Limit already exists for this app")
+            HapticFeedback.error.trigger()
+            dismiss()
+            return
+        }
+        
+        // Create new AppLimit using ApplicationToken directly
+        let appLimit = AppLimit(
+            token: firstToken,
+            appName: appName.isEmpty ? "App" : appName,
+            bundleIdentifier: bundleID,
+            dailyLimitMinutes: selectedLimit
         )
         
-        // Save schedule with token hash
+        // Save to shared storage
+        storage.addAppLimit(appLimit)
+        
+        print("✅ Added app limit: \(appLimit.appName) - \(selectedLimit) min (ID: \(appLimit.id))")
+        
+        // Save schedule with limit ID
         if let scheduleData = try? JSONEncoder().encode(schedule) {
-            UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(tokenHash)")
-            print("💾 Saved schedule for token hash: \(tokenHash)")
+            UserDefaults.standard.set(scheduleData, forKey: "limitSchedule_\(appLimit.id.uuidString)")
         }
         
-        // ✅ NEW: Trigger immediate sync to try to get real app name
-        // The report extension will write the real name to per_app_usage
-        // Next time we load, we can try to match and cache the name
-        Task {
-            await ScreenTimeService.shared.updateUsageFromReport()
-        }
+        // Also add to legacy system for backward compatibility
+        var appSelection = FamilyActivitySelection()
+        appSelection.applicationTokens = [firstToken]
+        
+        appState.addAppGoalFromFamilySelection(
+            appSelection,
+            appName: appName.isEmpty ? "App" : appName,
+            dailyLimitMinutes: selectedLimit,
+            bundleID: appLimit.id.uuidString
+        )
+        
+        // Reload app goals
+        appState.loadAppGoals()
         
         HapticFeedback.success.trigger()
         dismiss()

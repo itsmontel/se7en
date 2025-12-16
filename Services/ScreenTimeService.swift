@@ -124,12 +124,7 @@ final class ScreenTimeService: ObservableObject {
     
     // MARK: - App Selection Management
     
-    /// Add an app for monitoring from FamilyActivitySelection
-    /// - Parameters:
-    ///   - selection: The FamilyActivitySelection containing the app's token
-    ///   - appName: Display name of the app
-    ///   - bundleID: Bundle identifier (can be extracted or provided)
-    ///   - dailyLimitMinutes: Daily usage limit in minutes
+    /// Add an app for monitoring using ApplicationToken directly (stable identifier)
     func addAppForMonitoring(
         selection: FamilyActivitySelection,
         appName: String,
@@ -146,63 +141,89 @@ final class ScreenTimeService: ObservableObject {
             return
         }
         
-        // ✅ Use token hash as the unique identifier - compute from first token
-        let tokenHash = String(firstToken.hashValue)
+        // ✅ Use AppLimitStorage with ApplicationToken directly
+        let storage = AppLimitStorage.shared
         
-        // ✅ CRITICAL: Verify hash consistency - compute from all tokens and use first
-        // This ensures the hash matches what the extension will compute
-        var computedHashes: [String] = []
-        for token in selection.applicationTokens {
-            computedHashes.append(String(token.hashValue))
+        // Check if limit already exists for this token
+        if storage.findLimit(for: firstToken) != nil {
+            print("⚠️ Limit already exists for this app")
+            return
         }
         
-        // Use the first token's hash (should be consistent)
-        let verifiedTokenHash = computedHashes.first ?? tokenHash
-        
-        print("\n" + String(repeating: "=", count: 60))
-        print("📱 ADDING APP FOR MONITORING")
-        print("   Token hash: \(verifiedTokenHash)")
-        print("   All token hashes: \(computedHashes)")
-        print("   Custom name: '\(appName)'")
-        print("   Limit: \(dailyLimitMinutes) minutes")
-        print(String(repeating: "=", count: 60))
-        
-        // Store the selection with verified token hash as key
-        appSelections[verifiedTokenHash] = selection
-        saveSelection(selection, forBundleID: verifiedTokenHash)
-        
-        // 🔥 CRITICAL: Save to shared container IMMEDIATELY for extension access
-        saveSelectionToSharedContainer(selection: selection, tokenHash: verifiedTokenHash)
-        
-        // ✅ NEW: Save ALL monitored app selections for extension to access
-        saveAllMonitoredSelectionsToSharedContainer()
-        
-        // Create app goal in Core Data using verified token hash as identifier
-        let appGoal = coreDataManager.createAppGoal(
-            appName: appName.isEmpty ? "" : appName,
-            bundleID: verifiedTokenHash,
+        // Create new AppLimit using ApplicationToken directly
+        let appLimit = AppLimit(
+            token: firstToken,
+            appName: appName,
+            bundleIdentifier: bundleID,
             dailyLimitMinutes: dailyLimitMinutes
         )
         
-        // 🔥 Initialize usage record AND shared container to 0 IMMEDIATELY
-        let today = Calendar.current.startOfDay(for: Date())
-        if coreDataManager.getTodaysUsageRecord(for: verifiedTokenHash) == nil {
-            _ = coreDataManager.createUsageRecord(
-                for: appGoal,
-                date: today,
-                actualUsageMinutes: 0,
-                didExceedLimit: false
-            )
-            coreDataManager.save()
-        }
+        // Save to shared storage (accessible by extensions)
+        storage.addAppLimit(appLimit)
         
-        // Initialize shared container
-        initializeSharedContainerUsage(tokenHash: verifiedTokenHash)
+        print("✅ Added app limit: \(appName) - \(dailyLimitMinutes) min (ID: \(appLimit.id))")
         
-        // Set up basic DeviceActivity monitoring
-        setupBasicMonitoring(for: appGoal, selection: selection)
+        // Also keep legacy storage for backward compatibility
+        let tokenHash = String(firstToken.hashValue)
+        appSelections[tokenHash] = selection
+        saveSelection(selection, forBundleID: tokenHash)
+        
+        // Create app goal in Core Data for backward compatibility
+        let appGoal = coreDataManager.createAppGoal(
+            appName: appName.isEmpty ? "" : appName,
+            bundleID: appLimit.id.uuidString,
+            dailyLimitMinutes: dailyLimitMinutes
+        )
+        
+        // Set up DeviceActivity monitoring using UUID
+        setupMonitoringForAppLimit(appLimit, selection: selection)
         
         print("✅ App added and monitoring started!")
+    }
+    
+    /// Set up DeviceActivity monitoring for an AppLimit
+    private func setupMonitoringForAppLimit(_ limit: AppLimit, selection: FamilyActivitySelection) {
+        guard let token = limit.getToken() else { return }
+        
+        let activityName = DeviceActivityName("limit_\(limit.id.uuidString)")
+        
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: 0, minute: 0),
+            intervalEnd: DateComponents(hour: 23, minute: 59),
+            repeats: true
+        )
+        
+        let eventName = DeviceActivityEvent.Name("limit_reached_\(limit.id.uuidString)")
+        let event = DeviceActivityEvent(
+            applications: [token],
+            threshold: DateComponents(minute: limit.dailyLimitMinutes)
+        )
+        
+        do {
+            try deviceActivityCenter.startMonitoring(activityName, during: schedule, events: [eventName: event])
+            print("✅ Started monitoring for \(limit.appName) (ID: \(limit.id))")
+        } catch {
+            print("❌ Failed to start monitoring: \(error)")
+        }
+    }
+    
+    /// Get usage minutes for an app limit
+    func getUsageMinutesForLimit(_ limitId: UUID) -> Int {
+        return AppLimitStorage.shared.getUsageMinutes(limitId: limitId)
+    }
+    
+    /// Remove monitoring for an app limit
+    func removeAppLimit(_ limitId: UUID) {
+        let storage = AppLimitStorage.shared
+        
+        // Stop monitoring
+        let activityName = DeviceActivityName("limit_\(limitId.uuidString)")
+        deviceActivityCenter.stopMonitoring([activityName])
+        
+        // Remove from storage
+        storage.removeAppLimit(id: limitId)
+        
+        print("✅ Removed app limit: \(limitId)")
     }
     
     // MARK: - Simple Monitoring Setup

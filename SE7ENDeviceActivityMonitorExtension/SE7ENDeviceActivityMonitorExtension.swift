@@ -1,69 +1,71 @@
 import DeviceActivity
 import Foundation
-
-// 🔥 ULTRA-MINIMAL Extension (under 1MB RAM)
-// The extension is unreliable in iOS 17+ so we keep it simple
-// Real tracking happens via timer-based fallback in main app
+import FamilyControls
+import ManagedSettings
 
 @main
 class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
+    let store = ManagedSettingsStore()
+    let storage = AppLimitStorage.shared
     
     static func main() {}
     
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
         
-        // Just mark that interval started
-        saveFlag(key: "interval_started", value: true)
+        // Extract limit ID from activity name (format: "limit_<UUID>")
+        if activity.rawValue.hasPrefix("limit_") {
+            let limitIdString = String(activity.rawValue.dropFirst(6)) // Remove "limit_" prefix
+            if let limitId = UUID(uuidString: limitIdString) {
+                // Check if it's a new day and reset usage
+                let records = storage.loadUsageRecords()
+                if let record = records[limitId] {
+                    let today = Calendar.current.startOfDay(for: Date())
+                    let recordDay = Calendar.current.startOfDay(for: record.lastResetDate)
+                    if today > recordDay {
+                        storage.updateUsage(limitId: limitId, seconds: 0)
+                    }
+                }
+            }
+        }
     }
     
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
-        
-        saveFlag(key: "interval_started", value: false)
     }
     
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
         
-        let eventString = String(describing: event)
+        // Extract limit ID from activity name
+        let limitIdString = activity.rawValue.replacingOccurrences(of: "limit_", with: "")
+        guard let limitId = UUID(uuidString: limitIdString) else { return }
         
-        // Extract token hash
-        guard let tokenHash = extractTokenHash(from: eventString) else { return }
+        // Find the matching limit
+        let limits = storage.loadAppLimits()
+        guard let limit = limits.first(where: { $0.id == limitId }),
+              let token = limit.getToken() else { return }
         
-        if eventString.contains("update") {
-            incrementUsage(for: tokenHash)
-        } else if eventString.contains("limit") {
-            markLimitReached(for: tokenHash)
+        // Block the app
+        store.shield.applications = [token]
+        
+        // Mark limit reached in shared storage
+        if let defaults = UserDefaults(suiteName: AppGroupConstants.groupIdentifier) {
+            defaults.set(true, forKey: "limit_reached_\(limitId.uuidString)")
+            defaults.synchronize()
         }
     }
     
-    // MARK: - Minimal Helpers
-    
-    private func extractTokenHash(from eventString: String) -> String? {
-        let parts = eventString.split(separator: ".")
-        return parts.count >= 2 ? String(parts[1]) : nil
+    override func intervalWillStartWarning(for activity: DeviceActivityName) {
+        super.intervalWillStartWarning(for: activity)
     }
     
-    private func incrementUsage(for tokenHash: String) {
-        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
-        
-        let key = "usage_\(tokenHash)"
-        let current = defaults.integer(forKey: key)
-        defaults.set(current + 1, forKey: key)
-        defaults.set(Date().timeIntervalSince1970, forKey: "last_update")
-        defaults.synchronize()
+    override func intervalWillEndWarning(for activity: DeviceActivityName) {
+        super.intervalWillEndWarning(for: activity)
     }
     
-    private func markLimitReached(for tokenHash: String) {
-        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
-        defaults.set(true, forKey: "limit_reached_\(tokenHash)")
-        defaults.synchronize()
-    }
-    
-    private func saveFlag(key: String, value: Bool) {
-        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
-        defaults.set(value, forKey: key)
-        defaults.synchronize()
+    override func eventWillReachThresholdWarning(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
+        super.eventWillReachThresholdWarning(event, activity: activity)
+        // Optional: Show a 5-minute warning before blocking
     }
 }
