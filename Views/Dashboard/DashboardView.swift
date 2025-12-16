@@ -12,6 +12,7 @@ extension DeviceActivityReport.Context {
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.colorScheme) var colorScheme
     private let screenTimeService = ScreenTimeService.shared
     @State private var showingSuccessToast = false
     @State private var showingAddAppSheet = false
@@ -197,6 +198,9 @@ struct DashboardView: View {
                 self.isLoadingScreenTime = false
                 self.hasLoadedInitialData = true // Mark that we've loaded initial data
                 
+                // CRITICAL FIX: Update AppState's todayScreenTimeMinutes so pet health can use it
+                appState.todayScreenTimeMinutes = totalMinutes
+                
                 // Only show informational message if we have connected apps but no usage yet
                 // Usage records are initialized immediately, so 0 means no usage yet (which is normal)
                 if totalMinutes == 0 && appsUsed == 0 && !connectedGoals.isEmpty {
@@ -215,26 +219,37 @@ struct DashboardView: View {
     
     // MARK: - Shared Container Reading
     
-    /// Read usage data from the shared container (populated by DeviceActivityReport extension)
     private func readUsageFromSharedContainer() -> Int {
         let appGroupID = "group.com.se7en.app"
+        var totalUsage = 0
+        var source = "none"
         
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            print("❌ Failed to access shared container")
-            return 0
+        // Try UserDefaults
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            sharedDefaults.synchronize()
+            totalUsage = sharedDefaults.integer(forKey: "total_usage")
+            if totalUsage > 0 {
+                source = "UserDefaults"
+            }
         }
         
-        // ✅ PERFORMANCE: Don't call synchronize() - UserDefaults auto-syncs
-        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
-        
-        if totalUsage > 0 {
-            print("📊 Found total_usage in shared container: \(totalUsage) minutes")
+        // Try file backup
+        if totalUsage == 0 {
+            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+                let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+                if let data = try? Data(contentsOf: fileURL),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let usage = json["total_usage"] as? Int {
+                    totalUsage = usage
+                    source = "File"
+                }
+            }
         }
         
+        print("📊 V5 readUsage: \(totalUsage) minutes from \(source)")
         return totalUsage
     }
     
-    /// ✅ PERFORMANCE: Optimized version without synchronize()
     private func readAppsCountFromSharedContainer() -> Int {
         let appGroupID = "group.com.se7en.app"
         
@@ -242,12 +257,8 @@ struct DashboardView: View {
             return 0
         }
         
-        // ✅ PERFORMANCE: Don't call synchronize() - UserDefaults auto-syncs
-        let appsCount = sharedDefaults.integer(forKey: "apps_count")
-        if appsCount > 0 {
-            print("📊 Found apps_count in shared container: \(appsCount)")
-        }
-        return appsCount
+        sharedDefaults.synchronize()
+        return sharedDefaults.integer(forKey: "apps_count")
     }
     
     /// Read last updated timestamp from the shared container for debugging
@@ -891,8 +902,13 @@ struct DashboardView: View {
             .background(Color.appBackground)
             .cornerRadius(16)
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.cardBackground, lineWidth: 1)
+                // Only show border in light mode, remove in dark mode
+                Group {
+                    if colorScheme == .light {
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.cardBackground, lineWidth: 1)
+                    }
+                }
             )
             .padding(.horizontal, 20)
             .padding(.vertical, 4)
@@ -937,6 +953,8 @@ struct DashboardView: View {
                     if sharedUsage > 0 || sharedApps > 0 {
                         totalScreenTimeMinutes = sharedUsage
                         appsUsedToday = sharedApps
+                        // CRITICAL FIX: Update AppState so pet health can use the latest data
+                        appState.todayScreenTimeMinutes = sharedUsage
                     }
                 }
             }

@@ -39,47 +39,59 @@ struct LimitReachedPuzzleView: View {
             
             VStack(spacing: 0) {
                 // Header
-                VStack(spacing: 16) {
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(.primary)
+                VStack(spacing: 12) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 48, weight: .medium))
+                        .foregroundColor(.pink)
+                        .padding(.top, 28)
                     
                     Text("Daily Limit Reached")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundColor(.textPrimary)
+                        .textCase(.none)
                     
-                    Text("You've reached your daily limit for **\(appName)**")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundColor(.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
+                    VStack(spacing: 4) {
+                        Text("That's okay, it happens 😊")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundColor(.textSecondary)
+                        
+                        Text("You've reached your limit for **\(appName)**")
+                            .font(.system(size: 15, weight: .regular, design: .rounded))
+                            .foregroundColor(.textSecondary)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.85)
+                    }
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
                 }
-                .padding(.top, 32)
-                .padding(.bottom, 24)
+                .padding(.bottom, 20)
                 
                 Divider()
+                    .padding(.horizontal, 0)
                 
                 // Puzzle option
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     Text("Solve a puzzle to earn 15 more minutes")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .foregroundColor(.textPrimary)
-                        .padding(.top, 24)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 20)
+                        .padding(.horizontal, 24)
                     
                     Button(action: {
                         HapticFeedback.medium.trigger()
                         startRandomPuzzle()
                     }) {
-                        HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             Image(systemName: "puzzlepiece.fill")
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.system(size: 18, weight: .semibold))
                             
                             Text("Start Puzzle")
-                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .font(.system(size: 17, weight: .bold, design: .rounded))
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 14)
                         .background(
                             LinearGradient(
                                 colors: [Color.primary, Color.primary.opacity(0.8)],
@@ -88,44 +100,50 @@ struct LimitReachedPuzzleView: View {
                             )
                         )
                         .cornerRadius(12)
-                        .shadow(color: Color.primary.opacity(0.3), radius: 8, x: 0, y: 4)
+                        .shadow(color: Color.primary.opacity(0.25), radius: 6, x: 0, y: 3)
                     }
                     .padding(.horizontal, 24)
                     
-                    Text("You can solve puzzles multiple times to extend your limit")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(.textSecondary)
+                    Text("You can solve puzzles multiple times")
+                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                        .foregroundColor(.textSecondary.opacity(0.8))
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.9)
                         .padding(.horizontal, 24)
-                        .padding(.bottom, 8)
+                        .padding(.bottom, 4)
                 }
-                .padding(.bottom, 24)
+                .padding(.bottom, 20)
                 
                 Divider()
+                    .padding(.horizontal, 0)
                 
                 // Cancel button
                 Button(action: {
                     HapticFeedback.light.trigger()
                     dismiss()
                 }) {
-                    Text("I Can Wait Till Tomorrow")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    Text("I CAN WAIT TILL TOMORROW")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundColor(.textSecondary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 14)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
                 .padding(.horizontal, 24)
-                .padding(.vertical, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
             }
-            .frame(maxWidth: 600)
+            .frame(maxWidth: 500)
             .background(Color.cardBackground)
-            .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.3), radius: 40, x: 0, y: 20)
+            .cornerRadius(18)
+            .shadow(color: Color.black.opacity(0.25), radius: 30, x: 0, y: 15)
             
             Spacer()
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 20)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 40)
     }
     
     @ViewBuilder

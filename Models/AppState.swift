@@ -35,8 +35,10 @@ class AppState: ObservableObject {
     @Published var newStreakValue = 0
     @Published var shouldShowAchievementCelebration = false
     @Published var newAchievement: Achievement?
+    @Published var todayScreenTimeMinutes: Int = 0
     
     private var previousStreak = 0
+    private var isRefreshingPetHealth = false
     
     // Computed property for compatibility
     var hasCompletedOnboarding: Bool {
@@ -51,11 +53,55 @@ class AppState: ObservableObject {
     private var lastLoadAppGoalsTime: Date = Date.distantPast
     private let loadAppGoalsThrottleInterval: TimeInterval = 2.0 // Minimum 2 seconds between calls
     
+    /// Preload screen time from shared container - tries UserDefaults AND file backup
+    private func preloadScreenTimeFromSharedContainer() {
+        let appGroupID = "group.com.se7en.app"
+        var totalUsage = 0
+        var lastUpdated: Double = 0
+        var source = "none"
+        
+        // METHOD 1: Try UserDefaults
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            sharedDefaults.synchronize()
+            let usage = sharedDefaults.integer(forKey: "total_usage")
+            let updated = sharedDefaults.double(forKey: "last_updated")
+            if usage > 0 || updated > 0 {
+                totalUsage = usage
+                lastUpdated = updated
+                source = "UserDefaults"
+            }
+        }
+        
+        // METHOD 2: Try file backup if UserDefaults failed
+        if totalUsage == 0 {
+            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+                let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+                if let data = try? Data(contentsOf: fileURL),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let usage = json["total_usage"] as? Int {
+                        totalUsage = usage
+                        lastUpdated = json["last_updated"] as? Double ?? 0
+                        source = "File"
+                    }
+                }
+            }
+        }
+        
+        print("📊 V6 preload:")
+        print("   • total_usage: \(totalUsage) minutes")
+        print("   • last_updated: \(lastUpdated > 0 ? "YES" : "NEVER")")
+        print("   • source: \(source)")
+        
+        if totalUsage > 0 {
+            self.todayScreenTimeMinutes = totalUsage
+        }
+    }
+    
     init() {
         setupObservers()
-        // Perform daily reset check on app launch
         coreDataManager.performDailyResetIfNeeded()
         loadInitialData()
+        preloadScreenTimeFromSharedContainer()
         loadUserPreferences()
         checkOnboardingStatus()
     }
@@ -606,6 +652,33 @@ class AppState: ObservableObject {
     func updatePetHealth() {
         guard var pet = userPet else { return }
         
+        // ⚠️ CRITICAL: If shared container is empty, trigger a refresh from report extension
+        // This ensures we have the latest data before calculating health
+        let appGroupID = "group.com.se7en.app"
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID), !isRefreshingPetHealth {
+            sharedDefaults.synchronize()
+            let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+            let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int]
+            
+            // If both are empty, trigger async refresh (but don't wait - calculate with what we have)
+            if totalUsage == 0 && (perAppUsage?.isEmpty ?? true) && isScreenTimeAuthorized {
+                isRefreshingPetHealth = true
+                Task {
+                    // Trigger report extension to refresh data
+                    await screenTimeService.updateUsageFromReport()
+                    // Small delay for extension to write to shared container
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    // Recalculate health after data is refreshed
+                    await MainActor.run {
+                        self.isRefreshingPetHealth = false
+                        self.updatePetHealth()
+                    }
+                }
+                // Return early - will recalculate after refresh
+                return
+            }
+        }
+        
         // Calculate pet health based on app usage percentages
         let healthPercentage = calculatePetHealthPercentage()
         
@@ -640,51 +713,118 @@ class AppState: ObservableObject {
         }
     }
     
-    /// Calculate pet health percentage based on the lowest app's remaining time percentage
-    /// - Returns: Health percentage from 0-100
     func calculatePetHealthPercentage() -> Int {
-        // If no monitored apps, pet is at full health
-        guard !monitoredApps.isEmpty else { return 100 }
+        var totalMinutes = todayScreenTimeMinutes
         
-        // Find the lowest percentage of time remaining across all apps
-        var lowestPercentRemaining: Double = 100
-        
-        for app in monitoredApps where app.isEnabled && app.dailyLimit > 0 {
-            // Calculate percentage of time remaining (not used)
-            let percentUsed = app.percentageUsed * 100 // Convert to 0-100 scale
-            let percentRemaining = max(0, 100 - percentUsed)
+        // Try to get from shared container if not set
+        if totalMinutes == 0 {
+            let appGroupID = "group.com.se7en.app"
             
-            if percentRemaining < lowestPercentRemaining {
-                lowestPercentRemaining = percentRemaining
+            // Try UserDefaults first
+            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                sharedDefaults.synchronize()
+                totalMinutes = sharedDefaults.integer(forKey: "total_usage")
+            }
+            
+            // Try file backup
+            if totalMinutes == 0 {
+                if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+                    let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+                    if let data = try? Data(contentsOf: fileURL),
+                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let usage = json["total_usage"] as? Int {
+                        totalMinutes = usage
+                    }
+                }
+            }
+            
+            if totalMinutes > 0 {
+                print("🏥 V5: Got \(totalMinutes) minutes from shared container")
+                self.todayScreenTimeMinutes = totalMinutes
             }
         }
         
-        // Calculate health based on the lowest percentage remaining
-        // Formula:
-        // - If 60%+ remaining: health = 100 (full health)
-        // - If 40-60% remaining: health decreases by 1 per percent below 60
-        // - If below 40% remaining: health decreases by 2 per percent below 40
+        let totalHours = Double(totalMinutes) / 60.0
+        print("🏥 calculatePetHealthPercentage: \(totalMinutes) minutes (\(String(format: "%.2f", totalHours)) hours)")
         
         let healthPercentage: Int
-        
-        if lowestPercentRemaining >= 60 {
-            // Over 60% time remaining = perfect health
-            healthPercentage = 100
-        } else if lowestPercentRemaining >= 40 {
-            // Between 40-60%: health = 40 + percentRemaining (linear decrease of 1 per %)
-            // At 60%: health = 40 + 60 = 100
-            // At 40%: health = 40 + 40 = 80
-            healthPercentage = 40 + Int(lowestPercentRemaining)
-        } else {
-            // Below 40%: health = 2 * percentRemaining (steeper decrease of 2 per %)
-            // At 40%: health = 80
-            // At 30%: health = 60
-            // At 10%: health = 20
-            // At 0%: health = 0
-            healthPercentage = Int(lowestPercentRemaining * 2)
+        switch totalHours {
+        case 0..<2: healthPercentage = 100
+        case 2..<3: healthPercentage = Int(100.0 - (20.0 * (totalHours - 2.0)))
+        case 3..<4: healthPercentage = Int(80.0 - (10.0 * (totalHours - 3.0)))
+        case 4..<5: healthPercentage = Int(70.0 - (10.0 * (totalHours - 4.0)))
+        case 5..<6: healthPercentage = Int(60.0 - (20.0 * (totalHours - 5.0)))
+        case 6..<8: healthPercentage = Int(40.0 - (10.0 * (totalHours - 6.0)))
+        case 8..<10: healthPercentage = Int(20.0 - (10.0 * (totalHours - 8.0)))
+        default: healthPercentage = 0
         }
         
         return max(0, min(100, healthPercentage))
+    }
+    
+    /// Helper function for linear interpolation between ranges
+    private func linearInterpolate(
+        value: Double,
+        fromRange: (Double, Double),
+        toRange: (Double, Double)
+    ) -> Double {
+        let (fromMin, fromMax) = fromRange
+        let (toMin, toMax) = toRange
+        let ratio = (value - fromMin) / (fromMax - fromMin)
+        return toMin + (toMax - toMin) * ratio
+    }
+    
+    /// Get total screen time from the shared container (populated by DeviceActivityReport extension)
+    /// This is the same source the dashboard uses for total screen time display
+    /// Handles both individual apps AND category-based selections by summing all usage
+    private func getTotalScreenTimeFromSharedContainer() -> Int {
+        let appGroupID = "group.com.se7en.app"
+        
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("⚠️ Pet health: Failed to access shared container, falling back to monitored apps")
+            // Fallback to monitored apps if shared container unavailable
+            return monitoredApps
+                .filter { $0.isEnabled }
+                .reduce(0) { $0 + $1.usedToday }
+        }
+        
+        // Force synchronize to get latest data (same as dashboard does)
+        sharedDefaults.synchronize()
+        
+        // Read total usage from shared container (same key as DashboardView)
+        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+        
+        if totalUsage > 0 {
+            print("📊 Pet health using total_usage from shared container: \(totalUsage) minutes")
+            return totalUsage
+        }
+        
+        // ⚠️ CRITICAL FIX: If total_usage is 0 but per_app_usage exists, sum it
+        // This handles cases where the extension wrote per-app data but total_usage wasn't set
+        // This is especially important for category-based selections where all apps are tracked
+        if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
+            let sumFromPerApp = perAppUsage.values.reduce(0, +)
+            if sumFromPerApp > 0 {
+                print("📊 Pet health using per_app_usage sum: \(sumFromPerApp) minutes (total_usage was 0)")
+                // Also update total_usage for future reads
+                sharedDefaults.set(sumFromPerApp, forKey: "total_usage")
+                sharedDefaults.synchronize()
+                return sumFromPerApp
+            }
+        }
+        
+        // Fallback to monitored apps if shared container has no data
+        let monitoredTotal = monitoredApps
+            .filter { $0.isEnabled }
+            .reduce(0) { $0 + $1.usedToday }
+        
+        if monitoredTotal > 0 {
+            print("📊 Pet health falling back to monitored apps: \(monitoredTotal) minutes")
+        } else {
+            print("⚠️ Pet health: No screen time data found (shared container empty, no monitored apps)")
+        }
+        
+        return monitoredTotal
     }
     
     func setUserPet(_ pet: Pet) {

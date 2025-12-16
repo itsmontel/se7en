@@ -9,52 +9,60 @@ struct TodayOverviewView: View {
     let summary: UsageSummary
     
     var body: some View {
-        let appBackground = Color(red: 1.0, green: 0.98, blue: 0.9) // soft yellow to match app theme
+        // App background color that adapts to light/dark mode
+        let appBackground = Color(UIColor { traitCollection in
+            if traitCollection.userInterfaceStyle == .dark {
+                return UIColor(red: 0.18, green: 0.18, blue: 0.19, alpha: 1.0) // Dark charcoal for dark mode
+            } else {
+                return UIColor(red: 1.0, green: 0.98, blue: 0.9, alpha: 1.0) // Soft yellow for light mode
+            }
+        })
         VStack(alignment: .leading, spacing: 16) {
             // Summary stats - side by side
                 HStack(spacing: 20) {
                     // Today's Screen Time
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Today's Screen Time")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.9)
                         
                         Text(format(duration: summary.totalDuration))
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
                     }
-                    
-                    Spacer()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     
                     // Apps Used
                     VStack(alignment: .trailing, spacing: 4) {
                         Text("Apps Used")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.secondary)
                         
                         Text("\(summary.appCount)")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
                     }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 .padding(.bottom, 8)
                 
                 // Divider
                 Divider()
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 2)
                 
                 // Top 10 Distractions header - only show if we have app data
                 if !summary.topApps.isEmpty {
                     Text("Top 10 Distractions")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.primary)
-                        .padding(.top, 4)
+                        .padding(.top, 2)
                     
                     // Top apps list with numeric rank (1-10)
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 3) {
                         ForEach(Array(summary.topApps.prefix(10).enumerated()), id: \.element.id) { index, app in
-                            HStack(spacing: 12) {
+                            HStack(spacing: 10) {
                                 // Rank badge
                                 Text("\(index + 1)")
                                     .font(.system(size: 16, weight: .bold))
@@ -77,8 +85,8 @@ struct TodayOverviewView: View {
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(.primary)
                             }
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 10)
                             .background(appBackground)
                             .cornerRadius(12)
                         }
@@ -91,12 +99,58 @@ struct TodayOverviewView: View {
                         .padding(.top, 8)
                 }
             }
-            .padding(.top, 72) // move content further down to avoid clipping
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
+            .padding(.top, 0) // Reduced top padding to push content closer to "Today's Dashboard" header
+            .padding(.horizontal, 8) // Minimal horizontal padding - wider container, closer to edges
+            .padding(.vertical, 8) // Reduced vertical padding
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(maxHeight: .infinity, alignment: .topLeading)
+            .onAppear {
+                // SAVE DATA WHEN VIEW APPEARS - THIS WILL DEFINITELY RUN!
+                saveDataToSharedContainer()
+            }
     }
+    
+    // MARK: - Save to Shared Container (called from onAppear)
+    
+    private func saveDataToSharedContainer() {
+        let appGroupID = "group.com.se7en.app"
+        
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return
+        }
+        
+        let totalMinutes = Int(summary.totalDuration / 60)
+        let appsCount = summary.appCount
+        
+        // Save to UserDefaults
+        sharedDefaults.set(totalMinutes, forKey: "total_usage")
+        sharedDefaults.set(appsCount, forKey: "apps_count")
+        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
+        
+        // Build top apps array
+        let topAppsPayload: [[String: Any]] = summary.topApps.map {
+            ["name": $0.name, "minutes": Int($0.duration / 60)]
+        }
+        sharedDefaults.set(topAppsPayload, forKey: "top_apps")
+        
+        // Force sync
+        sharedDefaults.synchronize()
+        
+        // Also write to file as backup
+        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+            let data: [String: Any] = [
+                "total_usage": totalMinutes,
+                "apps_count": appsCount,
+                "last_updated": Date().timeIntervalSince1970
+            ]
+            if let jsonData = try? JSONSerialization.data(withJSONObject: data) {
+                try? jsonData.write(to: fileURL)
+            }
+        }
+    }
+    
+    // MARK: - Helpers
     
     // Helper function to format duration
     private func format(duration: TimeInterval) -> String {
@@ -152,7 +206,3 @@ struct TodayOverviewView: View {
         return "app.fill"
     }
 }
-
-
-
-

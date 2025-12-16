@@ -488,10 +488,17 @@ class CoreDataManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? date
         
+        // ⚠️ FIX: AppUsageRecord doesn't have appBundleID - need to query through appGoal relationship
+        // First find the goal, then find the usage record
+        let goals = getActiveAppGoals()
+        guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else {
+            return nil
+        }
+        
         let request: NSFetchRequest<AppUsageRecord> = AppUsageRecord.fetchRequest()
         request.predicate = NSPredicate(
-            format: "appBundleID == %@ AND date >= %@ AND date < %@",
-            bundleID,
+            format: "appGoal == %@ AND date >= %@ AND date < %@",
+            goal,
             startOfDay as NSDate,
             endOfDay as NSDate
         )

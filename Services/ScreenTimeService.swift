@@ -1045,7 +1045,7 @@ final class ScreenTimeService: ObservableObject {
                 return (0, estimatedApps)
             }
             
-            // Force refresh from disk
+            // CRITICAL FIX: Force synchronize for cross-process access
             sharedDefaults.synchronize()
             
             // Read total usage directly
@@ -1072,6 +1072,47 @@ final class ScreenTimeService: ObservableObject {
         
         // Return estimated count with 0 usage (will be updated by DeviceActivityReport)
         return (0, estimatedApps)
+    }
+    
+    /// Get total screen time today (synchronous)
+    /// Uses the EXACT same logic as DashboardView: reads from shared container "total_usage" key first
+    /// This matches how the dashboard gets its screen time data
+    func getTotalScreenTimeTodaySync() -> Int {
+        let appGroupID = "group.com.se7en.app"
+        
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ getTotalScreenTimeTodaySync: Failed to access shared container")
+            return 0
+        }
+        
+        // CRITICAL FIX: Force synchronize to read fresh data from disk
+        // The DeviceActivityReport extension writes to disk from a separate process
+        sharedDefaults.synchronize()
+        
+        // EXACT SAME LOGIC AS DASHBOARD: Read from "total_usage" key first
+        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+        
+        if totalUsage > 0 {
+            print("📊 getTotalScreenTimeTodaySync: Using shared container total_usage: \(totalUsage) minutes")
+            return totalUsage
+        }
+        
+        // Fallback: Sum up usage from monitored apps (same as async version fallback)
+        let goals = coreDataManager.getActiveAppGoals()
+        var totalMinutes = 0
+        
+        for goal in goals {
+            guard let bundleID = goal.appBundleID,
+                  hasSelection(for: bundleID) else {
+                continue
+            }
+            
+            let usage = getUsageMinutes(for: bundleID)
+            totalMinutes += usage
+        }
+        
+        print("📊 getTotalScreenTimeTodaySync: Fallback - summed from monitored apps: \(totalMinutes) minutes")
+        return totalMinutes
     }
     
     /// Get the app with the most usage today (from allAppsSelection or monitored apps)

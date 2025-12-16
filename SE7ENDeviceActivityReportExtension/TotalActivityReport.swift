@@ -50,21 +50,29 @@ struct TotalActivityReport: DeviceActivityReportScene {
         )
     }
     
-    /// Save to shared app group
     private func saveToSharedContainer(totalDuration: TimeInterval, appsCount: Int) {
         let appGroupID = "group.com.se7en.app"
-        DispatchQueue.main.async {
-            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-                print("❌ TotalActivityReport: Failed to open shared defaults")
-                return
-            }
-            
-            let totalMinutes = Int(totalDuration / 60)
+        let totalMinutes = Int(totalDuration / 60)
+        
+        // METHOD 1: UserDefaults
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
             sharedDefaults.set(totalMinutes, forKey: "total_usage")
             sharedDefaults.set(appsCount, forKey: "apps_count")
             sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
-            
-            print("💾 TotalActivityReport: Saved to shared container (minutes=\(totalMinutes), apps=\(appsCount))")
+            sharedDefaults.synchronize()
+        }
+        
+        // METHOD 2: File backup
+        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+            let data: [String: Any] = [
+                "total_usage": totalMinutes,
+                "apps_count": appsCount,
+                "last_updated": Date().timeIntervalSince1970
+            ]
+            if let jsonData = try? JSONSerialization.data(withJSONObject: data) {
+                try? jsonData.write(to: fileURL)
+            }
         }
     }
     

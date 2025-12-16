@@ -230,11 +230,11 @@ struct Achievement: Identifiable {
             isUnlocked: { appState in appState.longestStreak >= 100 }
         ),
         
-        // MARK: - Credit Management
+        // MARK: - Limit Management
         Achievement(
             id: "perfect_week",
             title: "Perfect Week",
-            description: "Finish a week with all 7 credits",
+            description: "Stay within all app limits for 7 days straight",
             icon: "checkmark.seal.fill",
             color: .success,
             category: .streaks,
@@ -253,23 +253,33 @@ struct Achievement: Identifiable {
         Achievement(
             id: "comeback_kid",
             title: "Comeback Kid",
-            description: "Recover from 1 credit to 7 credits",
+            description: "Recover pet health from sick to full health",
             icon: "arrow.up.circle.fill",
             color: .primary,
-            category: .credits,
+            category: .pet,
             rarity: .uncommon,
-            isUnlocked: { _ in false } // Complex logic needed
+            isUnlocked: { appState in
+                // Check if pet was sick and is now at full health
+                guard let pet = appState.userPet else { return false }
+                // This would need to track pet health history - for now check current state
+                // If pet is at full health and user has a streak, likely recovered
+                return pet.healthState == .fullHealth && appState.currentStreak >= 3
+            }
         ),
         
         Achievement(
-            id: "credit_saver",
-            title: "Credit Saver",
-            description: "Never drop below 5 credits for a month",
+            id: "pet_protector",
+            title: "Pet Protector",
+            description: "Keep your pet at full health for 30 days",
             icon: "shield.fill",
             color: .success,
-            category: .credits,
+            category: .pet,
             rarity: .rare,
-            isUnlocked: { _ in false }
+            isUnlocked: { appState in
+                // Check if pet is at full health and user has 30+ day streak
+                guard let pet = appState.userPet else { return false }
+                return pet.healthState == .fullHealth && appState.currentStreak >= 30
+            }
         ),
         
         // MARK: - App Usage
@@ -588,12 +598,15 @@ struct Achievement: Identifiable {
         Achievement(
             id: "lucky_seven",
             title: "Lucky Seven",
-            description: "Maintain exactly 7 credits for 7 consecutive weeks",
+            description: "Maintain 7-day streak for 7 consecutive weeks",
             icon: "dice.fill",
             color: .primary,
             category: .fun,
             rarity: .epic,
-            isUnlocked: { _ in false }
+            isUnlocked: { appState in
+                // Check if user has maintained 7+ day streak for 7 weeks (49 days)
+                return appState.longestStreak >= 49 && appState.currentStreak >= 7
+            }
         ),
         
         // MARK: - Mastery Achievements
@@ -700,14 +713,17 @@ struct Achievement: Identifiable {
         ),
         
         Achievement(
-            id: "credit_saver",
-            title: "Credit Saver",
-            description: "End 10 weeks in a row with all 7 credits intact",
-            icon: "banknote.fill",
+            id: "consistency_master",
+            title: "Consistency Master",
+            description: "Stay within limits for 10 consecutive weeks",
+            icon: "checkmark.circle.fill",
             color: .green,
-            category: .financial,
+            category: .mastery,
             rarity: .epic,
-            isUnlocked: { _ in false }
+            isUnlocked: { appState in
+                // Check if user has maintained streak for 70 days (10 weeks)
+                return appState.longestStreak >= 70
+            }
         ),
         
         Achievement(
