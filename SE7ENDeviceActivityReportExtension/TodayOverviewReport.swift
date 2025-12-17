@@ -2,16 +2,21 @@
 //  TodayOverviewReport.swift
 //  SE7ENDeviceActivityReportExtension
 //
+//  Reports today's app usage and saves to shared container for main app
+//
 
 import DeviceActivity
 import SwiftUI
 import Foundation
 import FamilyControls
+import ManagedSettings
 
+// MARK: - Report Context
 extension DeviceActivityReport.Context {
     static let todayOverview = Self("todayOverview")
 }
 
+// MARK: - Today Overview Report
 struct TodayOverviewReport: DeviceActivityReportScene {
     let context: DeviceActivityReport.Context = .todayOverview
     let content: (UsageSummary) -> TodayOverviewView
@@ -19,33 +24,21 @@ struct TodayOverviewReport: DeviceActivityReportScene {
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> UsageSummary {
-        print("🚀 TodayOverviewReport.makeConfiguration: STARTING!")
-        print("   ⏰ Time: \(Date())")
+        print("🚀 TodayOverviewReport: Processing device activity data...")
         
         var totalDuration: TimeInterval = 0
         var perAppDuration: [String: TimeInterval] = [:]
+        var tokenToDuration: [Application: TimeInterval] = [:]
+        var tokenToName: [Application: String] = [:]
         var uniqueApps: Set<String> = []
-        var segmentCount = 0
-        var categoryCount = 0
-        var appCount = 0
-        var dataIterations = 0
         
         // Process all device activity data
         for await deviceActivityData in data {
-            dataIterations += 1
-            print("   📦 Processing deviceActivityData iteration #\(dataIterations)...")
-            
             for await segment in deviceActivityData.activitySegments {
-                segmentCount += 1
-                print("   📈 Segment \(segmentCount): duration=\(Int(segment.totalActivityDuration))s")
-                
-                // Drill into categories and applications
                 for await category in segment.categories {
-                    categoryCount += 1
-                    
                     for await app in category.applications {
-                        appCount += 1
-                        let rawName = app.application.localizedDisplayName ?? "Unknown"
+                        let application = app.application
+                        let rawName = application.localizedDisplayName ?? "Unknown"
                         
                         // Filter out placeholder app names
                         guard let name = sanitizedAppName(rawName) else {
@@ -53,25 +46,24 @@ struct TodayOverviewReport: DeviceActivityReportScene {
                         }
                         
                         let appDuration = app.totalActivityDuration
+                        
+                        // Aggregate by app name (for display)
                         uniqueApps.insert(name)
                         perAppDuration[name, default: 0] += appDuration
                         totalDuration += appDuration
                         
-                        if appDuration > 60 { // Only log apps with > 1 minute usage
-                            print("      📱 App: \(name) = \(Int(appDuration/60))m")
+                        // Aggregate by application (for reliable limit matching)
+                        tokenToDuration[application, default: 0] += appDuration
+                        if tokenToName[application] == nil {
+                            tokenToName[application] = name
                         }
                     }
                 }
             }
         }
         
-        print("📊 TodayOverviewReport: Processing complete!")
-        print("   • Data iterations: \(dataIterations)")
-        print("   • Segments: \(segmentCount)")
-        print("   • Categories: \(categoryCount)")
-        print("   • Apps processed: \(appCount)")
-        print("   • Unique apps: \(uniqueApps.count)")
-        print("   • Total duration: \(Int(totalDuration/60)) minutes")
+        let totalMinutes = Int(totalDuration / 60)
+        print("📊 TodayOverviewReport: \(totalMinutes) min total, \(uniqueApps.count) apps")
         
         // Sort apps by duration and get top 10
         let sortedApps = perAppDuration.sorted { $0.value > $1.value }
@@ -83,35 +75,36 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             topApps: topApps
         )
         
-        // CRITICAL: Save to shared container SYNCHRONOUSLY
-        print("💾 TodayOverviewReport: About to save to shared container...")
-        saveToSharedContainer(summary: summary, perAppDuration: perAppDuration)
+        // Save to shared container for main app
+        saveToSharedContainer(
+            summary: summary,
+            perAppDuration: perAppDuration,
+            tokenToDuration: tokenToDuration,
+            tokenToName: tokenToName
+        )
         
         return summary
     }
     
-    /// Save summary to shared app group for main app to read - MUST BE SYNCHRONOUS!
-    private func saveToSharedContainer(summary: UsageSummary, perAppDuration: [String: TimeInterval]) {
-        // UNIQUE DEBUG STRING V4 - if you see this in logs, the fix was applied
-        print("🔥🔥🔥 EXTENSION V4: saveToSharedContainer called!")
-        
+    // MARK: - Save to Shared Container
+    
+    private func saveToSharedContainer(
+        summary: UsageSummary,
+        perAppDuration: [String: TimeInterval],
+        tokenToDuration: [Application: TimeInterval],
+        tokenToName: [Application: String]
+    ) {
         let appGroupID = "group.com.se7en.app"
         
-        // NO DispatchQueue.main.async - extensions get killed before async completes!
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            print("❌ EXTENSION V4: Failed to open UserDefaults!")
+            print("❌ REPORT: Failed to access App Group")
             return
         }
         
-        let totalMinutes = Int(summary.totalDuration / 60)
+        let totalMinutes = summary.totalMinutes
         let appsCount = summary.appCount
         
-        print("🔥 EXTENSION V4: Saving \(totalMinutes) minutes, \(appsCount) apps")
-        
-        let topAppsPayload: [[String: Any]] = summary.topApps.map { 
-            ["name": $0.name, "minutes": Int($0.duration / 60)]
-        }
-        
+        // Build per-app usage dictionary (minutes)
         var perAppUsage: [String: Int] = [:]
         for (appName, duration) in perAppDuration {
             let minutes = Int(duration / 60)
@@ -120,20 +113,107 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             }
         }
         
-        // Write all values SYNCHRONOUSLY
+        // Build top apps payload
+        let topAppsPayload: [[String: Any]] = summary.topApps.map {
+            ["name": $0.name, "minutes": $0.minutes]
+        }
+        
+        // Write core values
         sharedDefaults.set(totalMinutes, forKey: "total_usage")
         sharedDefaults.set(appsCount, forKey: "apps_count")
         sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
         sharedDefaults.set(topAppsPayload, forKey: "top_apps")
         sharedDefaults.set(perAppUsage, forKey: "per_app_usage")
         
-        // Force write to disk NOW
-        let synced = sharedDefaults.synchronize()
+        // Match tokens to limits and write usage by token hash
+        matchTokensToLimits(
+            tokenToDuration: tokenToDuration,
+            tokenToName: tokenToName,
+            sharedDefaults: sharedDefaults
+        )
         
-        print("🔥 EXTENSION V4: Saved! sync=\(synced), minutes=\(totalMinutes)")
+        sharedDefaults.synchronize()
+        
+        print("💾 REPORT: Saved \(totalMinutes) min, \(appsCount) apps")
     }
     
-    /// Filter out placeholder app names like "app 902388" or "Unknown"
+    // MARK: - Token to Limit Matching
+    
+    private func matchTokensToLimits(
+        tokenToDuration: [Application: TimeInterval],
+        tokenToName: [Application: String],
+        sharedDefaults: UserDefaults
+    ) {
+        // Load stored limits
+        guard let limitsData = sharedDefaults.data(forKey: "stored_app_limits_v2"),
+              let limits = try? JSONDecoder().decode([StoredLimit].self, from: limitsData) else {
+            print("📭 REPORT: No stored limits found")
+            return
+        }
+        
+        print("🔗 REPORT: Matching \(tokenToDuration.count) apps to \(limits.count) limits...")
+        
+        var usageByLimitUUID: [String: Int] = [:]
+        var nameByLimitUUID: [String: String] = [:]
+        var hashToLimitUUID: [String: String] = [:]
+        
+        // For each application in report, find matching limit
+        for (application, duration) in tokenToDuration {
+            let minutes = Int(duration / 60)
+            guard minutes > 0 else { continue }
+            
+            let appName = tokenToName[application] ?? "Unknown"
+            
+            // Get the token (it's optional)
+            guard let appToken = application.token else { continue }
+            let tokenHash = String(appToken.hashValue)
+            
+            // Try to find limit by direct token comparison
+            for limit in limits where limit.isActive {
+                guard let selection = limit.getSelection() else { continue }
+                
+                // Direct token comparison (most reliable)
+                if selection.applicationTokens.contains(appToken) {
+                    let uuidString = limit.id.uuidString
+                    usageByLimitUUID[uuidString] = minutes
+                    nameByLimitUUID[uuidString] = appName
+                    hashToLimitUUID[tokenHash] = uuidString
+                    print("✅ REPORT: Matched '\(appName)' -> limit \(uuidString.prefix(8))..., \(minutes) min")
+                    break
+                }
+            }
+            
+            // Also save by token hash (for backwards compatibility with token hash based lookups)
+            sharedDefaults.set(minutes, forKey: "usage_\(tokenHash)")
+        }
+        
+        // Save usage by limit UUID (primary method for main app)
+        for (uuidString, minutes) in usageByLimitUUID {
+            sharedDefaults.set(minutes, forKey: "usage_v2_\(uuidString)")
+        }
+        
+        // Save name mappings
+        let existingNameMap = sharedDefaults.dictionary(forKey: "limit_id_to_app_name") as? [String: String] ?? [:]
+        var updatedNameMap = existingNameMap
+        for (uuid, name) in nameByLimitUUID {
+            updatedNameMap[uuid] = name
+        }
+        sharedDefaults.set(updatedNameMap, forKey: "limit_id_to_app_name")
+        
+        // Save hash to UUID mapping (for backwards compatibility)
+        let existingHashMap = sharedDefaults.dictionary(forKey: "token_hash_to_limit_uuid") as? [String: String] ?? [:]
+        var updatedHashMap = existingHashMap
+        for (hash, uuid) in hashToLimitUUID {
+            updatedHashMap[hash] = uuid
+        }
+        sharedDefaults.set(updatedHashMap, forKey: "token_hash_to_limit_uuid")
+        
+        print("✅ REPORT: Matched \(usageByLimitUUID.count) limits")
+    }
+    
+    // MARK: - Helpers
+    
+    /// Filter out placeholder app names
     private func sanitizedAppName(_ raw: String?) -> String? {
         guard let name = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
               !name.isEmpty else {
@@ -141,16 +221,13 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         }
         
         let lower = name.lowercased()
-        if lower == "unknown" {
-            return nil
-        }
         
-        // Filter out system/auth helper labels that should not surface to users
-        if lower.contains("familycontrols") || lower.contains("authentication") {
-            return nil
-        }
+        // Filter out system/placeholder names
+        if lower == "unknown" { return nil }
+        if lower.contains("familycontrols") { return nil }
+        if lower.contains("authentication") { return nil }
         
-        // Match patterns like "app 902388" or "app902388"
+        // Filter out "app 902388" style placeholders
         if let regex = try? NSRegularExpression(pattern: #"^app\s*\d{2,}$"#, options: [.caseInsensitive]) {
             let range = NSRange(location: 0, length: name.utf16.count)
             if regex.firstMatch(in: name, options: [], range: range) != nil {
@@ -162,4 +239,17 @@ struct TodayOverviewReport: DeviceActivityReportScene {
     }
 }
 
-
+// MARK: - Stored Limit (for decoding)
+private struct StoredLimit: Codable {
+    let id: UUID
+    let appName: String
+    let dailyLimitMinutes: Int
+    let usageMinutes: Int
+    let isActive: Bool
+    let createdAt: Date
+    let selectionData: Data
+    
+    func getSelection() -> FamilyActivitySelection? {
+        return try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: selectionData)
+    }
+}

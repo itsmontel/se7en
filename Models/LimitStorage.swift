@@ -78,11 +78,14 @@ final class LimitStorageManager {
     func addLimit(_ limit: StoredAppLimit) {
         var limits = loadLimits()
         
-        // Remove any existing limit for the same app (by name)
-        limits.removeAll { $0.appName.lowercased() == limit.appName.lowercased() }
+        // ✅ DON'T remove existing limits by name anymore
+        // Allow multiple limits to exist temporarily
+        // The extension will map them properly
         
         limits.append(limit)
         saveLimits(limits)
+        
+        print("💾 Saved limit \(limit.id.uuidString.prefix(8)) with name '\(limit.appName)'")
     }
     
     func removeLimit(id: UUID) {

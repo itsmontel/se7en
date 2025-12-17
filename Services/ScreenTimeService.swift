@@ -23,6 +23,9 @@ final class ScreenTimeService: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
+    // Track last logged usage values to prevent log spam
+    private var lastLoggedUsage: [String: Int] = [:]
+    
     // MARK: - Token Storage
     // Key: bundle ID or app identifier, Value: FamilyActivitySelection for that app
     private var appSelections: [String: FamilyActivitySelection] = [:]
@@ -174,6 +177,15 @@ final class ScreenTimeService: ObservableObject {
         // 🔥 CRITICAL: Save to shared container IMMEDIATELY for extension access
         saveSelectionToSharedContainer(selection: selection, tokenHash: verifiedTokenHash)
         
+        // ✅ CRITICAL: Save to LimitStorageManager so extension can find the limit!
+        let storedLimit = StoredAppLimit(
+            appName: appName,
+            dailyLimitMinutes: dailyLimitMinutes,
+            selection: selection
+        )
+        LimitStorageManager.shared.addLimit(storedLimit)
+        print("💾 Saved StoredAppLimit: \(storedLimit.id.uuidString.prefix(8))... for '\(appName)'")
+        
         // ✅ NEW: Save ALL monitored app selections for extension to access
         saveAllMonitoredSelectionsToSharedContainer()
         
@@ -201,6 +213,12 @@ final class ScreenTimeService: ObservableObject {
         
         // Set up basic DeviceActivity monitoring
         setupBasicMonitoring(for: appGoal, selection: selection)
+        
+        // ✅ CRITICAL: Refresh global monitoring to include this new app
+        // This ensures the report extension can see this app's usage
+        if let allApps = allAppsSelection {
+            setupGlobalMonitoringForReports(selection: allApps)
+        }
         
         print("✅ App added and monitoring started!")
     }
@@ -241,17 +259,17 @@ final class ScreenTimeService: ObservableObject {
         // Save to shared storage
         LimitStorageManager.shared.addLimit(limit)
         
-        // Also create Core Data goal for backward compatibility
-        let tokenHash = limit.id.uuidString  // Use UUID as the "bundleID" field
+        // ✅ Create Core Data goal with UUID stored in appBundleID field
+        let limitUUIDString = limit.id.uuidString
         _ = coreDataManager.createAppGoal(
             appName: appName,
-            bundleID: tokenHash,
+            bundleID: limitUUIDString,  // ✅ Store UUID, not token hash!
             dailyLimitMinutes: dailyLimitMinutes
         )
         
-        // Store selection with UUID key
-        appSelections[tokenHash] = selection
-        saveSelection(selection, forBundleID: tokenHash)
+        // Store selection with UUID key (for lookup)
+        appSelections[limitUUIDString] = selection
+        saveSelection(selection, forBundleID: limitUUIDString)
         
         // Set up monitoring
         setupCombinedMonitoringReliable(limitID: limit.id, selection: selection, limitMinutes: dailyLimitMinutes)
@@ -887,7 +905,12 @@ final class ScreenTimeService: ObservableObject {
                 let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                 if normalizedGoalName == normalizedReportName {
                     usageMinutes = reportUsage
-                    print("📊 Matched usage by name: \(appName) = \(usageMinutes) minutes")
+                    // Only log if value changed to reduce log spam
+                    let lastLogged = lastLoggedUsage[tokenHash] ?? 0
+                    if usageMinutes != lastLogged {
+                        print("📊 Matched usage by name: \(appName) = \(usageMinutes) minutes")
+                        lastLoggedUsage[tokenHash] = usageMinutes
+                    }
                     break
                 }
             }
@@ -897,7 +920,12 @@ final class ScreenTimeService: ObservableObject {
                 let key = "usage_\(tokenHash)"
                 usageMinutes = sharedDefaults.integer(forKey: key)
                 if usageMinutes > 0 {
-                    print("📊 Matched usage by token hash: \(tokenHash) = \(usageMinutes) minutes")
+                    // Only log if value changed to reduce log spam
+                    let lastLogged = lastLoggedUsage[tokenHash] ?? 0
+                    if usageMinutes != lastLogged {
+                        print("📊 Matched usage by token hash: \(tokenHash) = \(usageMinutes) minutes")
+                        lastLoggedUsage[tokenHash] = usageMinutes
+                    }
                 }
             }
             
@@ -1733,10 +1761,32 @@ final class ScreenTimeService: ObservableObject {
     private func setupGlobalMonitoringForReports(selection: FamilyActivitySelection) {
         let globalActivityName = DeviceActivityName("se7en.global.reports")
         
+        // ✅ CRITICAL: Merge category selection with individual app limit tokens
+        // This ensures report extension sees BOTH category apps AND individual limit apps
+        var combinedSelection = selection
+        
+        // Add tokens from all stored limits (individual app limits)
+        let storedLimits = LimitStorageManager.shared.loadLimits()
+        for limit in storedLimits where limit.isActive {
+            if let limitSelection = limit.getSelection() {
+                // Add individual app tokens to combined selection
+                for token in limitSelection.applicationTokens {
+                    combinedSelection.applicationTokens.insert(token)
+                }
+            }
+        }
+        
+        // Also add tokens from in-memory appSelections
+        for (_, appSelection) in appSelections {
+            for token in appSelection.applicationTokens {
+                combinedSelection.applicationTokens.insert(token)
+            }
+        }
+        
         print("🌍 Setting up global monitoring for DeviceActivityReport extensions")
         print("   Activity Name: \(globalActivityName)")
-        print("   Apps: \(selection.applicationTokens.count)")
-        print("   Categories: \(selection.categoryTokens.count)")
+        print("   Apps (combined): \(combinedSelection.applicationTokens.count)")
+        print("   Categories: \(combinedSelection.categoryTokens.count)")
         
         // Create 24-hour schedule
         let schedule = DeviceActivitySchedule(
@@ -1748,8 +1798,8 @@ final class ScreenTimeService: ObservableObject {
         // ⚠️ CRITICAL FIX: Use 1-minute threshold instead of 1440!
         // This ensures reports get updated frequently
         let reportingEvent = DeviceActivityEvent(
-            applications: selection.applicationTokens,
-            categories: selection.categoryTokens,
+            applications: combinedSelection.applicationTokens,
+            categories: combinedSelection.categoryTokens,
             threshold: DateComponents(minute: 1) // ✅ Changed from 1440 to 1
         )
         
@@ -1761,6 +1811,7 @@ final class ScreenTimeService: ObservableObject {
             try deviceActivityCenter.startMonitoring(globalActivityName, during: schedule, events: events)
             print("✅ Started global monitoring for DeviceActivityReport extensions")
             print("   This enables the report extensions to receive usage data")
+            print("   Individual app limits will now be tracked!")
         } catch {
             print("❌ Failed to start global monitoring: \(error)")
             print("   DeviceActivityReport extensions may not receive data!")

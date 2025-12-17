@@ -2,114 +2,49 @@
 //  TotalActivityReport.swift
 //  SE7ENDeviceActivityReportExtension
 //
+//  Simple report for total screen time
+//
 
 import DeviceActivity
 import SwiftUI
-import Foundation
 
+// MARK: - Report Context
 extension DeviceActivityReport.Context {
     static let totalActivity = Self("Total Activity")
 }
 
+// MARK: - Total Activity Report
 struct TotalActivityReport: DeviceActivityReportScene {
     let context: DeviceActivityReport.Context = .totalActivity
-    let content: (TotalActivityData) -> TotalActivityView
+    let content: (Int) -> TotalActivityView
     
-    func makeConfiguration(
-        representing data: DeviceActivityResults<DeviceActivityData>
-    ) async -> TotalActivityData {
-        var totalDuration: TimeInterval = 0
-        var uniqueApps: Set<String> = []
+    func makeConfiguration(representing data: DeviceActivityResults<DeviceActivityData>) async -> Int {
+        var totalSeconds: TimeInterval = 0
         
-        // Process all device activity data
-        for await deviceActivityData in data {
-            for await segment in deviceActivityData.activitySegments {
-                totalDuration += segment.totalActivityDuration
-                
-                // Drill into categories and applications to count unique apps
-                for await category in segment.categories {
-                    for await app in category.applications {
-                        // Filter out placeholder app names
-                        guard let name = sanitizedAppName(app.application.localizedDisplayName) else {
-                            continue
-                        }
-                        uniqueApps.insert(name)
-                    }
-                }
+        for await datum in data {
+            for await segment in datum.activitySegments {
+                totalSeconds += segment.totalActivityDuration
             }
         }
         
-        print("📊 TotalActivityReport: totalDuration=\(Int(totalDuration))s uniqueApps=\(uniqueApps.count)")
+        let totalMinutes = Int(totalSeconds / 60)
         
-        // Save to shared container
-        saveToSharedContainer(totalDuration: totalDuration, appsCount: uniqueApps.count)
+        // Save to shared container for main app
+        saveToSharedContainer(totalMinutes: totalMinutes)
         
-        return TotalActivityData(
-            totalDuration: totalDuration,
-            appsCount: uniqueApps.count
-        )
+        return totalMinutes
     }
     
-    private func saveToSharedContainer(totalDuration: TimeInterval, appsCount: Int) {
-        let appGroupID = "group.com.se7en.app"
-        let totalMinutes = Int(totalDuration / 60)
-        
-        // METHOD 1: UserDefaults
-        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-            sharedDefaults.set(totalMinutes, forKey: "total_usage")
-            sharedDefaults.set(appsCount, forKey: "apps_count")
-            sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
-            sharedDefaults.synchronize()
+    private func saveToSharedContainer(totalMinutes: Int) {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.se7en.app") else {
+            print("❌ TOTAL: Failed to access App Group")
+            return
         }
         
-        // METHOD 2: File backup
-        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-            let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
-            let data: [String: Any] = [
-                "total_usage": totalMinutes,
-                "apps_count": appsCount,
-                "last_updated": Date().timeIntervalSince1970
-            ]
-            if let jsonData = try? JSONSerialization.data(withJSONObject: data) {
-                try? jsonData.write(to: fileURL)
-            }
-        }
-    }
-    
-    /// Filter out placeholder app names like "app 902388" or "Unknown"
-    private func sanitizedAppName(_ raw: String?) -> String? {
-        guard let name = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !name.isEmpty else {
-            return nil
-        }
+        sharedDefaults.set(totalMinutes, forKey: "total_usage")
+        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
+        sharedDefaults.synchronize()
         
-        let lower = name.lowercased()
-        if lower == "unknown" {
-            return nil
-        }
-        
-        // Match patterns like "app 902388" or "app902388"
-        if let regex = try? NSRegularExpression(pattern: #"^app\s*\d{2,}$"#, options: [.caseInsensitive]) {
-            let range = NSRange(location: 0, length: name.utf16.count)
-            if regex.firstMatch(in: name, options: [], range: range) != nil {
-                return nil
-            }
-        }
-        
-        return name
+        print("📊 TOTAL: Saved \(totalMinutes) minutes")
     }
 }
-
-struct TotalActivityData {
-    let totalDuration: TimeInterval
-    let appsCount: Int
-}
-
-
-
-
-
-
-
-
-

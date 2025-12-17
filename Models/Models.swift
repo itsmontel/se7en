@@ -11,7 +11,7 @@ struct MonitoredApp: Identifiable, Equatable {
     var usedToday: Int // in minutes
     var color: Color
     var isEnabled: Bool = true
-    let limitID: UUID?  // ✅ Changed from tokenHash to limitID
+    let tokenHash: String?  // ✅ Store token hash for retrieving selection
     
     var remainingMinutes: Int {
         max(0, dailyLimit - usedToday)
@@ -47,7 +47,7 @@ struct MonitoredApp: Identifiable, Equatable {
                lhs.dailyLimit == rhs.dailyLimit &&
                lhs.usedToday == rhs.usedToday &&
                lhs.isEnabled == rhs.isEnabled &&
-               lhs.limitID == rhs.limitID &&
+               lhs.tokenHash == rhs.tokenHash &&
                colorComponentsEqual(lhs.color, rhs.color)
     }
     

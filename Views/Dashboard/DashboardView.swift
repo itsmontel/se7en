@@ -378,7 +378,7 @@ struct DashboardView: View {
                 usedToday: minutes,
                 color: Color(category.color),
                 isEnabled: false,
-                limitID: nil
+                tokenHash: nil
             ))
         }
         
@@ -506,7 +506,7 @@ struct DashboardView: View {
                 usedToday: app.minutes,
                 color: app.color,
                 isEnabled: false, // Not actively monitored
-                limitID: nil
+                tokenHash: nil
             )
         }
     }

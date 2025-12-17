@@ -71,55 +71,8 @@ class AppState: ObservableObject {
         coreDataManager.performDailyResetIfNeeded()
         loadInitialData()
         preloadScreenTimeFromSharedContainer()
-        // Migrate from hash-based to UUID-based limits
-        migrateFromHashToUUID()
         loadUserPreferences()
         checkOnboardingStatus()
-    }
-    
-    func migrateFromHashToUUID() {
-        let migrationKey = "limits_migration_v2_complete"
-        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
-        
-        print("🔄 Starting migration from hash-based to UUID-based limits...")
-        
-        let coreDataManager = CoreDataManager.shared
-        let screenTimeService = ScreenTimeService.shared
-        let goals = coreDataManager.getActiveAppGoals()
-        
-        for goal in goals {
-            guard let oldIdentifier = goal.appBundleID,
-                  !oldIdentifier.isEmpty,
-                  UUID(uuidString: oldIdentifier) == nil else { // Skip if already UUID
-                continue
-            }
-            
-            // Try to find the selection
-            if let selection = screenTimeService.getSelection(for: oldIdentifier),
-               !selection.applicationTokens.isEmpty {
-                
-                let appName = goal.appName ?? "App"
-                let limitMinutes = Int(goal.dailyLimitMinutes)
-                
-                // Create new limit with UUID
-                let newLimit = StoredAppLimit(
-                    appName: appName,
-                    dailyLimitMinutes: limitMinutes,
-                    selection: selection
-                )
-                
-                LimitStorageManager.shared.addLimit(newLimit)
-                
-                // Update Core Data goal with new UUID
-                goal.appBundleID = newLimit.id.uuidString
-                
-                print("✅ Migrated: \(appName) -> \(newLimit.id.uuidString.prefix(8))...")
-            }
-        }
-        
-        coreDataManager.save()
-        UserDefaults.standard.set(true, forKey: migrationKey)
-        print("✅ Migration complete!")
     }
     
     private func setupObservers() {
@@ -320,9 +273,6 @@ class AppState: ObservableObject {
             // ✅ Use custom name if provided, otherwise will be shown via Label(token) in UI
             let customName = goal.appName ?? ""
             
-            // Convert tokenHash to limitID if it's a UUID
-            let limitID = UUID(uuidString: tokenHash)
-            
             return MonitoredApp(
                 name: customName.isEmpty ? "App" : customName,  // Fallback name (real name shown via Label)
                 icon: "app.fill",  // Fallback icon (real icon shown via Label)
@@ -330,7 +280,7 @@ class AppState: ObservableObject {
                 usedToday: getCurrentUsage(for: goal),
                 color: getAppColor(for: customName),
                 isEnabled: goal.isActive,
-                limitID: limitID  // ✅ Store UUID for retrieving selection
+                tokenHash: tokenHash  // ✅ Store token hash for retrieving selection
             )
         }
         
@@ -362,171 +312,79 @@ class AppState: ObservableObject {
     }
     
     /// Get current usage for a goal - bulletproof matching with multiple fallbacks
-    /// Get current usage for a goal - RELIABLE method using UUID
-    /// Get current usage for a goal - FIXED VERSION
     private func getCurrentUsage(for goal: AppGoal) -> Int {
-        let identifier = goal.appBundleID ?? ""
-        let storedAppName = goal.appName ?? ""
-        
-        guard !identifier.isEmpty else { return 0 }
-        
-        // SPECIAL CASE: "All Categories Tracking"
-        if identifier == "com.se7en.allcategories" {
-            let appGroupID = "group.com.se7en.app"
-            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return 0 }
-            sharedDefaults.synchronize()
-            return sharedDefaults.integer(forKey: "total_usage")
-        }
+        let tokenHash = goal.appBundleID ?? ""
+        let appName = goal.appName ?? ""
+        guard !tokenHash.isEmpty else { return 0 }
         
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return 0 }
+        
         sharedDefaults.synchronize()
+        applyPendingGoalNameUpdates()
         
-        // Get per-app usage dictionary (written by extension)
-        let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+        var usage: Int = 0
         
-        // Get the name mapping (written by extension)
-        let nameMapKey = "limit_id_to_app_name"
-        let nameMap = sharedDefaults.dictionary(forKey: nameMapKey) as? [String: String] ?? [:]
-        
-        print("🔍 Looking for usage: identifier=\(identifier.prefix(8)), storedName='\(storedAppName)'")
-        print("   per_app_usage has \(perAppUsage.count) entries")
-        print("   nameMap has \(nameMap.count) entries")
-        
-        // =========================================================
-        // PRIORITY 1: Check UUID-based usage (written by extension)
-        // =========================================================
-        if let uuid = UUID(uuidString: identifier) {
-            // Check direct usage key
-            let directUsage = sharedDefaults.integer(forKey: "usage_v2_\(uuid.uuidString)")
-            if directUsage > 0 {
-                print("✅ Found usage by direct UUID key: \(directUsage) min")
-                return directUsage
-            }
+        // PRIORITY 1: Check if token hash is actually a UUID (limit UUID system)
+        // Extension writes usage_v2_<UUID> when it matches tokens to limits
+        if UUID(uuidString: tokenHash) != nil {
+            usage = sharedDefaults.integer(forKey: "usage_v2_\(tokenHash)")
+            if usage > 0 { return usage }
         }
         
-        // =========================================================
-        // PRIORITY 2: Check real app name from extension
-        // =========================================================
-        if let uuid = UUID(uuidString: identifier) {
-            if let realAppName = nameMap[uuid.uuidString] {
-                print("📱 Found real app name in mapping: '\(realAppName)'")
-                
-                // Look up in per_app_usage
-                if let usage = perAppUsage[realAppName], usage > 0 {
-                    print("✅ Found usage by real name: \(usage) min")
-                    return usage
-                }
-                
-                let normalized = realAppName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                if let usage = perAppUsage[normalized], usage > 0 {
-                    print("✅ Found usage by normalized real name: \(usage) min")
-                    return usage
-                }
-            }
+        // PRIORITY 2: Direct lookup with stored token hash
+        usage = sharedDefaults.integer(forKey: "usage_\(tokenHash)")
+        if usage > 0 { return usage }
+        
+        // PRIORITY 3: Check token_hash_to_limit_uuid mapping (extension maps hashes to UUIDs)
+        if let hashToUUID = sharedDefaults.dictionary(forKey: "token_hash_to_limit_uuid") as? [String: String],
+           let limitUUID = hashToUUID[tokenHash] {
+            usage = sharedDefaults.integer(forKey: "usage_v2_\(limitUUID)")
+            if usage > 0 { return usage }
         }
         
-        // =========================================================
-        // PRIORITY 3: Check stored app name (if not "App")
-        // =========================================================
-        if !storedAppName.isEmpty && storedAppName.lowercased() != "app" {
-            let normalizedName = storedAppName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        // PRIORITY 4: Match by app name using limit_id_to_app_name mapping
+        if !appName.isEmpty {
+            let normalizedName = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             
-            if let usage = perAppUsage[storedAppName], usage > 0 {
-                print("✅ Found usage by stored name: \(usage) min")
-                return usage
-            }
-            if let usage = perAppUsage[normalizedName], usage > 0 {
-                print("✅ Found usage by normalized stored name: \(usage) min")
-                return usage
+            // Get name-to-limit mapping from extension
+            if let limitIdToName = sharedDefaults.dictionary(forKey: "limit_id_to_app_name") as? [String: String] {
+                for (limitUUID, realName) in limitIdToName {
+                    let normalizedRealName = realName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                    if normalizedRealName == normalizedName || 
+                       normalizedRealName.contains(normalizedName) || 
+                       normalizedName.contains(normalizedRealName) {
+                        usage = sharedDefaults.integer(forKey: "usage_v2_\(limitUUID)")
+                        if usage > 0 { return usage }
+                    }
+                }
             }
             
-            // Fuzzy match
-            for (appName, usage) in perAppUsage {
-                let normalizedKey = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                if normalizedKey.contains(normalizedName) || normalizedName.contains(normalizedKey) {
-                    if usage > 0 {
-                        print("✅ Found usage by fuzzy match '\(appName)': \(usage) min")
-                        return usage
+            // Try per_app_usage dictionary (name-based)
+            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
+                for (reportAppName, reportUsage) in perAppUsage {
+                    let normalizedReportName = reportAppName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                    if normalizedReportName == normalizedName || 
+                       normalizedReportName.contains(normalizedName) || 
+                       normalizedName.contains(normalizedReportName) {
+                        return reportUsage
                     }
                 }
             }
         }
         
-        // =========================================================
-        // PRIORITY 4: If name is "App", find best matching app
-        // =========================================================
-        if storedAppName.lowercased() == "app" || storedAppName.isEmpty {
-            print("🔄 Name is 'App' - searching for best match in per_app_usage...")
-            
-            // Find the app with most usage (excluding system apps)
-            var bestMatch: (name: String, usage: Int)? = nil
-            
-            for (appName, usage) in perAppUsage {
-                let lower = appName.lowercased()
-                
-                // Skip system/internal apps
-                if lower.contains("familycontrols") ||
-                   lower.contains("authentication") ||
-                   lower.contains("screen time") ||
-                   lower.contains("settings") ||
-                   lower == "unknown" ||
-                   lower.hasPrefix("app ") ||
-                   lower == "app" {
-                    continue
-                }
-                
-                if usage > 0 && (bestMatch == nil || usage > bestMatch!.usage) {
-                    bestMatch = (name: appName, usage: usage)
-                }
-            }
-            
-            if let best = bestMatch {
-                print("✅ Best match for 'App': '\(best.name)' = \(best.usage) min")
-                
-                // Save this mapping for next time
-                if let uuid = UUID(uuidString: identifier) {
-                    var updatedNameMap = nameMap
-                    updatedNameMap[uuid.uuidString] = best.name
-                    sharedDefaults.set(updatedNameMap, forKey: nameMapKey)
-                    sharedDefaults.synchronize()
-                    print("💾 Saved name mapping: \(uuid.uuidString.prefix(8)) → '\(best.name)'")
-                }
-                
-                return best.usage
+        // PRIORITY 5: Try to compute hash from stored selection and match
+        if let selection = screenTimeService.getSelection(for: tokenHash),
+           let firstToken = selection.applicationTokens.first {
+            let computedHash = String(firstToken.hashValue)
+            if computedHash != tokenHash {
+                usage = sharedDefaults.integer(forKey: "usage_\(computedHash)")
+                if usage > 0 { return usage }
             }
         }
         
-        // =========================================================
-        // PRIORITY 5: Legacy fallback
-        // =========================================================
-        let legacyUsage = sharedDefaults.integer(forKey: "usage_\(identifier)")
-        if legacyUsage > 0 {
-            print("⚠️ Found usage by legacy key: \(legacyUsage) min")
-            return legacyUsage
-        }
-        
-        print("⚠️ No usage found for '\(storedAppName)' (ID: \(identifier.prefix(8)))")
         return 0
     }
-    
-    /// Add app goal using the new reliable method
-    func addAppGoalReliable(
-        selection: FamilyActivitySelection,
-        appName: String,
-        dailyLimitMinutes: Int
-    ) {
-        // Use the new reliable method
-        screenTimeService.addAppLimitReliable(
-            selection: selection,
-            appName: appName,
-            dailyLimitMinutes: dailyLimitMinutes
-        )
-        
-        // Reload goals
-        loadAppGoals()
-    }
-    
     
     /// ✅ NEW: Apply pending name updates from extension
     private func applyPendingGoalNameUpdates() {
@@ -673,6 +531,19 @@ class AppState: ObservableObject {
     
     func requestScreenTimeAuthorization() async {
         await screenTimeService.requestAuthorization()
+    }
+    
+    /// Add app goal using the reliable method with user-typed name
+    func addAppGoalReliable(
+        selection: FamilyActivitySelection,
+        appName: String,
+        dailyLimitMinutes: Int
+    ) {
+        addAppGoalFromFamilySelection(
+            selection,
+            appName: appName,
+            dailyLimitMinutes: dailyLimitMinutes
+        )
     }
     
     func addAppGoalFromFamilySelection(_ selection: FamilyActivitySelection, appName: String, dailyLimitMinutes: Int, bundleID: String? = nil) {
@@ -999,5 +870,4 @@ class AppState: ObservableObject {
         userName = name
         saveUserPreferences()
     }
-}
 }

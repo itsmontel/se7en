@@ -271,7 +271,7 @@ struct BlockingView: View {
         let coreDataManager = CoreDataManager.shared
         let goals = coreDataManager.getActiveAppGoals()
         
-        let identifier = app.limitID?.uuidString ?? ""
+        let identifier = app.tokenHash ?? ""
         if !identifier.isEmpty,
            let goal = goals.first(where: { $0.appBundleID == identifier }) {
             
@@ -290,7 +290,7 @@ struct BlockingView: View {
                 }
             }
         } else {
-            print("❌ deleteLimit: No matching goal found for app \(app.name) with limitID \(app.limitID?.uuidString ?? "nil")")
+            print("❌ deleteLimit: No matching goal found for app \(app.name) with tokenHash \(app.tokenHash ?? "nil")")
         }
         
         // Clear the delete state
@@ -331,7 +331,7 @@ struct BlockingView: View {
     @ViewBuilder
     private func appLimitRow(_ app: MonitoredApp) -> some View {
         // ✅ Get selection using token hash to display real app name and icon
-                            let identifier = app.limitID?.uuidString ?? ""
+                            let identifier = app.tokenHash ?? ""
                             let selection = screenTimeService.getSelection(for: identifier)
         // applicationTokens.first is already ApplicationToken type, no cast needed
         let firstToken = selection?.applicationTokens.first
@@ -532,7 +532,7 @@ struct BlockingView: View {
     
     private func getScheduleInfo(for app: MonitoredApp) -> String? {
         // ✅ Use token hash as identifier (stored in appBundleID field)
-        let identifier = app.limitID?.uuidString ?? ""
+        let identifier = app.tokenHash ?? ""
         guard !identifier.isEmpty,
               let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(identifier)"),
               let schedule = try? JSONDecoder().decode(LimitSchedule.self, from: scheduleData) else {
@@ -594,7 +594,7 @@ struct EditLimitSheet: View {
         self._newLimit = State(initialValue: currentLimit)
         
         // ✅ Use limitID as identifier (stored in appBundleID field)
-        let identifier = app.limitID?.uuidString ?? ""
+        let identifier = app.tokenHash ?? ""
         let scheduleData = UserDefaults.standard.data(forKey: "limitSchedule_\(identifier)")
         if let data = scheduleData,
            let decoded = try? JSONDecoder().decode(LimitSchedule.self, from: data) {
@@ -624,7 +624,7 @@ struct EditLimitSheet: View {
                         // Elegant Header
                         VStack(spacing: 18) {
                             // ✅ Get selection using token hash to display real app name and icon
-                            let identifier = app.limitID?.uuidString ?? ""
+                            let identifier = app.tokenHash ?? ""
             let selection = screenTimeService.getSelection(for: identifier)
                             let firstToken = selection?.applicationTokens.first
                             
@@ -1129,7 +1129,7 @@ struct EditLimitSheet: View {
         let goals = coreDataManager.getActiveAppGoals()
         
         // ✅ Use token hash as identifier (stored in appBundleID field)
-        let identifier = app.limitID?.uuidString ?? ""
+        let identifier = app.tokenHash ?? ""
         guard !identifier.isEmpty else {
             print("❌ Cannot save limit - no token hash for app")
             dismiss()
@@ -1180,6 +1180,10 @@ struct SetLimitSheet: View {
     @State private var schedule: LimitSchedule = LimitSchedule()
     @State private var showingScheduleOptions = false
     
+    // ✅ NEW: State for user-typed app name
+    @State private var userAppName: String = ""
+    @FocusState private var isAppNameFocused: Bool
+    
     let limitOptions = [30, 60, 90, 120, 180, 240]
     
     var body: some View {
@@ -1220,43 +1224,66 @@ struct SetLimitSheet: View {
                                         .scaleEffect(4.5)  // ✅ Scale up to fill 110x110 border
                                         .frame(width: 110, height: 110)  // Match border size exactly
                                 } else {
-                                    // Fallback to generic icon if no token available
                                     Image(systemName: "app.fill")
-                                        .font(.system(size: 110, weight: .semibold))
-                                        .foregroundColor(.textPrimary)
-                                        .frame(width: 110, height: 110)  // Match border size exactly
+                                        .font(.system(size: 65, weight: .light))
+                                        .foregroundColor(.primary.opacity(0.7))
                                 }
                             }
                             .shadow(color: Color.primary.opacity(0.25), radius: 20, x: 0, y: 10)
                             
-                            VStack(spacing: 8) {
-                                // ✅ Use Label(token) to show real app name
-                                if let firstToken = fullSelection.applicationTokens.first {
-                                    // Token from applicationTokens is already ApplicationToken type
-                                    Label(firstToken)
-                                        .labelStyle(.titleOnly)
-                                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                                        .foregroundColor(.primary)
-                                } else {
-                                    Text(appName.isEmpty ? "App" : appName)
-                                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                                        .foregroundColor(.primary)
-                                }
+                            Text("Set App Limit")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundColor(.textPrimary)
+                            
+                            // ✅ NEW: App name input field
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("App Name")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.textSecondary)
+                                    .padding(.leading, 4)
                                 
-                                Text("Set a daily time limit")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.secondary)
+                                TextField("Enter app name (e.g., Instagram, TikTok)", text: $userAppName)
+                                    .font(.system(size: 17, weight: .medium))
+                                    .padding(16)
+                                    .background(Color.cardBackground)
+                                    .cornerRadius(14)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(isAppNameFocused ? Color.primary : Color.clear, lineWidth: 2)
+                                    )
+                                    .focused($isAppNameFocused)
+                                    .textInputAutocapitalization(.words)
+                                    .autocorrectionDisabled(false)
+                                
+                                Text("💡 Tip: Type the exact app name to track usage")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.textSecondary.opacity(0.8))
+                                    .padding(.leading, 4)
+                                    .padding(.top, 4)
                             }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
                         }
                         .padding(.top, 28)
                         
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("Daily Time Limit")
-                                .font(.system(size: 21, weight: .bold, design: .rounded))
-                                .foregroundColor(.primary)
-                                .padding(.horizontal, 24)
+                        // Limit selection
+                        VStack(spacing: 18) {
+                            HStack {
+                                Image(systemName: "timer")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                Text("Daily Limit")
+                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    .foregroundColor(.textPrimary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 20)
                             
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 14) {
                                 ForEach(limitOptions, id: \.self) { limit in
                                     setLimitOptionButton(limit: limit)
                                 }
@@ -1306,63 +1333,45 @@ struct SetLimitSheet: View {
                                 HStack(spacing: 12) {
                                     TextField("Minutes", text: $customLimitText)
                                         .keyboardType(.numberPad)
-                                        .font(.system(size: 17, weight: .semibold))
-                                        .padding(.horizontal, 18)
-                                        .padding(.vertical, 16)
-                                        .background(Color.white)
+                                        .font(.system(size: 17, weight: .medium))
+                                        .padding(16)
+                                        .background(Color.cardBackground)
                                         .cornerRadius(14)
-                                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
-                                        .onChange(of: customLimitText) { newValue in
-                                            if let minutes = Int(newValue), minutes > 0 {
+                                        .onChange(of: customLimitText) { value in
+                                            if let minutes = Int(value), minutes > 0 {
                                                 selectedLimit = minutes
-                    }
-                }
-                
-                                    Text("min")
-                                        .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.secondary)
+                                            }
+                                        }
+                                    
+                                    Text("minutes")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.textSecondary)
                                 }
                                 .padding(.horizontal, 20)
                                 .transition(.opacity.combined(with: .move(edge: .top)))
                             }
                         }
                         
-                        VStack(alignment: .leading, spacing: 20) {
+                        // Schedule options (keep existing code)
+                        VStack(spacing: 18) {
                             Button(action: {
                                 withAnimation(.spring(response: 0.3)) {
                                     showingScheduleOptions.toggle()
                                 }
                             }) {
-                                HStack(spacing: 14) {
-                                    Image(systemName: "calendar.badge.clock")
+                                HStack {
+                                    Image(systemName: "calendar")
                                         .font(.system(size: 20, weight: .semibold))
                                     Text("Schedule Options")
-                                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        Spacer()
-                                    Image(systemName: showingScheduleOptions ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
-                                        .font(.system(size: 22))
+                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    Spacer()
+                                    Image(systemName: showingScheduleOptions ? "chevron.up" : "chevron.down")
+                                        .font(.system(size: 16, weight: .bold))
                                 }
-                                .foregroundColor(showingScheduleOptions ? .white : .primary)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 18)
-                                .background(
-                                    Group {
-                                        if showingScheduleOptions {
-                                            LinearGradient(
-                                                gradient: Gradient(colors: [Color.primary, Color.primary.opacity(0.8)]),
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        } else {
-                                            LinearGradient(
-                                                gradient: Gradient(colors: [Color.white, Color.white]),
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                            }
-                        }
-                                )
-                                .cornerRadius(18)
+                                .foregroundColor(.textPrimary)
+                                .padding(18)
+                                .background(Color.cardBackground)
+                                .cornerRadius(16)
                                 .shadow(color: showingScheduleOptions ? Color.primary.opacity(0.3) : Color.black.opacity(0.06), radius: showingScheduleOptions ? 12 : 8, x: 0, y: showingScheduleOptions ? 6 : 4)
                             }
                             .padding(.horizontal, 20)
@@ -1375,11 +1384,12 @@ struct SetLimitSheet: View {
                         
                         Spacer(minLength: 20)
                         
+                        // Add button
                         Button(action: addLimit) {
                             HStack(spacing: 14) {
-                                Image(systemName: "plus.circle.fill")
+                                Image(systemName: userAppName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "exclamationmark.circle.fill" : "plus.circle.fill")
                                     .font(.system(size: 22, weight: .semibold))
-                                Text("Add Limit")
+                                Text(userAppName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Enter App Name First" : "Add Limit")
                                     .font(.system(size: 19, weight: .bold, design: .rounded))
                             }
                             .foregroundColor(.white)
@@ -1387,7 +1397,9 @@ struct SetLimitSheet: View {
                             .padding(.vertical, 20)
                             .background(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [Color.primary, Color.primary.opacity(0.8)]),
+                                    gradient: Gradient(colors: userAppName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 
+                                        [Color.gray, Color.gray.opacity(0.8)] : 
+                                        [Color.primary, Color.primary.opacity(0.8)]),
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -1395,6 +1407,7 @@ struct SetLimitSheet: View {
                             .cornerRadius(18)
                             .shadow(color: Color.primary.opacity(0.4), radius: 16, x: 0, y: 8)
                         }
+                        .disabled(userAppName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 40)
                     }
@@ -1456,203 +1469,140 @@ struct SetLimitSheet: View {
                     }
     }
     
+    @ViewBuilder
     private var setLimitScheduleOptionsView: some View {
-        VStack(spacing: 24) {
-            setLimitDaySelectionView
-            setLimitTimeRestrictionView
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 20)
-        .background(Color.white)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 6)
-        .padding(.horizontal, 20)
-    }
-    
-    private var setLimitDaySelectionView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                Image(systemName: "calendar")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.textPrimary)
+        VStack(spacing: 16) {
+            // Day selection
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Active Days")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-            }
-            
-            VStack(spacing: 10) {
-                ForEach([DaySelection.allDays, .weekdays, .weekends, .custom], id: \.self) { option in
-                    setLimitDaySelectionButton(option: option)
-                }
-            }
-            
-            if schedule.daySelection == .custom {
-                setLimitCustomDaySelectionView
-                    .padding(.top, 8)
-                                    }
-                            }
-    }
-    
-    @ViewBuilder
-    private func setLimitDaySelectionButton(option: DaySelection) -> some View {
-        let isSelected = schedule.daySelection == option
-        
-        Button(action: {
-            withAnimation(.spring(response: 0.3)) {
-                schedule.daySelection = option
-                if option != .custom {
-                    schedule.selectedDays = []
-                }
-            }
-        }) {
-            HStack(spacing: 12) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(isSelected ? .white : .secondary)
-                
-                Text(option.description)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(isSelected ? .white : .primary)
-                
-                Spacer()
-                        }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(
-                Group {
-                    if isSelected {
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.primary, Color.primary.opacity(0.85)]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    } else {
-                        Color.cardBackground
-                    }
-                }
-            )
-            .cornerRadius(14)
-        }
-    }
-    
-    private var setLimitCustomDaySelectionView: some View {
-        let dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-        return LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 10) {
-            ForEach(0..<7) { dayIndex in
-                setLimitCustomDayButton(dayIndex: dayIndex, dayName: dayNames[dayIndex])
-    }
-        }
-    }
-    
-    @ViewBuilder
-    private func setLimitCustomDayButton(dayIndex: Int, dayName: String) -> some View {
-        let isSelected = schedule.selectedDays.contains(dayIndex)
-        
-        Button(action: {
-            withAnimation(.spring(response: 0.2)) {
-                if isSelected {
-                    schedule.selectedDays.remove(dayIndex)
-            } else {
-                    schedule.selectedDays.insert(dayIndex)
-                }
-            }
-        }) {
-            Text(dayName)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(isSelected ? .white : .primary)
-                .frame(width: 42, height: 42)
-                .background(
-                    Group {
-                        if isSelected {
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.primary, Color.primary.opacity(0.8)]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-        } else {
-                            Color.cardBackground
-                        }
-                    }
-                )
-                .cornerRadius(10)
-        }
-    }
-    
-    private var setLimitTimeRestrictionView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "clock")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.textPrimary)
-                Text("Time Restriction")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-            }
-            
-            VStack(spacing: 10) {
-                ForEach([TimeRestrictionType.none, .timeRange, .afterTime, .beforeTime], id: \.self) { option in
-                    setLimitTimeRestrictionButton(option: option)
-                }
-            }
-            
-            setLimitTimeRestrictionPickers
-        }
-    }
-    
-    @ViewBuilder
-    private func setLimitTimeRestrictionButton(option: TimeRestrictionType) -> some View {
-        let isSelected = schedule.timeRestriction == option
-        
-        Button(action: {
-            withAnimation(.spring(response: 0.3)) {
-                schedule.timeRestriction = option
-            }
-        }) {
-            HStack(spacing: 12) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(isSelected ? .white : .secondary)
                 
-                Text(option.description)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(isSelected ? .white : .primary)
-                
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(
-                Group {
-                    if isSelected {
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.primary, Color.primary.opacity(0.85)]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    } else {
-                        Color.cardBackground
+                ForEach(DaySelection.allCases, id: \.self) { option in
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3)) {
+                            schedule.daySelection = option
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: schedule.daySelection == option ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(schedule.daySelection == option ? .primary : .textSecondary)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(option.rawValue)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.textPrimary)
+                                Text(option.description)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.textSecondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(14)
+                        .background(schedule.daySelection == option ? Color.primary.opacity(0.1) : Color.cardBackground)
+                        .cornerRadius(12)
                     }
                 }
-            )
-            .cornerRadius(14)
+                
+                if schedule.daySelection == .custom {
+                    customDayPickerView
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            
+            // Time restriction
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Time Restriction")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.textPrimary)
+                
+                ForEach(TimeRestrictionType.allCases, id: \.self) { option in
+                    Button(action: {
+                        withAnimation(.spring(response: 0.3)) {
+                            schedule.timeRestriction = option
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: schedule.timeRestriction == option ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(schedule.timeRestriction == option ? .primary : .textSecondary)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(option.rawValue)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.textPrimary)
+                                Text(option.description)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.textSecondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(14)
+                        .background(schedule.timeRestriction == option ? Color.primary.opacity(0.1) : Color.cardBackground)
+                        .cornerRadius(12)
+                    }
+                }
+                
+                if schedule.timeRestriction == .timeRange {
+                    timeRangePickerView
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                } else if schedule.timeRestriction == .afterTime {
+                    afterTimePickerView
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                } else if schedule.timeRestriction == .beforeTime {
+                    beforeTimePickerView
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
         }
+        .padding(18)
+        .background(Color.cardBackground.opacity(0.5))
+        .cornerRadius(16)
+        .padding(.horizontal, 20)
     }
     
     @ViewBuilder
-    private var setLimitTimeRestrictionPickers: some View {
-        if schedule.timeRestriction == .timeRange {
-            VStack(spacing: 14) {
+    private var customDayPickerView: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            ForEach(0..<7) { day in
+                let dayName = Calendar.current.shortWeekdaySymbols[day]
+                Button(action: {
+                    withAnimation(.spring(response: 0.3)) {
+                        if schedule.selectedDays.contains(day) {
+                            schedule.selectedDays.remove(day)
+                        } else {
+                            schedule.selectedDays.insert(day)
+                        }
+                    }
+                }) {
+                    Text(dayName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(schedule.selectedDays.contains(day) ? .white : .textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(schedule.selectedDays.contains(day) ? Color.primary : Color.cardBackground)
+                        .cornerRadius(10)
+                }
+            }
+        }
+        .padding(.top, 8)
+    }
+    
+    @ViewBuilder
+    private var timeRangePickerView: some View {
+        VStack(spacing: 12) {
+            HStack {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Start Time")
-                    .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.secondary)
                     DatePicker("", selection: $schedule.startTime, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
                 }
-                .padding(14)
-                .background(Color.cardBackground)
-                .cornerRadius(12)
+                
+                Spacer()
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("End Time")
@@ -1662,51 +1612,62 @@ struct SetLimitSheet: View {
                         .labelsHidden()
                         .datePickerStyle(.compact)
                 }
-                .padding(14)
-                .background(Color.cardBackground)
-                .cornerRadius(12)
-        }
-            .padding(.top, 8)
-        } else if schedule.timeRestriction == .afterTime {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("After Time")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.secondary)
-                DatePicker("", selection: $schedule.afterTime, displayedComponents: .hourAndMinute)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
             }
             .padding(14)
             .background(Color.cardBackground)
             .cornerRadius(12)
-            .padding(.top, 8)
-        } else if schedule.timeRestriction == .beforeTime {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Before Time")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.secondary)
-                DatePicker("", selection: $schedule.beforeTime, displayedComponents: .hourAndMinute)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-            }
-            .padding(14)
-            .background(Color.cardBackground)
-            .cornerRadius(12)
-            .padding(.top, 8)
         }
+        .padding(.top, 8)
     }
     
-    private func addLimit() {
-        // Get the app name - use provided name or empty (UI shows real name via Label)
-        var finalAppName = appName.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        if finalAppName.isEmpty {
-            // Try to get name from token label (if available)
-            // Check if we have a token (name will be populated by extension)
-            if !fullSelection.applicationTokens.isEmpty {
-                finalAppName = "App"
-            }
+    @ViewBuilder
+    private var afterTimePickerView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("After Time")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+            DatePicker("", selection: $schedule.afterTime, displayedComponents: .hourAndMinute)
+                .labelsHidden()
+                .datePickerStyle(.compact)
         }
+        .padding(14)
+        .background(Color.cardBackground)
+        .cornerRadius(12)
+        .padding(.top, 8)
+    }
+    
+    @ViewBuilder
+    private var beforeTimePickerView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Before Time")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+            DatePicker("", selection: $schedule.beforeTime, displayedComponents: .hourAndMinute)
+                .labelsHidden()
+                .datePickerStyle(.compact)
+        }
+        .padding(14)
+        .background(Color.cardBackground)
+        .cornerRadius(12)
+        .padding(.top, 8)
+    }
+    
+    // ✅ MODIFIED: Use user-typed app name instead of placeholder
+    private func addLimit() {
+        // ✅ Use the user-typed name
+        let finalAppName = userAppName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Don't allow empty names
+        guard !finalAppName.isEmpty else {
+            print("❌ App name is required")
+            return
+        }
+        
+        print("\n" + String(repeating: "=", count: 60))
+        print("📱 ADDING LIMIT WITH USER-TYPED NAME")
+        print("   User typed name: '\(finalAppName)'")
+        print("   Limit: \(selectedLimit) minutes")
+        print(String(repeating: "=", count: 60))
         
         // Create selection with just the first app token
         var appSelection = FamilyActivitySelection()
@@ -1723,15 +1684,10 @@ struct SetLimitSheet: View {
             return
         }
         
-        print("📱 Adding app with RELIABLE method:")
-        print("   App name: '\(finalAppName)'")
-        print("   Limit: \(selectedLimit) minutes")
-        print("   Tokens: \(appSelection.applicationTokens.count)")
-        
-        // ✅ Use the new reliable method
+        // ✅ Use the new reliable method with user-typed name
         appState.addAppGoalReliable(
             selection: appSelection,
-            appName: finalAppName,
+            appName: finalAppName,  // ✅ User-typed name!
             dailyLimitMinutes: selectedLimit
         )
         

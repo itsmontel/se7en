@@ -2,26 +2,23 @@
 //  SE7ENDeviceActivityReportExtension.swift
 //  SE7ENDeviceActivityReportExtension
 //
+//  Main entry point for the Device Activity Report Extension
+//
 
 import DeviceActivity
 import SwiftUI
 
 @main
 struct SE7ENDeviceActivityReportExtension: DeviceActivityReportExtension {
-    init() {
-        print("🎬 SE7ENDeviceActivityReportExtension: INITIALIZED")
-        print("🏗️ SE7ENDeviceActivityReportExtension: Building scenes...")
-    }
-    
     var body: some DeviceActivityReportScene {
-        TotalActivityReport { totalActivity in
-            print("📊 TotalActivityReport scene rendered")
-            return TotalActivityView(totalActivity: totalActivity)
+        // Total screen time report
+        TotalActivityReport { totalMinutes in
+            TotalActivityView(activityReport: totalMinutes)
         }
         
+        // Detailed app usage report
         TodayOverviewReport { summary in
-            print("📊 TodayOverviewReport scene rendered with \(summary.appCount) apps")
-            return TodayOverviewView(summary: summary)
+            TodayOverviewView(activityReport: summary)
         }
     }
 }
