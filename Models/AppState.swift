@@ -363,71 +363,150 @@ class AppState: ObservableObject {
     
     /// Get current usage for a goal - bulletproof matching with multiple fallbacks
     /// Get current usage for a goal - RELIABLE method using UUID
+    /// Get current usage for a goal - FIXED VERSION
     private func getCurrentUsage(for goal: AppGoal) -> Int {
         let identifier = goal.appBundleID ?? ""
-        let appName = goal.appName ?? ""
+        let storedAppName = goal.appName ?? ""
         
         guard !identifier.isEmpty else { return 0 }
         
-        // SPECIAL CASE: "All Categories Tracking" should use total_usage (total screen time)
+        // SPECIAL CASE: "All Categories Tracking"
         if identifier == "com.se7en.allcategories" {
             let appGroupID = "group.com.se7en.app"
             guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return 0 }
             sharedDefaults.synchronize()
-            let totalUsage = sharedDefaults.integer(forKey: "total_usage")
-            if totalUsage > 0 {
-                return totalUsage
-            }
-            return 0
+            return sharedDefaults.integer(forKey: "total_usage")
         }
         
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return 0 }
         sharedDefaults.synchronize()
         
-        // PRIORITY 1: Try UUID-based lookup (new reliable method)
+        // Get per-app usage dictionary (written by extension)
+        let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+        
+        // Get the name mapping (written by extension)
+        let nameMapKey = "limit_id_to_app_name"
+        let nameMap = sharedDefaults.dictionary(forKey: nameMapKey) as? [String: String] ?? [:]
+        
+        print("🔍 Looking for usage: identifier=\(identifier.prefix(8)), storedName='\(storedAppName)'")
+        print("   per_app_usage has \(perAppUsage.count) entries")
+        print("   nameMap has \(nameMap.count) entries")
+        
+        // =========================================================
+        // PRIORITY 1: Check UUID-based usage (written by extension)
+        // =========================================================
         if let uuid = UUID(uuidString: identifier) {
-            let usage = LimitStorageManager.shared.getUsage(for: uuid)
-            if usage > 0 {
-                print("✅ Found usage by UUID: \(usage) min for \(appName)")
-                return usage
+            // Check direct usage key
+            let directUsage = sharedDefaults.integer(forKey: "usage_v2_\(uuid.uuidString)")
+            if directUsage > 0 {
+                print("✅ Found usage by direct UUID key: \(directUsage) min")
+                return directUsage
             }
         }
         
-        // PRIORITY 2: Try per_app_usage by name (from report extension)
-        if !appName.isEmpty {
-            let normalizedName = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
-                // Try exact match
-                if let usage = perAppUsage[appName], usage > 0 {
-                    print("✅ Found usage by exact name: \(usage) min for \(appName)")
+        // =========================================================
+        // PRIORITY 2: Check real app name from extension
+        // =========================================================
+        if let uuid = UUID(uuidString: identifier) {
+            if let realAppName = nameMap[uuid.uuidString] {
+                print("📱 Found real app name in mapping: '\(realAppName)'")
+                
+                // Look up in per_app_usage
+                if let usage = perAppUsage[realAppName], usage > 0 {
+                    print("✅ Found usage by real name: \(usage) min")
                     return usage
                 }
-                // Try normalized match
-                if let usage = perAppUsage[normalizedName], usage > 0 {
-                    print("✅ Found usage by normalized name: \(usage) min for \(appName)")
+                
+                let normalized = realAppName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                if let usage = perAppUsage[normalized], usage > 0 {
+                    print("✅ Found usage by normalized real name: \(usage) min")
                     return usage
                 }
-                // Try fuzzy match
-                for (name, usage) in perAppUsage {
-                    if name.lowercased().contains(normalizedName) || normalizedName.contains(name.lowercased()) {
-                        if usage > 0 {
-                            print("✅ Found usage by fuzzy match: \(usage) min for \(appName)")
-                            return usage
-                        }
+            }
+        }
+        
+        // =========================================================
+        // PRIORITY 3: Check stored app name (if not "App")
+        // =========================================================
+        if !storedAppName.isEmpty && storedAppName.lowercased() != "app" {
+            let normalizedName = storedAppName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            if let usage = perAppUsage[storedAppName], usage > 0 {
+                print("✅ Found usage by stored name: \(usage) min")
+                return usage
+            }
+            if let usage = perAppUsage[normalizedName], usage > 0 {
+                print("✅ Found usage by normalized stored name: \(usage) min")
+                return usage
+            }
+            
+            // Fuzzy match
+            for (appName, usage) in perAppUsage {
+                let normalizedKey = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                if normalizedKey.contains(normalizedName) || normalizedName.contains(normalizedKey) {
+                    if usage > 0 {
+                        print("✅ Found usage by fuzzy match '\(appName)': \(usage) min")
+                        return usage
                     }
                 }
             }
         }
         
-        // PRIORITY 3: Legacy hash-based lookup (for backward compatibility)
-        let usage = sharedDefaults.integer(forKey: "usage_\(identifier)")
-        if usage > 0 {
-            print("⚠️ Found usage by legacy hash: \(usage) min for \(appName)")
-            return usage
+        // =========================================================
+        // PRIORITY 4: If name is "App", find best matching app
+        // =========================================================
+        if storedAppName.lowercased() == "app" || storedAppName.isEmpty {
+            print("🔄 Name is 'App' - searching for best match in per_app_usage...")
+            
+            // Find the app with most usage (excluding system apps)
+            var bestMatch: (name: String, usage: Int)? = nil
+            
+            for (appName, usage) in perAppUsage {
+                let lower = appName.lowercased()
+                
+                // Skip system/internal apps
+                if lower.contains("familycontrols") ||
+                   lower.contains("authentication") ||
+                   lower.contains("screen time") ||
+                   lower.contains("settings") ||
+                   lower == "unknown" ||
+                   lower.hasPrefix("app ") ||
+                   lower == "app" {
+                    continue
+                }
+                
+                if usage > 0 && (bestMatch == nil || usage > bestMatch!.usage) {
+                    bestMatch = (name: appName, usage: usage)
+                }
+            }
+            
+            if let best = bestMatch {
+                print("✅ Best match for 'App': '\(best.name)' = \(best.usage) min")
+                
+                // Save this mapping for next time
+                if let uuid = UUID(uuidString: identifier) {
+                    var updatedNameMap = nameMap
+                    updatedNameMap[uuid.uuidString] = best.name
+                    sharedDefaults.set(updatedNameMap, forKey: nameMapKey)
+                    sharedDefaults.synchronize()
+                    print("💾 Saved name mapping: \(uuid.uuidString.prefix(8)) → '\(best.name)'")
+                }
+                
+                return best.usage
+            }
         }
         
-        print("⚠️ No usage found for \(appName) (ID: \(identifier.prefix(8)))")
+        // =========================================================
+        // PRIORITY 5: Legacy fallback
+        // =========================================================
+        let legacyUsage = sharedDefaults.integer(forKey: "usage_\(identifier)")
+        if legacyUsage > 0 {
+            print("⚠️ Found usage by legacy key: \(legacyUsage) min")
+            return legacyUsage
+        }
+        
+        print("⚠️ No usage found for '\(storedAppName)' (ID: \(identifier.prefix(8)))")
         return 0
     }
     
@@ -920,4 +999,5 @@ class AppState: ObservableObject {
         userName = name
         saveUserPreferences()
     }
+}
 }

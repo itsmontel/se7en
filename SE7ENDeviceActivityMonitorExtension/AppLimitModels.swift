@@ -12,7 +12,7 @@ enum AppGroupConstants {
 // MARK: - App Limit Model
 struct AppLimit: Codable, Identifiable {
     let id: UUID
-    let tokenData: Data // Encoded ApplicationToken
+    let selectionData: Data // Encoded FamilyActivitySelection (ApplicationToken cannot be archived directly)
     let appName: String
     let bundleIdentifier: String?
     let dailyLimitMinutes: Int
@@ -21,7 +21,10 @@ struct AppLimit: Codable, Identifiable {
     
     init(token: ApplicationToken, appName: String, bundleIdentifier: String?, dailyLimitMinutes: Int, isEnabled: Bool = true) {
         self.id = UUID()
-        self.tokenData = Self.encode(token: token)
+        // Create a FamilyActivitySelection containing just this token (it's Codable)
+        var selection = FamilyActivitySelection()
+        selection.applicationTokens = [token]
+        self.selectionData = (try? PropertyListEncoder().encode(selection)) ?? Data()
         self.appName = appName
         self.bundleIdentifier = bundleIdentifier
         self.dailyLimitMinutes = dailyLimitMinutes
@@ -30,9 +33,9 @@ struct AppLimit: Codable, Identifiable {
     }
     
     // Custom initializer to preserve ID and createdAt when updating
-    init(id: UUID, tokenData: Data, appName: String, bundleIdentifier: String?, dailyLimitMinutes: Int, isEnabled: Bool, createdAt: Date) {
+    init(id: UUID, selectionData: Data, appName: String, bundleIdentifier: String?, dailyLimitMinutes: Int, isEnabled: Bool, createdAt: Date) {
         self.id = id
-        self.tokenData = tokenData
+        self.selectionData = selectionData
         self.appName = appName
         self.bundleIdentifier = bundleIdentifier
         self.dailyLimitMinutes = dailyLimitMinutes
@@ -44,7 +47,7 @@ struct AppLimit: Codable, Identifiable {
     func updated(dailyLimitMinutes: Int? = nil, isEnabled: Bool? = nil, appName: String? = nil) -> AppLimit {
         return AppLimit(
             id: self.id,
-            tokenData: self.tokenData,
+            selectionData: self.selectionData,
             appName: appName ?? self.appName,
             bundleIdentifier: self.bundleIdentifier,
             dailyLimitMinutes: dailyLimitMinutes ?? self.dailyLimitMinutes,
@@ -53,29 +56,18 @@ struct AppLimit: Codable, Identifiable {
         )
     }
     
-    // Decode the token back
+    // Get the selection
+    func getSelection() -> FamilyActivitySelection? {
+        return try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: selectionData)
+    }
+    
+    // Decode the token back (get first token from selection)
     func getToken() -> ApplicationToken? {
-        return Self.decode(data: tokenData)
-    }
-    
-    // Encode ApplicationToken to Data
-    private static func encode(token: ApplicationToken) -> Data {
-        do {
-            return try NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true)
-        } catch {
-            print("❌ Failed to encode ApplicationToken: \(error)")
-            return Data()
-        }
-    }
-    
-    // Decode Data back to ApplicationToken
-    private static func decode(data: Data) -> ApplicationToken? {
-        do {
-            return try NSKeyedUnarchiver.unarchivedObject(ofClass: ApplicationToken.self, from: data)
-        } catch {
-            print("❌ Failed to decode ApplicationToken: \(error)")
+        guard let selection = getSelection(),
+              let firstToken = selection.applicationTokens.first else {
             return nil
         }
+        return firstToken
     }
 }
 

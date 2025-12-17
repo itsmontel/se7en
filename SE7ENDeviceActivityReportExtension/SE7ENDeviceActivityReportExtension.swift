@@ -20,10 +20,8 @@ struct SE7ENDeviceActivityReportExtension: DeviceActivityReportExtension {
         }
         
         TodayOverviewReport { summary in
-            print("📊 TodayOverviewReport scene rendered")
+            print("📊 TodayOverviewReport scene rendered with \(summary.appCount) apps")
             return TodayOverviewView(summary: summary)
         }
     }
 }
-
-

@@ -1585,8 +1585,23 @@ struct StoredAppLimit: Codable, Identifiable {
     
     func containsToken(_ token: AnyHashable) -> Bool {
         guard let selection = getSelection() else { return false }
-        let tokenHash = token.hashValue
-        return selection.applicationTokens.contains { ($0 as AnyHashable).hashValue == tokenHash }
+        
+        // ✅ Try direct ApplicationToken comparison first
+        // Cast AnyHashable to ApplicationToken by trying each token in selection
+        for storedToken in selection.applicationTokens {
+            if (storedToken as AnyHashable) == token {
+                return true
+            }
+        }
+        
+        // Fallback for category tokens
+        for storedToken in selection.categoryTokens {
+            if (storedToken as AnyHashable) == token {
+                return true
+            }
+        }
+        
+        return false
     }
 }
 
