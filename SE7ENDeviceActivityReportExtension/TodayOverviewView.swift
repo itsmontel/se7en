@@ -2,123 +2,128 @@
 //  TodayOverviewView.swift
 //  SE7ENDeviceActivityReportExtension
 //
-//  UI for displaying today's app usage overview
-//
 
 import SwiftUI
-import DeviceActivity
-import FamilyControls
 
 struct TodayOverviewView: View {
-    let activityReport: UsageSummary
+    let summary: UsageSummary
     
     var body: some View {
+        // App background color that adapts to light/dark mode
+        let appBackground = Color(UIColor { traitCollection in
+            if traitCollection.userInterfaceStyle == .dark {
+                return UIColor(red: 0.18, green: 0.18, blue: 0.19, alpha: 1.0)
+            } else {
+                return UIColor(red: 1.0, green: 0.98, blue: 0.9, alpha: 1.0)
+            }
+        })
+        
         VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack {
-                Image(systemName: "chart.bar.fill")
-                    .font(.title2)
-                    .foregroundColor(.blue)
-                Text("Today's App Usage")
-                    .font(.headline)
-                Spacer()
-            }
-            
-            // Summary Stats
-            HStack(spacing: 20) {
-                VStack {
-                    Text("\(activityReport.totalMinutes)")
-                        .font(.title.bold())
-                        .foregroundColor(.primary)
-                    Text("Total Minutes")
-                        .font(.caption)
+            // Summary stats - side by side
+            HStack(alignment: .top, spacing: 0) {
+                // Today's Screen Time
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Today's Screen...")
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.secondary)
-                }
-                
-                Divider()
-                    .frame(height: 40)
-                
-                VStack {
-                    Text("\(activityReport.appCount)")
-                        .font(.title.bold())
-                        .foregroundColor(.primary)
-                    Text("Apps Used")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            
-            // Top Apps
-            if !activityReport.topApps.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Most Used Apps")
-                        .font(.subheadline.bold())
-                        .foregroundColor(.primary)
                     
-                    ForEach(Array(activityReport.topApps.prefix(5).enumerated()), id: \.offset) { index, app in
-                        HStack {
-                            // App rank indicator
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 32, height: 32)
-                                .overlay(
-                                    Text("\(index + 1)")
-                                        .font(.caption.bold())
-                                        .foregroundColor(.secondary)
-                                )
-                            
-                            VStack(alignment: .leading, spacing: 2) {
+                    Text(format(duration: summary.totalDuration))
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(.primary)
+                }
+                
+                Spacer()
+                
+                // Apps Used
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Apps Used")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.secondary)
+                    
+                    Text("\(summary.appCount)")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(.primary)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+            
+            // Divider line
+            Rectangle()
+                .fill(Color.gray.opacity(0.2))
+                .frame(height: 1)
+                .padding(.horizontal, 20)
+            
+            // Top 10 Distractions list
+            if !summary.topApps.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Top 10 Distractions")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                    
+                    VStack(spacing: 0) {
+                        ForEach(Array(summary.topApps.prefix(10).enumerated()), id: \.offset) { index, app in
+                            HStack(spacing: 16) {
+                                // Number (1-10)
+                                Text("\(index + 1)")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.primary)
+                                    .frame(width: 30, alignment: .leading)
+                                
+                                // App name
                                 Text(app.name)
-                                    .font(.subheadline)
+                                    .font(.system(size: 18, weight: .regular))
+                                    .foregroundColor(.primary)
                                     .lineLimit(1)
                                 
-                                Text("\(app.minutes) min")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                Spacer()
+                                
+                                // Usage time
+                                Text(format(duration: app.duration))
+                                    .font(.system(size: 18, weight: .regular))
+                                    .foregroundColor(.primary)
                             }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
                             
-                            Spacer()
-                            
-                            // Usage bar
-                            let maxUsage = activityReport.topApps.first?.minutes ?? 1
-                            let barWidth = CGFloat(app.minutes) / CGFloat(max(maxUsage, 1)) * 60
-                            
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.blue.opacity(0.7))
-                                .frame(width: max(barWidth, 4), height: 8)
+                            // Divider between items (but not after last item)
+                            if index < min(summary.topApps.count, 10) - 1 {
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.2))
+                                    .frame(height: 1)
+                                    .padding(.horizontal, 20)
+                            }
                         }
-                        .padding(.vertical, 2)
                     }
                 }
-            } else {
-                Text("No app usage data available")
-                    .font(.subheadline)
+            } else if summary.appCount > 0 {
+                Text("Individual app breakdown not available")
+                    .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical)
+                    .padding(.top, 8)
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(radius: 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 16)
+        .background(appBackground)
+        .cornerRadius(16)
+        .onAppear {
+            print("📊 TodayOverviewView appeared with \(summary.appCount) apps, \(Int(summary.totalDuration / 60)) min total")
+        }
     }
-}
-
-#Preview {
-    let sampleApps = [
-        AppUsage(name: "Instagram", duration: 7200),
-        AppUsage(name: "TikTok", duration: 5700),
-        AppUsage(name: "Safari", duration: 2700)
-    ]
     
-    let summary = UsageSummary(
-        totalDuration: 15600,
-        appCount: 8,
-        topApps: sampleApps
-    )
-    
-    return TodayOverviewView(activityReport: summary)
-        .padding()
+    private func format(duration: TimeInterval) -> String {
+        let minutes = Int(duration / 60)
+        let hours = minutes / 60
+        let remainingMinutes = minutes % 60
+        
+        if hours > 0 {
+            return "\(hours)h \(remainingMinutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
 }

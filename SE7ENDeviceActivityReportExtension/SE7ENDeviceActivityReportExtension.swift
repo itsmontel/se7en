@@ -18,7 +18,7 @@ struct SE7ENDeviceActivityReportExtension: DeviceActivityReportExtension {
         
         // Detailed app usage report
         TodayOverviewReport { summary in
-            TodayOverviewView(activityReport: summary)
+            TodayOverviewView(summary: summary)
         }
     }
 }
