@@ -147,6 +147,48 @@ class AppState: ObservableObject {
         isOnboarding = goals.isEmpty
     }
     
+    /// Check for pending puzzles from shield action and show them
+    func checkForPendingPuzzles() {
+        let appGroupID = "group.com.se7en.app"
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        // Get all pending puzzle flags
+        var pendingTokenHashes: [String] = []
+        if let allKeys = defaults.dictionaryRepresentation().keys as? [String] {
+            for key in allKeys where key.hasPrefix("needsPuzzle_") {
+                if defaults.bool(forKey: key) {
+                    let tokenHash = String(key.dropFirst("needsPuzzle_".count))
+                    pendingTokenHashes.append(tokenHash)
+                }
+            }
+        }
+        
+        guard !pendingTokenHashes.isEmpty else { return }
+        
+        // Find the first pending puzzle and show it
+        for tokenHash in pendingTokenHashes {
+            // Try to get app name from stored value
+            if let storedName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") {
+                // Post notification to show puzzle (DashboardView listens to this)
+                NotificationCenter.default.post(
+                    name: .appBlocked,
+                    object: nil,
+                    userInfo: [
+                        "appName": storedName,
+                        "bundleID": tokenHash
+                    ]
+                )
+                
+                // Clear the puzzle flag
+                defaults.removeObject(forKey: "needsPuzzle_\(tokenHash)")
+                defaults.synchronize()
+                
+                print("🎯 AppState: Showing puzzle for \(storedName) (from shield action)")
+                return
+            }
+        }
+    }
+    
     // MARK: - User Preferences Persistence
     
     private func loadUserPreferences() {
@@ -312,6 +354,7 @@ class AppState: ObservableObject {
     }
     
     /// Get current usage for a goal - bulletproof matching with multiple fallbacks
+    /// ✅ FIXED: Prioritize per_app_usage (same source as dashboard) for consistency
     private func getCurrentUsage(for goal: AppGoal) -> Int {
         let tokenHash = goal.appBundleID ?? ""
         let appName = goal.appName ?? ""
@@ -325,25 +368,51 @@ class AppState: ObservableObject {
         
         var usage: Int = 0
         
-        // PRIORITY 1: Check if token hash is actually a UUID (limit UUID system)
+        // ✅ PRIORITY 1 (NEW): Direct lookup from per_app_usage by app name
+        // This is the SAME source the dashboard uses, so it ensures consistency
+        // The DeviceActivityReport extension writes usage keyed by app display name
+        if !appName.isEmpty {
+            let normalizedName = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
+                // Try exact match first
+                if let exactMatch = perAppUsage[appName], exactMatch > 0 {
+                    return exactMatch
+                }
+                
+                // Try normalized/fuzzy match
+                for (reportAppName, reportUsage) in perAppUsage {
+                    let normalizedReportName = reportAppName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                    if normalizedReportName == normalizedName ||
+                       normalizedReportName.contains(normalizedName) ||
+                       normalizedName.contains(normalizedReportName) {
+                        if reportUsage > 0 {
+                            return reportUsage
+                        }
+                    }
+                }
+            }
+        }
+        
+        // PRIORITY 2: Check if token hash is actually a UUID (limit UUID system)
         // Extension writes usage_v2_<UUID> when it matches tokens to limits
         if UUID(uuidString: tokenHash) != nil {
             usage = sharedDefaults.integer(forKey: "usage_v2_\(tokenHash)")
             if usage > 0 { return usage }
         }
         
-        // PRIORITY 2: Direct lookup with stored token hash
+        // PRIORITY 3: Direct lookup with stored token hash
         usage = sharedDefaults.integer(forKey: "usage_\(tokenHash)")
         if usage > 0 { return usage }
         
-        // PRIORITY 3: Check token_hash_to_limit_uuid mapping (extension maps hashes to UUIDs)
+        // PRIORITY 4: Check token_hash_to_limit_uuid mapping (extension maps hashes to UUIDs)
         if let hashToUUID = sharedDefaults.dictionary(forKey: "token_hash_to_limit_uuid") as? [String: String],
            let limitUUID = hashToUUID[tokenHash] {
             usage = sharedDefaults.integer(forKey: "usage_v2_\(limitUUID)")
             if usage > 0 { return usage }
         }
         
-        // PRIORITY 4: Match by app name using limit_id_to_app_name mapping
+        // PRIORITY 5: Match by app name using limit_id_to_app_name mapping
         if !appName.isEmpty {
             let normalizedName = appName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             
@@ -351,29 +420,17 @@ class AppState: ObservableObject {
             if let limitIdToName = sharedDefaults.dictionary(forKey: "limit_id_to_app_name") as? [String: String] {
                 for (limitUUID, realName) in limitIdToName {
                     let normalizedRealName = realName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                    if normalizedRealName == normalizedName || 
-                       normalizedRealName.contains(normalizedName) || 
+                    if normalizedRealName == normalizedName ||
+                       normalizedRealName.contains(normalizedName) ||
                        normalizedName.contains(normalizedRealName) {
                         usage = sharedDefaults.integer(forKey: "usage_v2_\(limitUUID)")
                         if usage > 0 { return usage }
                     }
                 }
             }
-            
-            // Try per_app_usage dictionary (name-based)
-            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
-                for (reportAppName, reportUsage) in perAppUsage {
-                    let normalizedReportName = reportAppName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                    if normalizedReportName == normalizedName || 
-                       normalizedReportName.contains(normalizedName) || 
-                       normalizedName.contains(normalizedReportName) {
-                        return reportUsage
-                    }
-                }
-            }
         }
         
-        // PRIORITY 5: Try to compute hash from stored selection and match
+        // PRIORITY 6: Try to compute hash from stored selection and match
         if let selection = screenTimeService.getSelection(for: tokenHash),
            let firstToken = selection.applicationTokens.first {
             let computedHash = String(firstToken.hashValue)

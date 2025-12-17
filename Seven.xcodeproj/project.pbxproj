@@ -77,6 +77,11 @@
 		7104 /* MemoryGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7004 /* MemoryGameView.swift */; };
 		7105 /* PatternGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7005 /* PatternGameView.swift */; };
 		7106 /* LimitReachedPuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7006 /* LimitReachedPuzzleView.swift */; };
+		8F667A202EF3524E0028D462 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */; };
+		8F667A222EF3524E0028D462 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F667A212EF3524E0028D462 /* ManagedSettingsUI.framework */; };
+		8F667A2A2EF3524E0028D462 /* SE7ENShieldConfigurationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8F667A1E2EF3524D0028D462 /* SE7ENShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8F667A362EF354490028D462 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */; };
+		8F667A3E2EF354490028D462 /* SE7ENShieldActionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8F667A352EF354490028D462 /* SE7ENShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8FB3DA092EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8FB3DA3A2EE38ECD005BC03C /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */; };
 		8FB3DA422EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -84,6 +89,20 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		8F667A282EF3524E0028D462 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 80 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8F667A1D2EF3524D0028D462;
+			remoteInfo = SE7ENShieldConfigurationExtension;
+		};
+		8F667A3C2EF354490028D462 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 80 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8F667A342EF354490028D462;
+			remoteInfo = SE7ENShieldActionExtension;
+		};
 		8FB3DA072EE37903005BC03C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 80 /* Project object */;
@@ -118,7 +137,9 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				8F667A3E2EF354490028D462 /* SE7ENShieldActionExtension.appex in Embed Foundation Extensions */,
 				8FB3DA422EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */,
+				8F667A2A2EF3524E0028D462 /* SE7ENShieldConfigurationExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -199,6 +220,10 @@
 		7004 /* MemoryGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryGameView.swift; sourceTree = "<group>"; };
 		7005 /* PatternGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternGameView.swift; sourceTree = "<group>"; };
 		7006 /* LimitReachedPuzzleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimitReachedPuzzleView.swift; sourceTree = "<group>"; };
+		8F667A1E2EF3524D0028D462 /* SE7ENShieldConfigurationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SE7ENShieldConfigurationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		8F667A212EF3524E0028D462 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		8F667A352EF354490028D462 /* SE7ENShieldActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SE7ENShieldActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = SE7ENDeviceActivityReportExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SE7ENDeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
@@ -206,6 +231,20 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8F667A2D2EF3524E0028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8F667A1D2EF3524D0028D462 /* SE7ENShieldConfigurationExtension */;
+		};
+		8F667A3F2EF354490028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8F667A342EF354490028D462 /* SE7ENShieldActionExtension */;
+		};
 		8FB3DA0D2EE37903005BC03C /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -223,11 +262,30 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		8F667A232EF3524E0028D462 /* SE7ENShieldConfigurationExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8F667A2D2EF3524E0028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SE7ENShieldConfigurationExtension; sourceTree = "<group>"; };
+		8F667A372EF354490028D462 /* SE7ENShieldActionExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8F667A3F2EF354490028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SE7ENShieldActionExtension; sourceTree = "<group>"; };
 		8FB3D9FE2EE37903005BC03C /* SE7ENDeviceActivityReportExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8FB3DA0D2EE37903005BC03C /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SE7ENDeviceActivityReportExtension; sourceTree = "<group>"; };
 		8FB3DA3B2EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8FB3DA462EE38ECD005BC03C /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SE7ENDeviceActivityMonitorExtension; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		8F667A1B2EF3524D0028D462 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F667A202EF3524E0028D462 /* ManagedSettings.framework in Frameworks */,
+				8F667A222EF3524E0028D462 /* ManagedSettingsUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8F667A322EF354490028D462 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F667A362EF354490028D462 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8FB3D9FA2EE37903005BC03C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -365,6 +423,8 @@
 				90,
 				8FB3D9FE2EE37903005BC03C /* SE7ENDeviceActivityReportExtension */,
 				8FB3DA3B2EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension */,
+				8F667A232EF3524E0028D462 /* SE7ENShieldConfigurationExtension */,
+				8F667A372EF354490028D462 /* SE7ENShieldActionExtension */,
 				8FB3DA382EE38ECD005BC03C /* Frameworks */,
 				99 /* Products */,
 				8F12620A2ED291550094DB0A /* Recovered References */,
@@ -385,6 +445,8 @@
 			isa = PBXGroup;
 			children = (
 				8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */,
+				8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */,
+				8F667A212EF3524E0028D462 /* ManagedSettingsUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -479,6 +541,8 @@
 				100 /* Seven.app */,
 				8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */,
 				8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */,
+				8F667A1E2EF3524D0028D462 /* SE7ENShieldConfigurationExtension.appex */,
+				8F667A352EF354490028D462 /* SE7ENShieldActionExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -486,6 +550,50 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		8F667A1D2EF3524D0028D462 /* SE7ENShieldConfigurationExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8F667A2E2EF3524E0028D462 /* Build configuration list for PBXNativeTarget "SE7ENShieldConfigurationExtension" */;
+			buildPhases = (
+				8F667A1A2EF3524D0028D462 /* Sources */,
+				8F667A1B2EF3524D0028D462 /* Frameworks */,
+				8F667A1C2EF3524D0028D462 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8F667A232EF3524E0028D462 /* SE7ENShieldConfigurationExtension */,
+			);
+			name = SE7ENShieldConfigurationExtension;
+			packageProductDependencies = (
+			);
+			productName = SE7ENShieldConfigurationExtension;
+			productReference = 8F667A1E2EF3524D0028D462 /* SE7ENShieldConfigurationExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		8F667A342EF354490028D462 /* SE7ENShieldActionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8F667A402EF354490028D462 /* Build configuration list for PBXNativeTarget "SE7ENShieldActionExtension" */;
+			buildPhases = (
+				8F667A312EF354490028D462 /* Sources */,
+				8F667A322EF354490028D462 /* Frameworks */,
+				8F667A332EF354490028D462 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8F667A372EF354490028D462 /* SE7ENShieldActionExtension */,
+			);
+			name = SE7ENShieldActionExtension;
+			packageProductDependencies = (
+			);
+			productName = SE7ENShieldActionExtension;
+			productReference = 8F667A352EF354490028D462 /* SE7ENShieldActionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		8FB3D9FC2EE37903005BC03C /* SE7ENDeviceActivityReportExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8FB3DA0E2EE37903005BC03C /* Build configuration list for PBXNativeTarget "SE7ENDeviceActivityReportExtension" */;
@@ -545,6 +653,8 @@
 			dependencies = (
 				8FB3DA082EE37903005BC03C /* PBXTargetDependency */,
 				8FB3DA412EE38ECD005BC03C /* PBXTargetDependency */,
+				8F667A292EF3524E0028D462 /* PBXTargetDependency */,
+				8F667A3D2EF354490028D462 /* PBXTargetDependency */,
 			);
 			name = Seven;
 			productName = Seven;
@@ -561,6 +671,12 @@
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
+					8F667A1D2EF3524D0028D462 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					8F667A342EF354490028D462 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 					8FB3D9FC2EE37903005BC03C = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -589,6 +705,8 @@
 				98 /* Seven */,
 				8FB3D9FC2EE37903005BC03C /* SE7ENDeviceActivityReportExtension */,
 				8FB3DA362EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension */,
+				8F667A1D2EF3524D0028D462 /* SE7ENShieldConfigurationExtension */,
+				8F667A342EF354490028D462 /* SE7ENShieldActionExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -605,6 +723,20 @@
 				1081 /* bunnyintro.mp4 in Resources */,
 				1082 /* hamsterintro.mp4 in Resources */,
 				1083 /* horseintro.mp4 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8F667A1C2EF3524D0028D462 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8F667A332EF354490028D462 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -625,6 +757,20 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		8F667A1A2EF3524D0028D462 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8F667A312EF354490028D462 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8FB3D9F92EE37903005BC03C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -713,6 +859,16 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		8F667A292EF3524E0028D462 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8F667A1D2EF3524D0028D462 /* SE7ENShieldConfigurationExtension */;
+			targetProxy = 8F667A282EF3524E0028D462 /* PBXContainerItemProxy */;
+		};
+		8F667A3D2EF354490028D462 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8F667A342EF354490028D462 /* SE7ENShieldActionExtension */;
+			targetProxy = 8F667A3C2EF354490028D462 /* PBXContainerItemProxy */;
+		};
 		8FB3DA082EE37903005BC03C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 8FB3D9FC2EE37903005BC03C /* SE7ENDeviceActivityReportExtension */;
@@ -918,6 +1074,114 @@
 			};
 			name = Release;
 		};
+		8F667A2B2EF3524E0028D462 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SE7ENShieldConfigurationExtension/SE7ENShieldConfigurationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SE7ENShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SE7ENShieldConfigurationExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.SE7ENShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8F667A2C2EF3524E0028D462 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SE7ENShieldConfigurationExtension/SE7ENShieldConfigurationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SE7ENShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SE7ENShieldConfigurationExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.SE7ENShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8F667A412EF354490028D462 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SE7ENShieldActionExtension/SE7ENShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SE7ENShieldActionExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SE7ENShieldActionExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.SE7ENShieldActionExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8F667A422EF354490028D462 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SE7ENShieldActionExtension/SE7ENShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SE7ENShieldActionExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SE7ENShieldActionExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.SE7ENShieldActionExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		8FB3DA0B2EE37903005BC03C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1045,6 +1309,24 @@
 			buildConfigurations = (
 				83 /* Debug */,
 				84 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8F667A2E2EF3524E0028D462 /* Build configuration list for PBXNativeTarget "SE7ENShieldConfigurationExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8F667A2B2EF3524E0028D462 /* Debug */,
+				8F667A2C2EF3524E0028D462 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8F667A402EF354490028D462 /* Build configuration list for PBXNativeTarget "SE7ENShieldActionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8F667A412EF354490028D462 /* Debug */,
+				8F667A422EF354490028D462 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
