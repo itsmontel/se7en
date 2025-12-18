@@ -16,6 +16,13 @@ final class DeviceActivityReportService {
     
     private let appGroupID = "group.com.se7en.app"
     
+    // ✅ PERFORMANCE: Throttle updates to prevent excessive saves
+    private var lastUpdateTime: [String: Date] = [:]
+    private var lastUpdateValue: [String: Int] = [:]
+    private let updateThrottleInterval: TimeInterval = 5.0 // Only update every 5 seconds max
+    private var pendingSaves: Set<String> = []
+    private var saveTimer: Timer?
+    
     private init() {}
     
     /// Fetch usage data for a specific app from the extension via shared container
@@ -56,7 +63,6 @@ final class DeviceActivityReportService {
             await MainActor.run {
                 updateUsageRecord(bundleID: bundleID, minutes: usage)
             }
-            print("📊 Fetched usage from shared container: \(bundleID) = \(usage) minutes")
             return usage
         }
         
@@ -78,20 +84,28 @@ final class DeviceActivityReportService {
     func requestReportUpdate(for bundleID: String, activityName: DeviceActivityName, selection: FamilyActivitySelection) async {
         // The extension will be called automatically by the system when monitoring is active
         // We just need to ensure the activity is being monitored
-        print("📊 Requesting report update for \(bundleID)")
     }
     
     /// Update usage record for an app
     /// This is called when we have usage data from reports or events
     /// MUST be called on main thread (Core Data requirement)
+    /// ✅ PERFORMANCE: Throttled to prevent excessive updates
     func updateUsageRecord(bundleID: String, minutes: Int) {
         // Ensure we're on main thread for Core Data access
         assert(Thread.isMainThread, "updateUsageRecord must be called on main thread")
         
+        let now = Date()
+        let lastTime = lastUpdateTime[bundleID] ?? Date.distantPast
+        let lastValue = lastUpdateValue[bundleID] ?? -1
+        
+        // ✅ PERFORMANCE: Skip if value unchanged and recently updated
+        if minutes == lastValue && now.timeIntervalSince(lastTime) < updateThrottleInterval {
+            return // No change, skip update
+        }
+        
         let goals = coreDataManager.getActiveAppGoals()
         
         guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else {
-            print("⚠️ No goal found for bundle ID: \(bundleID)")
             return
         }
         
@@ -99,10 +113,12 @@ final class DeviceActivityReportService {
         
         // Get or create usage record
         if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
-            // Update existing record
-            record.actualUsageMinutes = Int32(minutes)
-            record.didExceedLimit = minutes >= Int(goal.dailyLimitMinutes)
-            print("📊 Updated usage record for \(bundleID): \(minutes) minutes")
+            // Only update if value changed
+            if Int(record.actualUsageMinutes) != minutes {
+                record.actualUsageMinutes = Int32(minutes)
+                record.didExceedLimit = minutes >= Int(goal.dailyLimitMinutes)
+                pendingSaves.insert(bundleID)
+            }
         } else {
             // Create new record
             _ = coreDataManager.createUsageRecord(
@@ -111,16 +127,36 @@ final class DeviceActivityReportService {
                 actualUsageMinutes: minutes,
                 didExceedLimit: minutes >= Int(goal.dailyLimitMinutes)
             )
-            print("📊 Created usage record for \(bundleID): \(minutes) minutes")
+            pendingSaves.insert(bundleID)
         }
         
-        coreDataManager.save()
+        // Update tracking
+        lastUpdateTime[bundleID] = now
+        lastUpdateValue[bundleID] = minutes
         
-        // Post notification to update UI
-        NotificationCenter.default.post(
-            name: .screenTimeDataUpdated,
-            object: nil
-        )
+        // ✅ PERFORMANCE: Batch saves instead of saving immediately
+        scheduleBatchedSave()
+    }
+    
+    /// ✅ PERFORMANCE: Batch Core Data saves to reduce I/O
+    private func scheduleBatchedSave() {
+        // Cancel existing timer
+        saveTimer?.invalidate()
+        
+        // Schedule batched save after short delay
+        saveTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
+            guard let self = self, !self.pendingSaves.isEmpty else { return }
+            
+            // Save all pending changes at once
+            self.coreDataManager.save()
+            self.pendingSaves.removeAll()
+            
+            // Post single notification for all updates
+            NotificationCenter.default.post(
+                name: .screenTimeDataUpdated,
+                object: nil
+            )
+        }
     }
     
     /// Initialize usage records for all monitored apps
@@ -140,7 +176,6 @@ final class DeviceActivityReportService {
                     actualUsageMinutes: 0,
                     didExceedLimit: false
                 )
-                print("📊 Initialized usage record for \(goal.appName ?? bundleID)")
             }
         }
         

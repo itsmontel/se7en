@@ -30,15 +30,6 @@ struct SE7ENApp: App {
                     appState.syncDataFromBackground()
                     
                     // Refresh Screen Time monitoring and data
-                    print("📱 App entered foreground - refreshing Screen Time data")
-                    ScreenTimeService.shared.refreshAllMonitoring()
-                    
-                    // Check for pending puzzles from shield action
-                    appState.checkForPendingPuzzles()
-                }
-                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-                    // Also refresh when app becomes active (covers first launch)
-                    print("📱 App became active - refreshing Screen Time data")
                     ScreenTimeService.shared.refreshAllMonitoring()
                     
                     // Check for pending puzzles from shield action
@@ -70,7 +61,6 @@ struct SE7ENApp: App {
                                     defaults.set(true, forKey: "puzzleMode")
                                     defaults.set(tokenHash, forKey: "puzzleTokenHash")
                                     defaults.set(appName, forKey: "puzzleAppName_\(tokenHash)")
-                                    defaults.synchronize()
                                 }
                                 
                                 // Trigger ContentView to show puzzle

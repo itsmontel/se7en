@@ -122,3 +122,4 @@ se7en://puzzle?tokenHash=<hash>&appName=<encoded_name>
 - If URL scheme isn't available, app is still unblocked (user can tap it)
 - Extension grants 15 minutes of additional usage time
 
+

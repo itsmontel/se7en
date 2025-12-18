@@ -117,3 +117,4 @@ The `AppState` class has a new method `checkForPendingPuzzles()` that:
 - The shield UI is shown by iOS, not your app
 - The puzzle UI is shown in your main app after the shield action
 
+

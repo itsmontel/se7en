@@ -222,14 +222,10 @@ struct DashboardView: View {
     private func readUsageFromSharedContainer() -> Int {
         let appGroupID = "group.com.se7en.app"
         var totalUsage = 0
-        var source = "none"
         
-        // Try UserDefaults (avoid explicit synchronize to keep UI responsive)
+        // Try UserDefaults
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
             totalUsage = sharedDefaults.integer(forKey: "total_usage")
-            if totalUsage > 0 {
-                source = "UserDefaults"
-            }
         }
         
         // Try file backup
@@ -240,12 +236,10 @@ struct DashboardView: View {
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let usage = json["total_usage"] as? Int {
                     totalUsage = usage
-                    source = "File"
                 }
             }
         }
         
-        print("📊 V5 readUsage: \(totalUsage) minutes from \(source)")
         return totalUsage
     }
     

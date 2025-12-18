@@ -81,15 +81,7 @@ class AppState: ObservableObject {
             .assign(to: \.isScreenTimeAuthorized, on: self)
             .store(in: &cancellables)
         
-        // Setup periodic data refresh - less frequent to improve performance
-        Timer.publish(every: 300, on: .main, in: .common) // Every 5 minutes instead of 1
-            .autoconnect()
-            .sink { [weak self] _ in
-                self?.refreshData()
-            }
-            .store(in: &cancellables)
-        
-        // Refresh usage when app becomes active (simpler than constant polling)
+        // Refresh usage when app becomes active (only on foreground, not periodic)
         NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
             .sink { [weak self] _ in
                 // Fetch fresh usage data when app becomes active
@@ -99,19 +91,7 @@ class AppState: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // Also sync periodically when app is active (every 30 seconds)
-        Timer.publish(every: 30, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                // Only sync if app is active
-                if UIApplication.shared.applicationState == .active {
-                    ScreenTimeService.shared.syncUsageFromSharedContainer()
-                    self?.loadAppGoals()
-                }
-            }
-            .store(in: &cancellables)
-        
-        // Listen for Screen Time data updates (removed duplicate)
+        // Listen for Screen Time data updates from extensions
         NotificationCenter.default.publisher(for: .screenTimeDataUpdated)
             .sink { [weak self] _ in
                 self?.refreshData()
@@ -181,7 +161,6 @@ class AppState: ObservableObject {
                 
                 // Clear the puzzle flag
                 defaults.removeObject(forKey: "needsPuzzle_\(tokenHash)")
-                defaults.synchronize()
                 
                 print("🎯 AppState: Showing puzzle for \(storedName) (from shield action)")
                 return
@@ -235,10 +214,8 @@ class AppState: ObservableObject {
         let weeklyPlan = coreDataManager.getOrCreateCurrentWeeklyPlan()
         updatePetHealth() // Update pet health based on usage
         
-        // Re-setup monitoring (individual apps will be blocked if limits exceeded)
-        if isScreenTimeAuthorized && !isOnboarding {
-            screenTimeService.checkAndUpdateAppBlocking()
-        }
+        // ✅ PERFORMANCE: Skip blocking check on every week data load - it's throttled internally
+        // Blocking is handled by DeviceActivityMonitor extension events, not polling
         
         // Calculate week progress (0.0 to 1.0)
         let startOfWeek = weeklyPlan.startDate ?? Date()
@@ -470,7 +447,6 @@ class AppState: ObservableObject {
             coreDataManager.save()
             // Clear pending updates
             sharedDefaults.removeObject(forKey: "pending_goal_name_updates")
-            sharedDefaults.synchronize()
         }
     }
     
@@ -869,7 +845,6 @@ class AppState: ObservableObject {
         let appGroupID = "group.com.se7en.app"
         
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            print("⚠️ Pet health: Failed to access shared container, falling back to monitored apps")
             // Fallback to monitored apps if shared container unavailable
             return monitoredApps
                 .filter { $0.isEnabled }
@@ -880,18 +855,14 @@ class AppState: ObservableObject {
         let totalUsage = sharedDefaults.integer(forKey: "total_usage")
         
         if totalUsage > 0 {
-            print("📊 Pet health using total_usage from shared container: \(totalUsage) minutes")
             return totalUsage
         }
         
-        // ⚠️ CRITICAL FIX: If total_usage is 0 but per_app_usage exists, sum it
-        // This handles cases where the extension wrote per-app data but total_usage wasn't set
-        // This is especially important for category-based selections where all apps are tracked
+        // If total_usage is 0 but per_app_usage exists, sum it
         if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
             let sumFromPerApp = perAppUsage.values.reduce(0, +)
             if sumFromPerApp > 0 {
-                print("📊 Pet health using per_app_usage sum: \(sumFromPerApp) minutes (total_usage was 0)")
-                // Also update total_usage for future reads (no explicit synchronize needed)
+                // Also update total_usage for future reads
                 sharedDefaults.set(sumFromPerApp, forKey: "total_usage")
                 return sumFromPerApp
             }
@@ -901,12 +872,6 @@ class AppState: ObservableObject {
         let monitoredTotal = monitoredApps
             .filter { $0.isEnabled }
             .reduce(0) { $0 + $1.usedToday }
-        
-        if monitoredTotal > 0 {
-            print("📊 Pet health falling back to monitored apps: \(monitoredTotal) minutes")
-        } else {
-            print("⚠️ Pet health: No screen time data found (shared container empty, no monitored apps)")
-        }
         
         return monitoredTotal
     }

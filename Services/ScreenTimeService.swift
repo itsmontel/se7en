@@ -26,6 +26,11 @@ final class ScreenTimeService: ObservableObject {
     // Track last logged usage values to prevent log spam
     private var lastLoggedUsage: [String: Int] = [:]
     
+    // ✅ PERFORMANCE: Track blocked apps to prevent repeated blocking calls
+    private var blockedApps: Set<String> = []
+    private var lastBlockTime: [String: Date] = [:]
+    private let blockThrottleInterval: TimeInterval = 10.0 // Don't re-block same app within 10 seconds
+    
     // MARK: - Token Storage
     // Key: bundle ID or app identifier, Value: FamilyActivitySelection for that app
     private var appSelections: [String: FamilyActivitySelection] = [:]
@@ -35,30 +40,18 @@ final class ScreenTimeService: ObservableObject {
         get {
             if _allAppsSelection == nil {
                 _allAppsSelection = loadAllAppsSelection()
-                if let loaded = _allAppsSelection {
-                    print("📂 Loaded allAppsSelection with \(loaded.applicationTokens.count) apps and \(loaded.categoryTokens.count) categories from storage")
-                } else {
-                    print("📂 No allAppsSelection found in storage")
-                }
             }
             return _allAppsSelection
         }
         set {
-            let appCount = newValue?.applicationTokens.count ?? 0
-            let categoryCount = newValue?.categoryTokens.count ?? 0
-            print("💾 Setting allAppsSelection with \(appCount) apps and \(categoryCount) categories")
             _allAppsSelection = newValue
             if let selection = newValue {
                 saveAllAppsSelection(selection)
-                print("💾 allAppsSelection setter: Saved \(selection.applicationTokens.count) apps and \(selection.categoryTokens.count) categories")
                 
                 // Immediately process the selection to create goals and records
                 Task {
                     await updateUsageFromAllAppsSelection(selection)
-                    print("🔄 allAppsSelection setter: Processed selection")
                 }
-            } else {
-                print("⚠️ allAppsSelection set to nil")
             }
         }
     }
@@ -79,12 +72,8 @@ final class ScreenTimeService: ObservableObject {
                 self?.authorizationStatus = status
                 self?.isAuthorized = status == .approved
                 
-                print("📱 Screen Time authorization status changed: \(status)")
-                print("📱 Was authorized: \(wasAuthorized), Now authorized: \(status == .approved)")
-                
                 // If we just became authorized, set up monitoring
                 if !wasAuthorized && status == .approved {
-                    print("🎉 Just became authorized - setting up monitoring")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         self?.refreshAllMonitoring()
                     }
@@ -696,21 +685,31 @@ final class ScreenTimeService: ObservableObject {
     // IMPORTANT: Use tokens directly from FamilyActivitySelection - don't rely on bundle IDs
     
     func blockApp(_ bundleID: String) {
+        // ✅ PERFORMANCE: Throttle blocking to prevent repeated calls
+        let now = Date()
+        if let lastBlock = lastBlockTime[bundleID],
+           now.timeIntervalSince(lastBlock) < blockThrottleInterval,
+           blockedApps.contains(bundleID) {
+            return // Already blocked recently, skip
+        }
+        
         // First try to get selection by bundle ID (for individual apps)
         if let selection = appSelections[bundleID] {
             // Block specific apps from this selection using tokens
-            var blockedApps = settingsStore.shield.applications ?? Set()
+            var blockedAppsSet = settingsStore.shield.applications ?? Set()
             for token in selection.applicationTokens {
-                blockedApps.insert(token)
+                blockedAppsSet.insert(token)
             }
-            settingsStore.shield.applications = blockedApps.isEmpty ? nil : blockedApps
+            settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
             
             // Also block categories if present
             if !selection.categoryTokens.isEmpty {
                 settingsStore.shield.applicationCategories = .specific(selection.categoryTokens)
             }
             
-            print("🚫 Blocked app: \(bundleID) (apps: \(selection.applicationTokens.count), categories: \(selection.categoryTokens.count))")
+            // Track blocking
+            blockedApps.insert(bundleID)
+            lastBlockTime[bundleID] = now
             return
         }
         
@@ -899,12 +898,8 @@ final class ScreenTimeService: ObservableObject {
                 let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                 if normalizedGoalName == normalizedReportName {
                     usageMinutes = reportUsage
-                    // Only log if value changed to reduce log spam
-                    let lastLogged = lastLoggedUsage[tokenHash] ?? 0
-                    if usageMinutes != lastLogged {
-                        print("📊 Matched usage by name: \(appName) = \(usageMinutes) minutes")
-                        lastLoggedUsage[tokenHash] = usageMinutes
-                    }
+                    // Track last logged to prevent spam
+                    lastLoggedUsage[tokenHash] = usageMinutes
                     break
                 }
             }
@@ -914,12 +909,8 @@ final class ScreenTimeService: ObservableObject {
                 let key = "usage_\(tokenHash)"
                 usageMinutes = sharedDefaults.integer(forKey: key)
                 if usageMinutes > 0 {
-                    // Only log if value changed to reduce log spam
-                    let lastLogged = lastLoggedUsage[tokenHash] ?? 0
-                    if usageMinutes != lastLogged {
-                        print("📊 Matched usage by token hash: \(tokenHash) = \(usageMinutes) minutes")
-                        lastLoggedUsage[tokenHash] = usageMinutes
-                    }
+                    // Track last logged to prevent spam
+                    lastLoggedUsage[tokenHash] = usageMinutes
                 }
             }
             
@@ -933,7 +924,6 @@ final class ScreenTimeService: ObservableObject {
                         record.actualUsageMinutes = Int32(usageMinutes)
                         record.didExceedLimit = usageMinutes >= Int(goal.dailyLimitMinutes)
                         coreDataManager.save()
-                        print("📊 Updated usage for \(appName): \(usageMinutes) minutes")
                     }
                 } else {
                     // Create new record
@@ -944,7 +934,6 @@ final class ScreenTimeService: ObservableObject {
                         didExceedLimit: usageMinutes >= Int(goal.dailyLimitMinutes)
                     )
                     coreDataManager.save()
-                    print("📊 Created usage record for \(appName): \(usageMinutes) minutes")
                 }
             }
         }
@@ -1593,14 +1582,21 @@ final class ScreenTimeService: ObservableObject {
                 minutes: limitMinutes
             )
         
+            // ✅ PERFORMANCE: Throttle puzzle notifications to prevent spam
+            let now = Date()
+            let lastPuzzleKey = "lastPuzzle_\(bundleID)"
+            if let lastPuzzleTime = UserDefaults.standard.object(forKey: lastPuzzleKey) as? Date,
+               now.timeIntervalSince(lastPuzzleTime) < 30.0 { // Don't show puzzle again within 30 seconds
+                return
+            }
+            UserDefaults.standard.set(now, forKey: lastPuzzleKey)
+            
             // Post notification for UI to show puzzle view
             NotificationCenter.default.post(
                 name: .appBlocked,
                 object: nil,
                 userInfo: ["appName": appName, "bundleID": bundleID]
             )
-        
-            print("🚫 Limit reached for \(appName) - showing puzzle")
         }
     }
     
@@ -1683,7 +1679,17 @@ final class ScreenTimeService: ObservableObject {
     // MARK: - Additional Methods (for compatibility)
     
     /// Check and update app blocking status
+    /// ✅ PERFORMANCE: Throttled to prevent excessive checks
+    private var lastBlockingCheck: Date = Date.distantPast
+    private let blockingCheckInterval: TimeInterval = 15.0 // Only check every 15 seconds
+    
     func checkAndUpdateAppBlocking() {
+        let now = Date()
+        guard now.timeIntervalSince(lastBlockingCheck) >= blockingCheckInterval else {
+            return // Too soon, skip check
+        }
+        lastBlockingCheck = now
+        
         // Re-check all apps for blocking status
         let goals = coreDataManager.getActiveAppGoals()
         for goal in goals {
@@ -1816,14 +1822,9 @@ final class ScreenTimeService: ObservableObject {
     
     /// Refresh all monitoring setups when app opens
     /// This ensures monitoring is active and usage data can be tracked
+    /// ✅ PERFORMANCE: Lightweight refresh - only essential operations
     func refreshAllMonitoring() {
-        print("🔄 Refreshing all monitoring setups...")
-        print("📱 Authorization status: \(authorizationStatus)")
-        print("📱 Is authorized: \(isAuthorized)")
-        
         guard isAuthorized else {
-            print("⚠️ Cannot refresh monitoring - not authorized")
-            print("   Current status: \(authorizationStatus)")
             return
         }
         
@@ -1836,15 +1837,12 @@ final class ScreenTimeService: ObservableObject {
         // Re-setup monitoring for all apps/categories in allAppsSelection
         if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
             Task {
-                let itemCount = allApps.applicationTokens.count + allApps.categoryTokens.count
-                print("📱 Refreshing monitoring for \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories in allAppsSelection")
                 await updateUsageFromAllAppsSelection(allApps)
-                print("✅ Refreshed monitoring for all apps")
                 
                 // Also trigger usage update
                 await updateUsageFromReport()
                 
-                // Notify UI to refresh
+                // Notify UI to refresh (single notification)
                 await MainActor.run {
                     NotificationCenter.default.post(
                         name: .screenTimeDataUpdated,
