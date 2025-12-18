@@ -2,6 +2,21 @@ import SwiftUI
 import UIKit
 import FamilyControls
 
+// MARK: - Unlock Mode
+enum UnlockMode: String, Codable, CaseIterable {
+    case extraTime = "Extra Time"
+    case oneSession = "One Session"
+    
+    var description: String {
+        switch self {
+        case .extraTime:
+            return "Solving a puzzle grants +15 minutes of additional usage"
+        case .oneSession:
+            return "Solving a puzzle unlocks the app for one session only. Once you leave, it locks again."
+        }
+    }
+}
+
 // MARK: - Monitored App
 struct MonitoredApp: Identifiable, Equatable {
     let id = UUID()

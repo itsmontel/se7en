@@ -36,6 +36,10 @@ struct SE7ENApp: App {
                     // Refresh Screen Time monitoring and data
                     ScreenTimeService.shared.refreshAllMonitoring()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                    // ✅ Check for One-Session Mode apps and re-block them
+                    ScreenTimeService.shared.checkAndReBlockOneSessionApps()
+                }
                 .onOpenURL { url in
                     handleIncomingURL(url)
                 }

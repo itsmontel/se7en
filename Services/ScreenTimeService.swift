@@ -1681,35 +1681,8 @@ final class ScreenTimeService: ObservableObject {
     func grantTemporaryExtension(for bundleID: String, minutes: Int) {
         let appGroupID = "group.com.se7en.app"
         
-        // ✅ 1. Unblock the app FIRST (bundleID is actually tokenHash)
+        // ✅ 1. Unblock the app FIRST
         unblockApp(bundleID)
-        
-        // ✅ 1b. Also try to unblock by finding token in all stored selections
-        // This ensures we unblock even if the selection wasn't cached
-        if let allApps = allAppsSelection {
-            for token in allApps.applicationTokens {
-                if String(token.hashValue) == bundleID {
-                    var blockedAppsSet = settingsStore.shield.applications ?? Set()
-                    blockedAppsSet.remove(token)
-                    settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
-                    print("✅ Unblocked app with token hash \(bundleID.prefix(8))... from allAppsSelection")
-                    break
-                }
-            }
-        }
-        
-        // ✅ 1c. Try to find and unblock from stored app selections
-        for (_, selection) in appSelections {
-            for token in selection.applicationTokens {
-                if String(token.hashValue) == bundleID {
-                    var blockedAppsSet = settingsStore.shield.applications ?? Set()
-                    blockedAppsSet.remove(token)
-                    settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
-                    print("✅ Unblocked app with token hash \(bundleID.prefix(8))... from appSelections")
-                    break
-                }
-            }
-        }
         
         // ✅ 2. Remove from blocked tracking
         blockedApps.remove(bundleID)
@@ -1769,6 +1742,21 @@ final class ScreenTimeService: ObservableObject {
         
         // Check in UserDefaults first
         if let extensionEndTime = UserDefaults.standard.object(forKey: "extension_end_\(bundleID)") as? Date {
+            // ✅ Check if extension was granted today (not yesterday)
+            let today = Calendar.current.startOfDay(for: Date())
+            let extensionDate = Calendar.current.startOfDay(for: extensionEndTime)
+            if extensionDate < today {
+                // Extension was from a previous day, clear it
+                UserDefaults.standard.removeObject(forKey: "extension_end_\(bundleID)")
+                if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                    sharedDefaults.removeObject(forKey: "extension_end_\(bundleID)")
+                    sharedDefaults.removeObject(forKey: "hasActiveExtension_\(bundleID)")
+                    sharedDefaults.removeObject(forKey: "extensionLimit_\(bundleID)")
+                    sharedDefaults.synchronize()
+                }
+                return false
+            }
+            
             if Date() < extensionEndTime {
                 return true
             }
@@ -1779,14 +1767,27 @@ final class ScreenTimeService: ObservableObject {
             let timestamp = sharedDefaults.double(forKey: "extension_end_\(bundleID)")
             if timestamp > 0 {
                 let extensionEndTime = Date(timeIntervalSince1970: timestamp)
+                
+                // ✅ Check if extension was granted today (not yesterday)
+                let today = Calendar.current.startOfDay(for: Date())
+                let extensionDate = Calendar.current.startOfDay(for: extensionEndTime)
+                if extensionDate < today {
+                    // Extension was from a previous day, clear it
+                    sharedDefaults.removeObject(forKey: "extension_end_\(bundleID)")
+                    sharedDefaults.removeObject(forKey: "hasActiveExtension_\(bundleID)")
+                    sharedDefaults.removeObject(forKey: "extensionLimit_\(bundleID)")
+                    sharedDefaults.synchronize()
+                    return false
+                }
+                
                 if Date() < extensionEndTime {
                     return true
                 }
             }
         }
         
-            return false
-        }
+        return false
+    }
     
     /// Get the effective limit for an app (accounts for extension mode)
     func getEffectiveDailyLimit(for bundleID: String) -> Int {

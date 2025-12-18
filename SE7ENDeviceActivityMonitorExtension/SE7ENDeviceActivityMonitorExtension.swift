@@ -122,16 +122,30 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         let rawValue = activity.rawValue
         print("🌅 Monitor: Interval started for \(rawValue)")
         
-        // ✅ CRITICAL: Check all active limits and unblock apps with active extensions
-        let limits = SharedStorage.shared.loadLimits()
-        for limit in limits where limit.isActive {
-            if let selection = limit.getSelection(),
-               let firstToken = selection.applicationTokens.first {
-                let tokenHash = String(firstToken.hashValue)
-                if hasActiveExtension(for: tokenHash) {
-                    unblockAppByTokenHash(tokenHash)
+        let appGroupID = "group.com.se7en.app"
+        let sharedDefaults = UserDefaults(suiteName: appGroupID)
+        let today = Calendar.current.startOfDay(for: Date())
+        
+        // ✅ CRITICAL: Clear all extensions from previous days
+        if let defaults = sharedDefaults {
+            let allKeys = Array(defaults.dictionaryRepresentation().keys)
+            for key in allKeys {
+                if key.hasPrefix("extension_end_") {
+                    let tokenHash = String(key.dropFirst("extension_end_".count))
+                    let timestamp = defaults.double(forKey: key)
+                    if timestamp > 0 {
+                        let extensionDate = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: timestamp))
+                        if extensionDate < today {
+                            // Extension from previous day, clear it
+                            defaults.removeObject(forKey: key)
+                            defaults.removeObject(forKey: "hasActiveExtension_\(tokenHash)")
+                            defaults.removeObject(forKey: "extensionLimit_\(tokenHash)")
+                            print("🧹 Monitor: Cleared extension from previous day for \(tokenHash.prefix(8))...")
+                        }
+                    }
                 }
             }
+            defaults.synchronize()
         }
         
         // New day started - clear any previous blocks and reset usage for this activity
@@ -143,6 +157,7 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
             
             // Reset usage counter for this limit
             // Find the token hash for this limit
+            let limits = SharedStorage.shared.loadLimits()
             if let limit = limits.first(where: { $0.id == limitID }),
                let selection = limit.getSelection(),
                let firstToken = selection.applicationTokens.first {
@@ -253,6 +268,19 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         let timestamp = sharedDefaults.double(forKey: "extension_end_\(tokenHash)")
         if timestamp > 0 {
             let extensionEndTime = Date(timeIntervalSince1970: timestamp)
+            
+            // ✅ Check if extension was granted today (not yesterday)
+            let today = Calendar.current.startOfDay(for: Date())
+            let extensionDate = Calendar.current.startOfDay(for: extensionEndTime)
+            if extensionDate < today {
+                // Extension from previous day, clear it
+                sharedDefaults.removeObject(forKey: "extension_end_\(tokenHash)")
+                sharedDefaults.removeObject(forKey: "hasActiveExtension_\(tokenHash)")
+                sharedDefaults.removeObject(forKey: "extensionLimit_\(tokenHash)")
+                sharedDefaults.synchronize()
+                return false
+            }
+            
             if Date() < extensionEndTime {
                 print("✅ Monitor: Active extension found until \(extensionEndTime)")
                 return true
@@ -262,8 +290,21 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         // Also check the hasActiveExtension flag
         if sharedDefaults.bool(forKey: "hasActiveExtension_\(tokenHash)") {
             let timestamp = sharedDefaults.double(forKey: "extension_end_\(tokenHash)")
-            if timestamp > Date().timeIntervalSince1970 {
-                return true
+            if timestamp > 0 {
+                let extensionEndTime = Date(timeIntervalSince1970: timestamp)
+                let today = Calendar.current.startOfDay(for: Date())
+                let extensionDate = Calendar.current.startOfDay(for: extensionEndTime)
+                if extensionDate < today {
+                    // Extension from previous day, clear it
+                    sharedDefaults.removeObject(forKey: "extension_end_\(tokenHash)")
+                    sharedDefaults.removeObject(forKey: "hasActiveExtension_\(tokenHash)")
+                    sharedDefaults.removeObject(forKey: "extensionLimit_\(tokenHash)")
+                    sharedDefaults.synchronize()
+                    return false
+                }
+                if timestamp > Date().timeIntervalSince1970 {
+                    return true
+                }
             }
         }
         
@@ -275,11 +316,6 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     /// Handle update events (fires every minute when app is being used)
     private func handleUpdateEvent(tokenHash: String) {
         guard !tokenHash.isEmpty else { return }
-        
-        // ✅ CRITICAL: Check if app has active extension and unblock if needed
-        if hasActiveExtension(for: tokenHash) {
-            unblockAppByTokenHash(tokenHash)
-        }
         
         // Find the limit to get the UUID
         let limits = SharedStorage.shared.loadLimits()
@@ -391,16 +427,6 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         // Mark limit as reached in shared storage
         SharedStorage.shared.markLimitReached(limitID: limitID)
         
-        // ✅ CRITICAL: Store app name with token hash for shield configuration
-        if let firstToken = selection.applicationTokens.first {
-            let tokenHash = String(firstToken.hashValue)
-            if let sharedDefaults = UserDefaults(suiteName: SharedConstants.appGroupID) {
-                sharedDefaults.set(appName, forKey: "limitAppName_\(tokenHash)")
-                sharedDefaults.synchronize()
-                print("💾 Monitor: Stored app name '\(appName)' for token hash \(tokenHash.prefix(8))...")
-            }
-        }
-        
         print("🚫 Monitor: BLOCKED '\(appName)' (limit \(limitID.uuidString.prefix(8))...)")
     }
     
@@ -418,55 +444,9 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         for token in selection.applicationTokens {
             currentShielded.remove(token)
         }
-        store.shield.applications = currentShielded.isEmpty ? nil : currentShielded
+        store.shield.applications = currentShielded
         
         print("✅ Monitor: Unblocked apps for limit \(limitID.uuidString.prefix(8))...")
-    }
-    
-    /// ✅ NEW: Unblock app by token hash (used when extension is granted)
-    private func unblockAppByTokenHash(_ tokenHash: String) {
-        let limits = SharedStorage.shared.loadLimits()
-        
-        // Find the limit that matches this token hash
-        for limit in limits where limit.isActive {
-            guard let selection = limit.getSelection() else { continue }
-            
-            // Check if this selection contains the token
-            if let firstToken = selection.applicationTokens.first {
-                let computedHash = String(firstToken.hashValue)
-                if computedHash == tokenHash {
-                    // Found matching limit, unblock it
-                    var currentShielded = store.shield.applications ?? []
-                    for token in selection.applicationTokens {
-                        currentShielded.remove(token)
-                    }
-                    store.shield.applications = currentShielded.isEmpty ? nil : currentShielded
-                    
-                    // Also clear limit reached flag
-                    SharedStorage.shared.clearLimitReached(limitID: limit.id)
-                    
-                    print("✅ Monitor: Unblocked app with token hash \(tokenHash.prefix(8))... (has active extension)")
-                    return
-                }
-            }
-        }
-        
-        // Fallback: Try to find and remove token from all blocked apps
-        var currentShielded = store.shield.applications ?? []
-        var foundToken: ApplicationToken? = nil
-        
-        for token in currentShielded {
-            if String(token.hashValue) == tokenHash {
-                foundToken = token
-                break
-            }
-        }
-        
-        if let token = foundToken {
-            currentShielded.remove(token)
-            store.shield.applications = currentShielded.isEmpty ? nil : currentShielded
-            print("✅ Monitor: Unblocked app with token hash \(tokenHash.prefix(8))... (fallback method)")
-        }
     }
     
     // MARK: - Helpers

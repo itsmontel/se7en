@@ -433,12 +433,73 @@ struct BlockingView: View {
                 .padding(.horizontal, 22)
                 .padding(.bottom, 22)
             }
+            
+            // Unlock Mode Toggle
+            VStack(spacing: 12) {
+                Divider()
+                    .padding(.horizontal, 22)
+                
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Unlock Mode")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundColor(.textPrimary)
+                        
+                        Text(getUnlockModeDescription(for: app))
+                            .font(.system(size: 12, weight: .regular, design: .rounded))
+                            .foregroundColor(.textSecondary)
+                            .lineLimit(2)
+                    }
+                    
+                    Spacer()
+                    
+                    Picker("", selection: Binding(
+                        get: { getUnlockMode(for: app) },
+                        set: { newMode in setUnlockMode(for: app, mode: newMode) }
+                    )) {
+                        ForEach(UnlockMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 180)
+                }
+                .padding(.horizontal, 22)
+                .padding(.bottom, 22)
+            }
         }
         .background(
             RoundedRectangle(cornerRadius: 22)
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 6)
         )
+    }
+    
+    // MARK: - Unlock Mode Helpers
+    
+    private func getUnlockMode(for app: MonitoredApp) -> UnlockMode {
+        guard let tokenHash = app.tokenHash else { return .extraTime }
+        let appGroupID = "group.com.se7en.app"
+        if let defaults = UserDefaults(suiteName: appGroupID),
+           let modeString = defaults.string(forKey: "unlockMode_\(tokenHash)"),
+           let mode = UnlockMode(rawValue: modeString) {
+            return mode
+        }
+        return .extraTime // Default to Extra Time Mode
+    }
+    
+    private func setUnlockMode(for app: MonitoredApp, mode: UnlockMode) {
+        guard let tokenHash = app.tokenHash else { return }
+        let appGroupID = "group.com.se7en.app"
+        if let defaults = UserDefaults(suiteName: appGroupID) {
+            defaults.set(mode.rawValue, forKey: "unlockMode_\(tokenHash)")
+            defaults.synchronize()
+        }
+    }
+    
+    private func getUnlockModeDescription(for app: MonitoredApp) -> String {
+        let mode = getUnlockMode(for: app)
+        return mode.description
     }
     
     private func progressColor(for app: MonitoredApp) -> Color {
