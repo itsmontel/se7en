@@ -21,7 +21,6 @@ struct DashboardView: View {
     @State private var showingLimitReachedPuzzle = false
     @State private var limitReachedAppName: String = ""
     @State private var limitReachedBundleID: String = ""
-    @State private var showPuzzleOnAppear = true // ✅ TEST: Show puzzle modal on app launch
     @State private var showingExtendLimitSheet = false
     @State private var appToExtend: MonitoredApp? = nil
     @State private var showingSelectAllApps = false
@@ -631,16 +630,6 @@ struct DashboardView: View {
                 )
             }
             .onAppear {
-                // ✅ TEST: Show puzzle modal on app launch
-                if showPuzzleOnAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        limitReachedAppName = "Instagram"
-                        limitReachedBundleID = "test_bundle_id"
-                        showingLimitReachedPuzzle = true
-                        showPuzzleOnAppear = false
-                    }
-                }
-                
                 // Ensure Screen Time is authorized (only refresh if needed)
                 if !screenTimeService.isAuthorized {
                     Task {

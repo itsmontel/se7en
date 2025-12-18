@@ -58,7 +58,7 @@ class AppState: ObservableObject {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        // Avoid forcing disk sync here; rely on system-managed UserDefaults buffering
+        sharedDefaults.synchronize()
         let totalUsage = sharedDefaults.integer(forKey: "total_usage")
         
         if totalUsage > 0 {
@@ -81,7 +81,15 @@ class AppState: ObservableObject {
             .assign(to: \.isScreenTimeAuthorized, on: self)
             .store(in: &cancellables)
         
-        // Refresh usage when app becomes active (only on foreground, not periodic)
+        // Setup periodic data refresh - less frequent to improve performance
+        Timer.publish(every: 300, on: .main, in: .common) // Every 5 minutes instead of 1
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.refreshData()
+            }
+            .store(in: &cancellables)
+        
+        // Refresh usage when app becomes active (simpler than constant polling)
         NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
             .sink { [weak self] _ in
                 // Fetch fresh usage data when app becomes active
@@ -91,7 +99,19 @@ class AppState: ObservableObject {
             }
             .store(in: &cancellables)
         
-        // Listen for Screen Time data updates from extensions
+        // Also sync periodically when app is active (every 30 seconds)
+        Timer.publish(every: 30, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                // Only sync if app is active
+                if UIApplication.shared.applicationState == .active {
+                    ScreenTimeService.shared.syncUsageFromSharedContainer()
+                    self?.loadAppGoals()
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Listen for Screen Time data updates (removed duplicate)
         NotificationCenter.default.publisher(for: .screenTimeDataUpdated)
             .sink { [weak self] _ in
                 self?.refreshData()
@@ -132,29 +152,6 @@ class AppState: ObservableObject {
         let appGroupID = "group.com.se7en.app"
         guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        // ✅ FIX: Check puzzleMode flag FIRST (set by shield action)
-        if defaults.bool(forKey: "puzzleMode"),
-           let tokenHash = defaults.string(forKey: "puzzleTokenHash"),
-           let appName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") {
-            // Post notification to show puzzle
-            NotificationCenter.default.post(
-                name: .appBlocked,
-                object: nil,
-                userInfo: [
-                    "appName": appName,
-                    "bundleID": tokenHash,
-                    "puzzleMode": true
-                ]
-            )
-            
-            // Clear the flags
-            defaults.set(false, forKey: "puzzleMode")
-            defaults.removeObject(forKey: "needsPuzzle_\(tokenHash)")
-            defaults.synchronize()
-            
-            return
-        }
-        
         // Get all pending puzzle flags
         var pendingTokenHashes: [String] = []
         if let allKeys = defaults.dictionaryRepresentation().keys as? [String] {
@@ -186,6 +183,7 @@ class AppState: ObservableObject {
                 defaults.removeObject(forKey: "needsPuzzle_\(tokenHash)")
                 defaults.synchronize()
                 
+                print("🎯 AppState: Showing puzzle for \(storedName) (from shield action)")
                 return
             }
         }
@@ -237,8 +235,10 @@ class AppState: ObservableObject {
         let weeklyPlan = coreDataManager.getOrCreateCurrentWeeklyPlan()
         updatePetHealth() // Update pet health based on usage
         
-        // ✅ PERFORMANCE: Skip blocking check on every week data load - it's throttled internally
-        // Blocking is handled by DeviceActivityMonitor extension events, not polling
+        // Re-setup monitoring (individual apps will be blocked if limits exceeded)
+        if isScreenTimeAuthorized && !isOnboarding {
+            screenTimeService.checkAndUpdateAppBlocking()
+        }
         
         // Calculate week progress (0.0 to 1.0)
         let startOfWeek = weeklyPlan.startDate ?? Date()
@@ -363,6 +363,7 @@ class AppState: ObservableObject {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return 0 }
         
+        sharedDefaults.synchronize()
         applyPendingGoalNameUpdates()
         
         var usage: Int = 0
@@ -470,6 +471,7 @@ class AppState: ObservableObject {
             coreDataManager.save()
             // Clear pending updates
             sharedDefaults.removeObject(forKey: "pending_goal_name_updates")
+            sharedDefaults.synchronize()
         }
     }
     
@@ -762,6 +764,7 @@ class AppState: ObservableObject {
         // This ensures we have the latest data before calculating health
         let appGroupID = "group.com.se7en.app"
         if let sharedDefaults = UserDefaults(suiteName: appGroupID), !isRefreshingPetHealth {
+            sharedDefaults.synchronize()
             let totalUsage = sharedDefaults.integer(forKey: "total_usage")
             let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int]
             
@@ -825,6 +828,7 @@ class AppState: ObservableObject {
         if totalMinutes == 0 {
             let appGroupID = "group.com.se7en.app"
             if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                sharedDefaults.synchronize()
                 totalMinutes = sharedDefaults.integer(forKey: "total_usage")
                 if totalMinutes > 0 {
                     self.todayScreenTimeMinutes = totalMinutes
@@ -868,25 +872,34 @@ class AppState: ObservableObject {
         let appGroupID = "group.com.se7en.app"
         
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("⚠️ Pet health: Failed to access shared container, falling back to monitored apps")
             // Fallback to monitored apps if shared container unavailable
             return monitoredApps
                 .filter { $0.isEnabled }
                 .reduce(0) { $0 + $1.usedToday }
         }
         
+        // Force synchronize to get latest data (same as dashboard does)
+        sharedDefaults.synchronize()
+        
         // Read total usage from shared container (same key as DashboardView)
         let totalUsage = sharedDefaults.integer(forKey: "total_usage")
         
         if totalUsage > 0 {
+            print("📊 Pet health using total_usage from shared container: \(totalUsage) minutes")
             return totalUsage
         }
         
-        // If total_usage is 0 but per_app_usage exists, sum it
+        // ⚠️ CRITICAL FIX: If total_usage is 0 but per_app_usage exists, sum it
+        // This handles cases where the extension wrote per-app data but total_usage wasn't set
+        // This is especially important for category-based selections where all apps are tracked
         if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
             let sumFromPerApp = perAppUsage.values.reduce(0, +)
             if sumFromPerApp > 0 {
+                print("📊 Pet health using per_app_usage sum: \(sumFromPerApp) minutes (total_usage was 0)")
                 // Also update total_usage for future reads
                 sharedDefaults.set(sumFromPerApp, forKey: "total_usage")
+                sharedDefaults.synchronize()
                 return sumFromPerApp
             }
         }
@@ -895,6 +908,12 @@ class AppState: ObservableObject {
         let monitoredTotal = monitoredApps
             .filter { $0.isEnabled }
             .reduce(0) { $0 + $1.usedToday }
+        
+        if monitoredTotal > 0 {
+            print("📊 Pet health falling back to monitored apps: \(monitoredTotal) minutes")
+        } else {
+            print("⚠️ Pet health: No screen time data found (shared container empty, no monitored apps)")
+        }
         
         return monitoredTotal
     }

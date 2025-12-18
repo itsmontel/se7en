@@ -9,10 +9,5 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).SE7ENDeviceActivityMonitor</string>
 	</dict>
-	<key>EXAppExtensionAttributes</key>
-	<dict>
-		<key>EXExtensionPointIdentifier</key>
-		<string>com.apple.deviceactivity.monitor-extension</string>
-	</dict>
 </dict>
 </plist>

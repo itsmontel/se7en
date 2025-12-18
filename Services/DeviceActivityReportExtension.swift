@@ -115,8 +115,8 @@ final class DeviceActivityReportService {
         if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
             // Only update if value changed
             if Int(record.actualUsageMinutes) != minutes {
-                record.actualUsageMinutes = Int32(minutes)
-                record.didExceedLimit = minutes >= Int(goal.dailyLimitMinutes)
+            record.actualUsageMinutes = Int32(minutes)
+            record.didExceedLimit = minutes >= Int(goal.dailyLimitMinutes)
                 pendingSaves.insert(bundleID)
             }
         } else {
@@ -150,12 +150,12 @@ final class DeviceActivityReportService {
             // Save all pending changes at once
             self.coreDataManager.save()
             self.pendingSaves.removeAll()
-            
+        
             // Post single notification for all updates
-            NotificationCenter.default.post(
-                name: .screenTimeDataUpdated,
-                object: nil
-            )
+        NotificationCenter.default.post(
+            name: .screenTimeDataUpdated,
+            object: nil
+        )
         }
     }
     

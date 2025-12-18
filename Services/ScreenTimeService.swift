@@ -754,12 +754,11 @@ final class ScreenTimeService: ObservableObject {
             } else {
                 // Try 3: Find goal by tokenHash and get its selection
                 let goals = coreDataManager.getActiveAppGoals()
-                if let goal = goals.first(where: { $0.appBundleID == bundleID }),
+                if let _ = goals.first(where: { $0.appBundleID == bundleID }),
                    let goalSelection = appSelections[bundleID] {
                     selection = goalSelection
-                } else if let goal = goals.first(where: { $0.appBundleID == bundleID }),
-                          let goalTokenHash = goal.appBundleID,
-                          let goalSelection = appSelections[goalTokenHash] {
+                } else if let _ = goals.first(where: { $0.appBundleID == bundleID }),
+                          let goalSelection = appSelections[bundleID] {
                     selection = goalSelection
                 }
             }
@@ -792,7 +791,7 @@ final class ScreenTimeService: ObservableObject {
         }
         
         // ✅ FALLBACK 2: Try to find token in all stored selections
-        for (storedBundleID, storedSelection) in appSelections {
+        for (_, storedSelection) in appSelections {
             for token in storedSelection.applicationTokens {
                 if String(token.hashValue) == bundleID {
                     // Found matching token, unblock it
@@ -978,7 +977,7 @@ final class ScreenTimeService: ObservableObject {
                 if normalizedGoalName == normalizedReportName {
                     usageMinutes = reportUsage
                     // Track last logged to prevent spam
-                    lastLoggedUsage[tokenHash] = usageMinutes
+                        lastLoggedUsage[tokenHash] = usageMinutes
                     break
                 }
             }
@@ -989,7 +988,7 @@ final class ScreenTimeService: ObservableObject {
                 usageMinutes = sharedDefaults.integer(forKey: key)
                 if usageMinutes > 0 {
                     // Track last logged to prevent spam
-                    lastLoggedUsage[tokenHash] = usageMinutes
+                        lastLoggedUsage[tokenHash] = usageMinutes
                 }
             }
             
@@ -1063,7 +1062,6 @@ final class ScreenTimeService: ObservableObject {
         
         // First, try to update from all apps selection (either apps OR categories)
         if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
-            let itemCount = allApps.applicationTokens.count + allApps.categoryTokens.count
             print("📱 Updating from allAppsSelection with \(allApps.applicationTokens.count) apps and \(allApps.categoryTokens.count) categories")
             await updateUsageFromAllAppsSelection(allApps)
         } else {
@@ -1669,7 +1667,7 @@ final class ScreenTimeService: ObservableObject {
                 return
             }
             UserDefaults.standard.set(now, forKey: lastPuzzleKey)
-            
+        
             // Post notification for UI to show puzzle view
             NotificationCenter.default.post(
                 name: .appBlocked,
@@ -1681,71 +1679,127 @@ final class ScreenTimeService: ObservableObject {
     
     /// Grant temporary extension after puzzle completion
     func grantTemporaryExtension(for bundleID: String, minutes: Int) {
-        // ✅ FIX: Unblock the app FIRST before storing extension time
+        let appGroupID = "group.com.se7en.app"
+        
+        // ✅ 1. Unblock the app FIRST
         unblockApp(bundleID)
         
-        // ✅ CRITICAL: Reset usage to 0 when extension is granted (fresh 15 minutes)
-        // This ensures the UI shows "0 of 15 minutes" after puzzle completion
+        // ✅ 2. Remove from blocked tracking
+        blockedApps.remove(bundleID)
+        
+        // ✅ 3. Reset usage in CoreData
         let goals = coreDataManager.getActiveAppGoals()
         if let goal = goals.first(where: { $0.appBundleID == bundleID }) {
-            let today = Calendar.current.startOfDay(for: Date())
             if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
-                // Reset usage to 0 for the extension period
+                // Reset usage to 0
                 record.actualUsageMinutes = 0
                 record.didExceedLimit = false
+                record.extendedLimitMinutes = Int32(minutes)
                 coreDataManager.save()
             } else {
                 // Create new record with 0 usage
-                _ = coreDataManager.createUsageRecord(
+                let today = Calendar.current.startOfDay(for: Date())
+                let newRecord = coreDataManager.createUsageRecord(
                     for: goal,
                     date: today,
                     actualUsageMinutes: 0,
                     didExceedLimit: false
                 )
-                coreDataManager.save()
-            }
-            
-            // ✅ CRITICAL: Update the effective limit to show 15 minutes in UI
-            // Store extension limit in usage record so getEffectiveDailyLimit returns 15
-            if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
-                record.extendedLimitMinutes = Int32(minutes)
+                newRecord.extendedLimitMinutes = Int32(minutes)
                 coreDataManager.save()
             }
         }
         
-        // Store extension end time
+        // ✅ 4. Store extension end time in UserDefaults
         let extensionEndTime = Date().addingTimeInterval(TimeInterval(minutes * 60))
         UserDefaults.standard.set(extensionEndTime, forKey: "extension_end_\(bundleID)")
         
-        // ✅ CRITICAL: Also store in shared container so extensions can see it
-        let appGroupID = "group.com.se7en.app"
+        // ✅ 5. CRITICAL: Update shared container for extensions to see
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
             sharedDefaults.set(extensionEndTime.timeIntervalSince1970, forKey: "extension_end_\(bundleID)")
-            // Also reset usage in shared container
+            sharedDefaults.set(true, forKey: "hasActiveExtension_\(bundleID)")
             sharedDefaults.set(0, forKey: "usage_\(bundleID)")
-            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int],
-               let goal = goals.first(where: { $0.appBundleID == bundleID }),
-               let appName = goal.appName {
-                var updatedPerApp = perAppUsage
-                updatedPerApp[appName] = 0
-                sharedDefaults.set(updatedPerApp, forKey: "per_app_usage")
-            }
+            sharedDefaults.set(minutes, forKey: "extensionLimit_\(bundleID)")
+            sharedDefaults.set(false, forKey: "limitReached_\(bundleID)")
             sharedDefaults.synchronize()
         }
         
-        // ✅ CRITICAL: Clear the blockedApps tracking so it doesn't get re-blocked immediately
-        blockedApps.remove(bundleID)
+        // ✅ 6. Clear puzzle flags
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            sharedDefaults.removeObject(forKey: "needsPuzzle_\(bundleID)")
+            sharedDefaults.synchronize()
+        }
         
-        // ✅ CRITICAL: Reload app goals to update UI immediately
+        print("✅ Granted \(minutes) minute extension for \(bundleID)")
+        
+        // ✅ 7. Notify UI to refresh
         NotificationCenter.default.post(name: .screenTimeDataUpdated, object: nil)
     }
     
     /// Check if app has active extension
     func hasActiveExtension(for bundleID: String) -> Bool {
-        guard let extensionEndTime = UserDefaults.standard.object(forKey: "extension_end_\(bundleID)") as? Date else {
+        let appGroupID = "group.com.se7en.app"
+        
+        // Check in UserDefaults first
+        if let extensionEndTime = UserDefaults.standard.object(forKey: "extension_end_\(bundleID)") as? Date {
+            if Date() < extensionEndTime {
+                return true
+            }
+        }
+        
+        // Also check shared container
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            let timestamp = sharedDefaults.double(forKey: "extension_end_\(bundleID)")
+            if timestamp > 0 {
+                let extensionEndTime = Date(timeIntervalSince1970: timestamp)
+                if Date() < extensionEndTime {
+                    return true
+                }
+            }
+        }
+        
             return false
         }
-        return Date() < extensionEndTime
+    
+    /// Get the effective limit for an app (accounts for extension mode)
+    func getEffectiveDailyLimit(for bundleID: String) -> Int {
+        let appGroupID = "group.com.se7en.app"
+        
+        // ✅ Check if there's an active extension - use extension limit instead
+        if hasActiveExtension(for: bundleID) {
+            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                let extensionLimit = sharedDefaults.integer(forKey: "extensionLimit_\(bundleID)")
+                if extensionLimit > 0 {
+                    return extensionLimit
+                }
+            }
+            return 15 // Default extension is 15 minutes
+        }
+        
+        // Otherwise use the normal daily limit from CoreData
+        let goals = coreDataManager.getActiveAppGoals()
+        if let goal = goals.first(where: { $0.appBundleID == bundleID }) {
+            return Int(goal.dailyLimitMinutes)
+        }
+        
+        return 0
+    }
+    
+    /// Get usage minutes that accounts for extension reset
+    func getEffectiveUsageMinutes(for bundleID: String) -> Int {
+        let appGroupID = "group.com.se7en.app"
+        
+        // ✅ If there's an active extension, use the usage since extension was granted
+        if hasActiveExtension(for: bundleID) {
+            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                // Get usage from shared container (this is reset when extension is granted)
+                let usage = sharedDefaults.integer(forKey: "usage_\(bundleID)")
+                return usage
+            }
+        }
+        
+        // Otherwise use normal usage tracking
+        return getUsageMinutes(for: bundleID)
     }
     
     /// Get effective limit (base limit + puzzle extensions)
@@ -1776,10 +1830,6 @@ final class ScreenTimeService: ObservableObject {
             // Update usage to reflect this
             let updateThreshold = 1 // minutes
             let currentUsage = self.getUsageMinutes(for: bundleID)
-        
-            // Use the maximum of current usage or the threshold
-            // This ensures we don't go backwards, but also captures the threshold amount
-            let newUsage = max(currentUsage, updateThreshold)
             
             // If this is the first update, set to threshold amount
             // Otherwise, increment by threshold (since event fires every 1 min)
@@ -2021,7 +2071,7 @@ final class ScreenTimeService: ObservableObject {
     private func processPendingMonitorEvents() {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID),
-              var events = sharedDefaults.array(forKey: "pendingEvents") as? [[String: String]],
+              let events = sharedDefaults.array(forKey: "pendingEvents") as? [[String: String]],
               !events.isEmpty else {
             return
         }

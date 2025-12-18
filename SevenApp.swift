@@ -37,47 +37,25 @@ struct SE7ENApp: App {
                     ScreenTimeService.shared.refreshAllMonitoring()
                 }
                 .onOpenURL { url in
-                    // Handle se7en://puzzle URL scheme
-                    if url.scheme == "se7en" && url.host == "puzzle" {
-                        print("🎯 App opened via puzzle URL: \(url)")
-                        
-                        // Extract parameters
-                        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-                           let queryItems = components.queryItems {
-                            var tokenHash: String?
-                            var appName: String?
-                            
-                            for item in queryItems {
-                                if item.name == "tokenHash" {
-                                    tokenHash = item.value
-                                } else if item.name == "appName" {
-                                    appName = item.value?.removingPercentEncoding
-                                }
-                            }
-                            
-                            if let tokenHash = tokenHash, let appName = appName {
-                                // Set puzzle mode
-                                let appGroupID = "group.com.se7en.app"
-                                if let defaults = UserDefaults(suiteName: appGroupID) {
-                                    defaults.set(true, forKey: "puzzleMode")
-                                    defaults.set(tokenHash, forKey: "puzzleTokenHash")
-                                    defaults.set(appName, forKey: "puzzleAppName_\(tokenHash)")
-                                }
-                                
-                                // Trigger ContentView to show puzzle
-                                NotificationCenter.default.post(
-                                    name: .appBlocked,
-                                    object: nil,
-                                    userInfo: [
-                                        "appName": appName,
-                                        "bundleID": tokenHash,
-                                        "puzzleMode": true
-                                    ]
-                                )
-                            }
-                        }
-                    }
+                    handleIncomingURL(url)
                 }
+        }
+    }
+    
+    private func handleIncomingURL(_ url: URL) {
+        print("📱 App opened with URL: \(url)")
+        
+        guard url.scheme == "se7en" else { return }
+        
+        // Handle puzzle mode
+        if url.host == "puzzle" {
+            print("🧩 URL: Puzzle mode requested")
+            // The puzzle mode will be picked up by ContentView's checkPuzzleMode()
+            // Just post a notification to ensure it's checked
+                                NotificationCenter.default.post(
+                name: UIApplication.didBecomeActiveNotification,
+                object: nil
+            )
         }
     }
 }

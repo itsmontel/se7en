@@ -177,31 +177,86 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         super.eventDidReachThreshold(event, activity: activity)
         
         let eventString = event.rawValue
-        print("⚠️ Monitor: Event threshold reached: \(eventString)")
+        print("📊 Monitor: Event threshold reached - \(eventString)")
         
-        // Handle different event types
+        // Parse event type
         if eventString.hasPrefix("update.") {
-            // UPDATE EVENT: Track usage increment (fires every minute)
-            let tokenHash = String(eventString.dropFirst(7)) // Remove "update." prefix
+            let tokenHash = String(eventString.dropFirst(7))
             handleUpdateEvent(tokenHash: tokenHash)
             return
         }
         
         if eventString.hasPrefix("warning.") {
-            // WARNING EVENT: User approaching limit (e.g., 80%)
-            let tokenHash = String(eventString.dropFirst(8)) // Remove "warning." prefix
+            let tokenHash = String(eventString.dropFirst(8))
             handleWarningEvent(tokenHash: tokenHash)
             return
         }
         
         if eventString.hasPrefix("limit.") {
-            // LIMIT EVENT: User reached limit - BLOCK!
-            let tokenHash = String(eventString.dropFirst(6)) // Remove "limit." prefix
+            let tokenHash = String(eventString.dropFirst(6))
+            
+            // ✅ CRITICAL: Check if puzzle was just requested (within last 5 seconds)
+            if hasRecentPuzzleRequest(for: tokenHash) {
+                print("⏭️ Monitor: Skipping block - puzzle was just requested")
+                return
+            }
+            
+            // ✅ CRITICAL: Check if there's an active extension before blocking
+            if hasActiveExtension(for: tokenHash) {
+                print("⏭️ Monitor: Skipping block - app has active extension")
+                return
+            }
+            
             handleLimitEvent(tokenHash: tokenHash)
             return
         }
+    }
+    
+    /// ✅ Check if puzzle was just requested (within last 5 seconds)
+    private func hasRecentPuzzleRequest(for tokenHash: String) -> Bool {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return false }
         
-        print("⚠️ Monitor: Unknown event type: \(eventString)")
+        // Check if puzzle was requested
+        if sharedDefaults.bool(forKey: "puzzleRequested_\(tokenHash)") {
+            // Check if it was requested recently (within last 5 seconds)
+            let requestTime = sharedDefaults.double(forKey: "puzzleRequestTime_\(tokenHash)")
+            if requestTime > 0 {
+                let timeSinceRequest = Date().timeIntervalSince1970 - requestTime
+                if timeSinceRequest < 5.0 {
+                    print("✅ Monitor: Puzzle was requested \(String(format: "%.1f", timeSinceRequest))s ago")
+                    return true
+                }
+            }
+        }
+        
+        return false
+    }
+    
+    /// ✅ Check if there's an active extension for this token
+    private func hasActiveExtension(for tokenHash: String) -> Bool {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return false }
+        
+        // Check the extension end time
+        let timestamp = sharedDefaults.double(forKey: "extension_end_\(tokenHash)")
+        if timestamp > 0 {
+            let extensionEndTime = Date(timeIntervalSince1970: timestamp)
+            if Date() < extensionEndTime {
+                print("✅ Monitor: Active extension found until \(extensionEndTime)")
+                return true
+            }
+        }
+        
+        // Also check the hasActiveExtension flag
+        if sharedDefaults.bool(forKey: "hasActiveExtension_\(tokenHash)") {
+            let timestamp = sharedDefaults.double(forKey: "extension_end_\(tokenHash)")
+            if timestamp > Date().timeIntervalSince1970 {
+                return true
+            }
+        }
+        
+        return false
     }
     
     // MARK: - Event Handlers
@@ -245,6 +300,12 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     private func handleLimitEvent(tokenHash: String) {
         guard !tokenHash.isEmpty else {
             print("⚠️ Monitor: Empty token hash in limit event")
+            return
+        }
+        
+        // ✅ Double-check extension status before blocking
+        if hasActiveExtension(for: tokenHash) {
+            print("⏭️ Monitor: Not blocking - active extension exists")
             return
         }
         

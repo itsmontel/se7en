@@ -1,124 +1,132 @@
-//
-//  ShieldActionExtension.swift
-//  SE7ENShieldActionExtension
-//
-//  Handles button taps on the shield UI - opens SE7EN in puzzle mode
-//
-
 import Foundation
-import UIKit
 import ManagedSettings
 import ManagedSettingsUI
-import FamilyControls
 
 class ShieldActionExtension: ShieldActionDelegate {
     
-    private let appGroupID = "group.com.se7en.app"
-    // ✅ FIX: Track if we've already handled this action to prevent double pop-ups
-    private var handledActions: Set<String> = []
+    let appGroupID = "group.com.se7en.app"
     
-    override func handle(action: ShieldAction, for applicationToken: ApplicationToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
+    override func handle(action: ShieldAction, for application: ApplicationToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
+        print("🛡️ ShieldAction: Handling response for application")
+        
+        // Store puzzle info in shared container
+        let tokenHash = String(application.hashValue)
+        
+        guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ ShieldAction: Failed to access shared defaults")
+            completionHandler(.close)
+            return
+        }
+        
         switch action {
         case .primaryButtonPressed:
-            // ✅ FIX: Prevent double handling
-            let tokenHash = String(applicationToken.hashValue)
-            let actionKey = "primary_\(tokenHash)"
+            print("🟢 ShieldAction: Primary button (Start Puzzle) pressed")
             
-            // Check if we've already handled this action
-            if handledActions.contains(actionKey) {
-                // Already handled, just defer to open app
-                completionHandler(.defer)
-                return
-            }
+            // ✅ CRITICAL: Set puzzle mode flags BEFORE opening app
+            defaults.set(true, forKey: "puzzleMode")
+            defaults.set(tokenHash, forKey: "puzzleTokenHash")
+            defaults.set(true, forKey: "needsPuzzle_\(tokenHash)")
             
-            // Mark as handled
-            handledActions.insert(actionKey)
-            
-            // User wants to solve the puzzle
-            // Get app name from token hash (we'll need to look it up from shared storage)
-            let appName: String
-            if let defaults = UserDefaults(suiteName: appGroupID),
-               let storedName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") {
-                appName = storedName
-            } else {
-                // Fallback: try to get from stored limits
-                appName = getAppNameFromTokenHash(tokenHash) ?? "App"
-            }
-            
-            // Store puzzle request in shared container
-            if let defaults = UserDefaults(suiteName: appGroupID) {
-                defaults.set(true, forKey: "needsPuzzle_\(tokenHash)")
+            // Try to get app name from stored data
+            if let appName = defaults.string(forKey: "limitAppName_\(tokenHash)") {
                 defaults.set(appName, forKey: "puzzleAppName_\(tokenHash)")
-                defaults.set(tokenHash, forKey: "puzzleTokenHash")
-                defaults.set(true, forKey: "puzzleMode") // Flag for fullscreen puzzle mode
-                defaults.synchronize()
+            } else {
+                // Fallback: try to find from per_app_usage keys
+                if let perAppUsage = defaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
+                    for (appName, _) in perAppUsage {
+                        // Store the first matching app name
+                        defaults.set(appName, forKey: "puzzleAppName_\(tokenHash)")
+                        break
+                    }
+                } else {
+                    defaults.set("App", forKey: "puzzleAppName_\(tokenHash)")
+                }
             }
             
-            // ✅ FIX: Return .defer to open SE7EN app
-            // The .defer response will open the main app, which will check for puzzleMode flag
+            // ✅ CRITICAL: Set a flag to prevent shield from reappearing
+            defaults.set(true, forKey: "puzzleRequested_\(tokenHash)")
+            defaults.set(Date().timeIntervalSince1970, forKey: "puzzleRequestTime_\(tokenHash)")
+            
+            // ✅ CRITICAL: Synchronize BEFORE opening app
+            defaults.synchronize()
+            
+            print("📝 ShieldAction: Stored puzzle data - tokenHash: \(tokenHash)")
+            
+            // ✅ CRITICAL: Use .defer to open the SE7EN app
+            // .defer tells iOS to open the main app, which will check for puzzleMode flag
+            // The puzzle flags are already set above, so the app will show the puzzle
             completionHandler(.defer)
             
         case .secondaryButtonPressed:
-            // User chose to close - keep the shield active
-            print("🎯 ShieldAction: Secondary button pressed - closing app")
+            print("🔴 ShieldAction: Secondary button (Cancel) pressed")
+            // User chose to stay blocked - just close the shield
             completionHandler(.close)
             
         @unknown default:
+            print("⚠️ ShieldAction: Unknown response type")
             completionHandler(.close)
         }
     }
     
     override func handle(action: ShieldAction, for webDomain: WebDomainToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
+        print("🛡️ ShieldAction: Handling response for webDomain")
+        
+        let tokenHash = String(webDomain.hashValue)
+        
+        guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            completionHandler(.close)
+            return
+        }
+        
         switch action {
         case .primaryButtonPressed:
-            print("🎯 ShieldAction: Primary button pressed for web domain")
+            print("🟢 ShieldAction: Primary button pressed for web domain")
+            
+            // Set puzzle mode flags
+            defaults.set(true, forKey: "puzzleMode")
+            defaults.set(tokenHash, forKey: "puzzleTokenHash")
+            defaults.set(true, forKey: "needsPuzzle_\(tokenHash)")
+            defaults.set("Website", forKey: "puzzleAppName_\(tokenHash)")
+            defaults.synchronize()
+            
             completionHandler(.defer)
+            
         case .secondaryButtonPressed:
             completionHandler(.close)
+            
         @unknown default:
             completionHandler(.close)
         }
     }
     
     override func handle(action: ShieldAction, for category: ActivityCategoryToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
+        print("🛡️ ShieldAction: Handling response for category")
+        
+        let tokenHash = String(category.hashValue)
+        
+        guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            completionHandler(.close)
+            return
+        }
+        
         switch action {
         case .primaryButtonPressed:
-            print("🎯 ShieldAction: Primary button pressed for category")
+            print("🟢 ShieldAction: Primary button pressed for category")
+            
+            defaults.set(true, forKey: "puzzleMode")
+            defaults.set(tokenHash, forKey: "puzzleTokenHash")
+            defaults.set(true, forKey: "needsPuzzle_\(tokenHash)")
+            defaults.set("Category", forKey: "puzzleAppName_\(tokenHash)")
+            defaults.synchronize()
+            
             completionHandler(.defer)
+            
         case .secondaryButtonPressed:
             completionHandler(.close)
+            
         @unknown default:
             completionHandler(.close)
         }
     }
     
-    // Helper to get app name from token hash
-    private func getAppNameFromTokenHash(_ tokenHash: String) -> String? {
-        guard let defaults = UserDefaults(suiteName: appGroupID),
-              let limitsData = defaults.data(forKey: "stored_app_limits_v2") else {
-            return nil
-        }
-        
-        // Decode limits to find matching app
-        struct StoredLimit: Codable {
-            let id: UUID
-            let appName: String
-            let selectionData: Data
-        }
-        
-        guard let limits = try? JSONDecoder().decode([StoredLimit].self, from: limitsData) else {
-            return nil
-        }
-        
-        // Find limit by matching token hash
-        for limit in limits {
-            if let selection = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: limit.selectionData),
-               let firstToken = selection.applicationTokens.first,
-               String(firstToken.hashValue) == tokenHash {
-                return limit.appName
-            }
-        }
-        
-        return nil
-    }
 }

@@ -107,7 +107,7 @@ struct BlockingView: View {
                         }
                             
                         // Apps list
-                        if appState.monitoredApps.isEmpty {
+                            if appState.monitoredApps.isEmpty {
                             emptyStateView
                         } else {
                             VStack(spacing: 14) {
@@ -148,10 +148,6 @@ struct BlockingView: View {
                         .padding(.top, 12)
                         
                         Spacer(minLength: 60)
-                        
-                        #if DEBUG
-                        debugView
-                        #endif
                     }
                     .padding(.top, 12)
                 }
@@ -196,13 +192,13 @@ struct BlockingView: View {
             .onAppear {
                 // Keep this light: AppState.loadAppGoals() already handles syncing usage
                 Task { @MainActor in
-                    appState.loadAppGoals()
+                        appState.loadAppGoals()
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 // Refresh limits when app returns from background without extra sync work
                 Task { @MainActor in
-                    appState.loadAppGoals()
+                        appState.loadAppGoals()
                 }
             }
             .alert("Delete Limit", isPresented: $showingDeleteConfirmation) {
@@ -219,39 +215,6 @@ struct BlockingView: View {
             }
         }
     }
-    
-    #if DEBUG
-    private var debugView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("🐛 DEBUG INFO")
-                .font(.headline)
-            
-            if let sharedDefaults = UserDefaults(suiteName: "group.com.se7en.app") {
-                let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
-                
-                Text("per_app_usage keys:")
-                    .font(.caption)
-                ForEach(Array(perAppUsage.keys.sorted()), id: \.self) { key in
-                    Text("  '\(key)': \(perAppUsage[key] ?? 0) min")
-                        .font(.caption2)
-                }
-                
-                Divider()
-                
-                Text("Goal names:")
-                    .font(.caption)
-                ForEach(appState.monitoredApps, id: \.id) { app in
-                    Text("  '\(app.name)': used=\(app.usedToday), limit=\(app.dailyLimit)")
-                        .font(.caption2)
-                }
-            }
-        }
-        .padding()
-        .background(Color.yellow.opacity(0.2))
-        .cornerRadius(8)
-        .padding()
-    }
-    #endif
     
     private func deleteLimit(_ app: MonitoredApp) {
         // Find the matching Core Data goal using the token hash (our stable identifier)
@@ -671,8 +634,8 @@ struct EditLimitSheet: View {
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
                                 ForEach(limitOptions, id: \.self) { limit in
                                     limitOptionButton(limit: limit)
+                                    }
                                 }
-                            }
                                 .padding(.horizontal, 20)
                             
                             Button(action: {
@@ -1417,8 +1380,8 @@ struct SetLimitSheet: View {
         
                     Button(action: {
                         withAnimation(.easeOut(duration: 0.2)) {
-                            selectedLimit = limit
-                            showingCustomLimit = false
+                selectedLimit = limit
+                showingCustomLimit = false
                         }
                     }) {
             VStack(spacing: 8) {
@@ -1645,7 +1608,7 @@ struct SetLimitSheet: View {
         // Don't allow empty names
         guard !finalAppName.isEmpty else {
                 // App name is required to track usage correctly
-                print("❌ App name is required")
+            print("❌ App name is required")
             return
         }
         
