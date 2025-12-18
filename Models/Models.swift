@@ -10,9 +10,9 @@ enum UnlockMode: String, Codable, CaseIterable {
     var description: String {
         switch self {
         case .extraTime:
-            return "Solving a puzzle grants +15 minutes of additional usage"
+            return "+15 minutes after solving puzzle"
         case .oneSession:
-            return "Solving a puzzle unlocks the app for one session only. Once you leave, it locks again."
+            return "Unlocks for one session, re-locks on exit"
         }
     }
 }

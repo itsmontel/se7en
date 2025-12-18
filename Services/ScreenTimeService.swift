@@ -1681,47 +1681,98 @@ final class ScreenTimeService: ObservableObject {
     func grantTemporaryExtension(for bundleID: String, minutes: Int) {
         let appGroupID = "group.com.se7en.app"
         
-        // ✅ 1. Unblock the app FIRST
+        // ✅ Check global unlock mode (applies to all apps)
+        let unlockMode: UnlockMode
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID),
+           let modeString = sharedDefaults.string(forKey: "globalUnlockMode"),
+           let mode = UnlockMode(rawValue: modeString) {
+            unlockMode = mode
+        } else {
+            unlockMode = .extraTime // Default to Extra Time Mode
+        }
+        
+        // ✅ 1. Unblock the app FIRST (bundleID is actually tokenHash)
         unblockApp(bundleID)
+        
+        // ✅ 1b. Also try to unblock by finding token in all stored selections
+        // This ensures we unblock even if the selection wasn't cached
+        if let allApps = allAppsSelection {
+            for token in allApps.applicationTokens {
+                if String(token.hashValue) == bundleID {
+                    var blockedAppsSet = settingsStore.shield.applications ?? Set()
+                    blockedAppsSet.remove(token)
+                    settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
+                    print("✅ Unblocked app with token hash \(bundleID.prefix(8))... from allAppsSelection")
+                    break
+                }
+            }
+        }
+        
+        // ✅ 1c. Try to find and unblock from stored app selections
+        for (_, selection) in appSelections {
+            for token in selection.applicationTokens {
+                if String(token.hashValue) == bundleID {
+                    var blockedAppsSet = settingsStore.shield.applications ?? Set()
+                    blockedAppsSet.remove(token)
+                    settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
+                    print("✅ Unblocked app with token hash \(bundleID.prefix(8))... from appSelections")
+                    break
+                }
+            }
+        }
         
         // ✅ 2. Remove from blocked tracking
         blockedApps.remove(bundleID)
         
-        // ✅ 3. Reset usage in CoreData
-        let goals = coreDataManager.getActiveAppGoals()
-        if let goal = goals.first(where: { $0.appBundleID == bundleID }) {
-            if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
-                // Reset usage to 0
-                record.actualUsageMinutes = 0
-                record.didExceedLimit = false
-                record.extendedLimitMinutes = Int32(minutes)
-                coreDataManager.save()
-            } else {
-                // Create new record with 0 usage
-                let today = Calendar.current.startOfDay(for: Date())
-                let newRecord = coreDataManager.createUsageRecord(
-                    for: goal,
-                    date: today,
-                    actualUsageMinutes: 0,
-                    didExceedLimit: false
-                )
-                newRecord.extendedLimitMinutes = Int32(minutes)
-                coreDataManager.save()
+        if unlockMode == .extraTime {
+            // ✅ 3. Extra Time Mode: Reset usage in CoreData and grant 15 minutes
+            let goals = coreDataManager.getActiveAppGoals()
+            if let goal = goals.first(where: { $0.appBundleID == bundleID }) {
+                if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
+                    // Reset usage to 0
+                    record.actualUsageMinutes = 0
+                    record.didExceedLimit = false
+                    record.extendedLimitMinutes = Int32(minutes)
+                    coreDataManager.save()
+                } else {
+                    // Create new record with 0 usage
+                    let today = Calendar.current.startOfDay(for: Date())
+                    let newRecord = coreDataManager.createUsageRecord(
+                        for: goal,
+                        date: today,
+                        actualUsageMinutes: 0,
+                        didExceedLimit: false
+                    )
+                    newRecord.extendedLimitMinutes = Int32(minutes)
+                    coreDataManager.save()
+                }
             }
-        }
-        
-        // ✅ 4. Store extension end time in UserDefaults
-        let extensionEndTime = Date().addingTimeInterval(TimeInterval(minutes * 60))
-        UserDefaults.standard.set(extensionEndTime, forKey: "extension_end_\(bundleID)")
-        
-        // ✅ 5. CRITICAL: Update shared container for extensions to see
-        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-            sharedDefaults.set(extensionEndTime.timeIntervalSince1970, forKey: "extension_end_\(bundleID)")
-            sharedDefaults.set(true, forKey: "hasActiveExtension_\(bundleID)")
-            sharedDefaults.set(0, forKey: "usage_\(bundleID)")
-            sharedDefaults.set(minutes, forKey: "extensionLimit_\(bundleID)")
-            sharedDefaults.set(false, forKey: "limitReached_\(bundleID)")
-            sharedDefaults.synchronize()
+            
+            // ✅ 4. Store extension end time in UserDefaults
+            let extensionEndTime = Date().addingTimeInterval(TimeInterval(minutes * 60))
+            UserDefaults.standard.set(extensionEndTime, forKey: "extension_end_\(bundleID)")
+            
+            // ✅ 5. CRITICAL: Update shared container for extensions to see
+            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                sharedDefaults.set(extensionEndTime.timeIntervalSince1970, forKey: "extension_end_\(bundleID)")
+                sharedDefaults.set(true, forKey: "hasActiveExtension_\(bundleID)")
+                sharedDefaults.set(0, forKey: "usage_\(bundleID)")
+                sharedDefaults.set(minutes, forKey: "extensionLimit_\(bundleID)")
+                sharedDefaults.set(false, forKey: "limitReached_\(bundleID)")
+                sharedDefaults.synchronize()
+            }
+            
+            print("✅ Granted \(minutes) minute extension for \(bundleID) (Extra Time Mode)")
+        } else {
+            // ✅ 3. One-Session Mode: Mark app as in one-session state (no time extension)
+            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                sharedDefaults.set(true, forKey: "oneSessionActive_\(bundleID)")
+                sharedDefaults.set(Date().timeIntervalSince1970, forKey: "oneSessionStartTime_\(bundleID)")
+                sharedDefaults.set(false, forKey: "hasActiveExtension_\(bundleID)")
+                sharedDefaults.synchronize()
+            }
+            
+            print("✅ Unlocked app for one session: \(bundleID) (One-Session Mode)")
         }
         
         // ✅ 6. Clear puzzle flags
@@ -1730,10 +1781,44 @@ final class ScreenTimeService: ObservableObject {
             sharedDefaults.synchronize()
         }
         
-        print("✅ Granted \(minutes) minute extension for \(bundleID)")
-        
         // ✅ 7. Notify UI to refresh
         NotificationCenter.default.post(name: .screenTimeDataUpdated, object: nil)
+    }
+    
+    /// Check for One-Session Mode apps and re-block them when app goes to background
+    func checkAndReBlockOneSessionApps() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        // Get all keys that start with "oneSessionActive_"
+        let allKeys = Array(sharedDefaults.dictionaryRepresentation().keys)
+        for key in allKeys where key.hasPrefix("oneSessionActive_") {
+            if sharedDefaults.bool(forKey: key) {
+                let tokenHash = String(key.dropFirst("oneSessionActive_".count))
+                
+                // Check if unlock mode is still One-Session (user might have changed it)
+                let unlockMode: UnlockMode
+                if let modeString = sharedDefaults.string(forKey: "globalUnlockMode"),
+                   let mode = UnlockMode(rawValue: modeString) {
+                    unlockMode = mode
+                } else {
+                    unlockMode = .extraTime
+                }
+                
+                // Only re-block if still in One-Session Mode
+                if unlockMode == .oneSession {
+                    // Re-block the app
+                    blockApp(tokenHash)
+                    
+                    // Clear one-session flag
+                    sharedDefaults.set(false, forKey: key)
+                    sharedDefaults.removeObject(forKey: "oneSessionStartTime_\(tokenHash)")
+                    sharedDefaults.synchronize()
+                    
+                    print("🔒 Re-blocked app \(tokenHash.prefix(8))... (One-Session Mode - user left app)")
+                }
+            }
+        }
     }
     
     /// Check if app has active extension

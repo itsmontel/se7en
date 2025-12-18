@@ -106,6 +106,45 @@ struct BlockingView: View {
                             .padding(.top, 12)
                         }
                             
+                        // Global Unlock Mode Toggle
+                        VStack(spacing: 12) {
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Unlock Mode")
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                    
+                                    Text(getGlobalUnlockModeDescription())
+                                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                                        .foregroundColor(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .lineLimit(nil)
+                                }
+                                
+                                Spacer(minLength: 8)
+                                
+                                Picker("", selection: Binding(
+                                    get: { getGlobalUnlockMode() },
+                                    set: { newMode in setGlobalUnlockMode(mode: newMode) }
+                                )) {
+                                    ForEach(UnlockMode.allCases, id: \.self) { mode in
+                                        Text(mode.rawValue).tag(mode)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 160)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.cardBackground)
+                                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                            )
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        
                         // Apps list
                             if appState.monitoredApps.isEmpty {
                             emptyStateView
@@ -325,12 +364,12 @@ struct BlockingView: View {
                         Label(token)
                             .labelStyle(.titleOnly)
                             .font(.system(size: 19, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary)
+                            .foregroundColor(Color(uiColor: .label))
                             .lineLimit(1)
                     } else {
                         Text(app.name)
                             .font(.system(size: 19, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary)
+                            .foregroundColor(Color(uiColor: .label))
                             .lineLimit(1)
                     }
                     
@@ -434,71 +473,36 @@ struct BlockingView: View {
                 .padding(.bottom, 22)
             }
             
-            // Unlock Mode Toggle
-            VStack(spacing: 12) {
-                Divider()
-                    .padding(.horizontal, 22)
-                
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Unlock Mode")
-                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                            .foregroundColor(.textPrimary)
-                        
-                        Text(getUnlockModeDescription(for: app))
-                            .font(.system(size: 12, weight: .regular, design: .rounded))
-                            .foregroundColor(.textSecondary)
-                            .lineLimit(2)
-                    }
-                    
-                    Spacer()
-                    
-                    Picker("", selection: Binding(
-                        get: { getUnlockMode(for: app) },
-                        set: { newMode in setUnlockMode(for: app, mode: newMode) }
-                    )) {
-                        ForEach(UnlockMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 180)
-                }
-                .padding(.horizontal, 22)
-                .padding(.bottom, 22)
-            }
         }
         .background(
             RoundedRectangle(cornerRadius: 22)
-                .fill(Color.white)
+                .fill(Color.cardBackground)
                 .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 6)
         )
     }
     
-    // MARK: - Unlock Mode Helpers
+    // MARK: - Global Unlock Mode Helpers
     
-    private func getUnlockMode(for app: MonitoredApp) -> UnlockMode {
-        guard let tokenHash = app.tokenHash else { return .extraTime }
+    private func getGlobalUnlockMode() -> UnlockMode {
         let appGroupID = "group.com.se7en.app"
         if let defaults = UserDefaults(suiteName: appGroupID),
-           let modeString = defaults.string(forKey: "unlockMode_\(tokenHash)"),
+           let modeString = defaults.string(forKey: "globalUnlockMode"),
            let mode = UnlockMode(rawValue: modeString) {
             return mode
         }
         return .extraTime // Default to Extra Time Mode
     }
     
-    private func setUnlockMode(for app: MonitoredApp, mode: UnlockMode) {
-        guard let tokenHash = app.tokenHash else { return }
+    private func setGlobalUnlockMode(mode: UnlockMode) {
         let appGroupID = "group.com.se7en.app"
         if let defaults = UserDefaults(suiteName: appGroupID) {
-            defaults.set(mode.rawValue, forKey: "unlockMode_\(tokenHash)")
+            defaults.set(mode.rawValue, forKey: "globalUnlockMode")
             defaults.synchronize()
         }
     }
     
-    private func getUnlockModeDescription(for app: MonitoredApp) -> String {
-        let mode = getUnlockMode(for: app)
+    private func getGlobalUnlockModeDescription() -> String {
+        let mode = getGlobalUnlockMode()
         return mode.description
     }
     
