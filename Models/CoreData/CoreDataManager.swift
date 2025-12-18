@@ -339,9 +339,37 @@ class CoreDataManager: ObservableObject {
             return 0
         }
         
+        // ✅ CRITICAL FIX: Check if there's an active extension (puzzle was completed)
+        // If extension is active, return ONLY the extension limit (15 minutes), not base + extension
+        let appGroupID = "group.com.se7en.app"
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID),
+           let extensionEndTime = sharedDefaults.object(forKey: "extension_end_\(bundleID)") as? TimeInterval {
+            let endDate = Date(timeIntervalSince1970: extensionEndTime)
+            if Date() < endDate {
+                // Extension is active - return the extension limit (15 minutes)
+                if let usageRecord = getTodaysUsageRecord(for: bundleID),
+                   usageRecord.extendedLimitMinutes > 0 {
+                    return Int(usageRecord.extendedLimitMinutes)
+                }
+                // Fallback: if no record, return 15 minutes (standard extension time)
+                return 15
+            }
+        }
+        
+        // Also check UserDefaults for extension
+        if let extensionEndTime = UserDefaults.standard.object(forKey: "extension_end_\(bundleID)") as? Date,
+           Date() < extensionEndTime {
+            // Extension is active - return extension limit
+            if let usageRecord = getTodaysUsageRecord(for: bundleID),
+               usageRecord.extendedLimitMinutes > 0 {
+                return Int(usageRecord.extendedLimitMinutes)
+            }
+            return 15
+        }
+        
         let baseLimit = Int(goal.dailyLimitMinutes)
         
-        // ✅ NEW: Add puzzle extensions
+        // ✅ NEW: Add puzzle extensions (for non-active extensions, just add to base)
         let puzzleExtensionMinutes = PuzzleManager.shared.getTotalExtensionMinutes(for: bundleID)
         
         // Check if there's an extension for today (legacy system)

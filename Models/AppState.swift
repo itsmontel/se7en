@@ -132,6 +132,29 @@ class AppState: ObservableObject {
         let appGroupID = "group.com.se7en.app"
         guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
         
+        // ✅ FIX: Check puzzleMode flag FIRST (set by shield action)
+        if defaults.bool(forKey: "puzzleMode"),
+           let tokenHash = defaults.string(forKey: "puzzleTokenHash"),
+           let appName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") {
+            // Post notification to show puzzle
+            NotificationCenter.default.post(
+                name: .appBlocked,
+                object: nil,
+                userInfo: [
+                    "appName": appName,
+                    "bundleID": tokenHash,
+                    "puzzleMode": true
+                ]
+            )
+            
+            // Clear the flags
+            defaults.set(false, forKey: "puzzleMode")
+            defaults.removeObject(forKey: "needsPuzzle_\(tokenHash)")
+            defaults.synchronize()
+            
+            return
+        }
+        
         // Get all pending puzzle flags
         var pendingTokenHashes: [String] = []
         if let allKeys = defaults.dictionaryRepresentation().keys as? [String] {
@@ -161,8 +184,8 @@ class AppState: ObservableObject {
                 
                 // Clear the puzzle flag
                 defaults.removeObject(forKey: "needsPuzzle_\(tokenHash)")
+                defaults.synchronize()
                 
-                print("🎯 AppState: Showing puzzle for \(storedName) (from shield action)")
                 return
             }
         }

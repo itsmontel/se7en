@@ -14,15 +14,28 @@ import FamilyControls
 class ShieldActionExtension: ShieldActionDelegate {
     
     private let appGroupID = "group.com.se7en.app"
+    // ✅ FIX: Track if we've already handled this action to prevent double pop-ups
+    private var handledActions: Set<String> = []
     
     override func handle(action: ShieldAction, for applicationToken: ApplicationToken, completionHandler: @escaping (ShieldActionResponse) -> Void) {
         switch action {
         case .primaryButtonPressed:
+            // ✅ FIX: Prevent double handling
+            let tokenHash = String(applicationToken.hashValue)
+            let actionKey = "primary_\(tokenHash)"
+            
+            // Check if we've already handled this action
+            if handledActions.contains(actionKey) {
+                // Already handled, just defer to open app
+                completionHandler(.defer)
+                return
+            }
+            
+            // Mark as handled
+            handledActions.insert(actionKey)
+            
             // User wants to solve the puzzle
             // Get app name from token hash (we'll need to look it up from shared storage)
-            let tokenHash = String(applicationToken.hashValue)
-            
-            // Try to get app name from shared storage
             let appName: String
             if let defaults = UserDefaults(suiteName: appGroupID),
                let storedName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") {
@@ -32,8 +45,6 @@ class ShieldActionExtension: ShieldActionDelegate {
                 appName = getAppNameFromTokenHash(tokenHash) ?? "App"
             }
             
-            print("🎯 ShieldAction: Primary button pressed for \(appName)")
-            
             // Store puzzle request in shared container
             if let defaults = UserDefaults(suiteName: appGroupID) {
                 defaults.set(true, forKey: "needsPuzzle_\(tokenHash)")
@@ -41,11 +52,10 @@ class ShieldActionExtension: ShieldActionDelegate {
                 defaults.set(tokenHash, forKey: "puzzleTokenHash")
                 defaults.set(true, forKey: "puzzleMode") // Flag for fullscreen puzzle mode
                 defaults.synchronize()
-                print("💾 ShieldAction: Stored puzzle request for \(tokenHash.prefix(8))...")
             }
             
-            // Return .defer to allow the main app to open
-            // The main app will check for puzzleMode flag on launch and show puzzle
+            // ✅ FIX: Return .defer to open SE7EN app
+            // The .defer response will open the main app, which will check for puzzleMode flag
             completionHandler(.defer)
             
         case .secondaryButtonPressed:

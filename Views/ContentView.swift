@@ -29,6 +29,11 @@ struct ContentView: View {
             checkPuzzleMode()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // ✅ FIX: Check for puzzle mode when app becomes active (handles shield action opening app)
+            checkPuzzleMode()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            // ✅ FIX: Also check when app enters foreground (covers all cases)
             checkPuzzleMode()
         }
         .onReceive(NotificationCenter.default.publisher(for: .appBlocked)) { notification in
@@ -59,6 +64,9 @@ struct ContentView: View {
     private func handlePuzzleComplete() {
         // Unblock the app
         ScreenTimeService.shared.grantTemporaryExtension(for: puzzleTokenHash, minutes: 15)
+        
+        // ✅ CRITICAL: Reload app goals to update UI immediately
+        appState.loadAppGoals()
         
         // Hide puzzle mode first
         showPuzzleMode = false

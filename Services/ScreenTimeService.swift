@@ -736,23 +736,102 @@ final class ScreenTimeService: ObservableObject {
     }
     
     func unblockApp(_ bundleID: String) {
-        // First try to get selection by bundle ID
-        if let selection = appSelections[bundleID] {
-            var blockedApps = settingsStore.shield.applications ?? Set()
-            for token in selection.applicationTokens {
-                blockedApps.remove(token)
+        // ✅ FIX: bundleID is actually a tokenHash, find selection by tokenHash
+        var selection: FamilyActivitySelection?
+        
+        // Try 1: Get from in-memory appSelections
+        if let foundSelection = appSelections[bundleID] {
+            selection = foundSelection
+        } else {
+            // Try 2: Load from shared container
+            let appGroupID = "group.com.se7en.app"
+            if let sharedDefaults = UserDefaults(suiteName: appGroupID),
+               let selectionData = sharedDefaults.data(forKey: "selection_\(bundleID)"),
+               let decodedSelection = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: selectionData) {
+                selection = decodedSelection
+                // Cache it for future use
+                appSelections[bundleID] = decodedSelection
+            } else {
+                // Try 3: Find goal by tokenHash and get its selection
+                let goals = coreDataManager.getActiveAppGoals()
+                if let goal = goals.first(where: { $0.appBundleID == bundleID }),
+                   let goalSelection = appSelections[bundleID] {
+                    selection = goalSelection
+                } else if let goal = goals.first(where: { $0.appBundleID == bundleID }),
+                          let goalTokenHash = goal.appBundleID,
+                          let goalSelection = appSelections[goalTokenHash] {
+                    selection = goalSelection
+                }
             }
-            settingsStore.shield.applications = blockedApps.isEmpty ? nil : blockedApps
+        }
+        
+        // Unblock using the selection
+        if let selection = selection {
+            unblockWithSelection(selection)
             
-            // Note: We can't selectively unblock categories, so we clear all if needed
-            // This is a limitation of the API - categories are all-or-nothing
-            print("✅ Unblocked app: \(bundleID)")
+            // ✅ CRITICAL: Also remove from blockedApps tracking
+            blockedApps.remove(bundleID)
+            
             return
         }
         
-        // Fallback: If bundle ID lookup fails, we can't selectively unblock
-        // This is a limitation when using categories or when bundle ID extraction fails
-        print("⚠️ Cannot unblock \(bundleID) - selection not found. Use unblockAllApps()")
+        // ✅ FALLBACK: If we can't find selection, try to unblock by finding the token in blocked apps
+        // This handles cases where the app was blocked but we lost the selection reference
+        if let allApps = allAppsSelection {
+            // Try to find the token in allAppsSelection by matching hash
+            for token in allApps.applicationTokens {
+                if String(token.hashValue) == bundleID {
+                    // Found the token, unblock it
+                    var blockedAppsSet = settingsStore.shield.applications ?? Set()
+                    blockedAppsSet.remove(token)
+                    settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
+                    blockedApps.remove(bundleID)
+                    return
+                }
+            }
+        }
+        
+        // ✅ FALLBACK 2: Try to find token in all stored selections
+        for (storedBundleID, storedSelection) in appSelections {
+            for token in storedSelection.applicationTokens {
+                if String(token.hashValue) == bundleID {
+                    // Found matching token, unblock it
+                    var blockedAppsSet = settingsStore.shield.applications ?? Set()
+                    blockedAppsSet.remove(token)
+                    settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
+                    blockedApps.remove(bundleID)
+                    return
+                }
+            }
+        }
+        
+        // ✅ FALLBACK 3: Try loading from shared container and finding token
+        let appGroupID = "group.com.se7en.app"
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            // Try all stored selections in shared container
+            let allKeys = sharedDefaults.dictionaryRepresentation().keys
+            for key in allKeys where key.hasPrefix("selection_") {
+                if let selectionData = sharedDefaults.data(forKey: key),
+                   let decodedSelection = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: selectionData) {
+                    for token in decodedSelection.applicationTokens {
+                        if String(token.hashValue) == bundleID {
+                            // Found matching token, unblock it
+                            var blockedAppsSet = settingsStore.shield.applications ?? Set()
+                            blockedAppsSet.remove(token)
+                            settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
+                            blockedApps.remove(bundleID)
+                            return
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Last resort: Clear all blocks if we can't find the specific app
+        // This ensures the app gets unblocked even if we can't find the exact selection
+        settingsStore.shield.applications = nil
+        settingsStore.shield.applicationCategories = nil
+        blockedApps.remove(bundleID)
     }
     
     /// Block using tokens directly from a FamilyActivitySelection (recommended approach)
@@ -1602,14 +1681,63 @@ final class ScreenTimeService: ObservableObject {
     
     /// Grant temporary extension after puzzle completion
     func grantTemporaryExtension(for bundleID: String, minutes: Int) {
-        // Unblock the app
+        // ✅ FIX: Unblock the app FIRST before storing extension time
         unblockApp(bundleID)
+        
+        // ✅ CRITICAL: Reset usage to 0 when extension is granted (fresh 15 minutes)
+        // This ensures the UI shows "0 of 15 minutes" after puzzle completion
+        let goals = coreDataManager.getActiveAppGoals()
+        if let goal = goals.first(where: { $0.appBundleID == bundleID }) {
+            let today = Calendar.current.startOfDay(for: Date())
+            if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
+                // Reset usage to 0 for the extension period
+                record.actualUsageMinutes = 0
+                record.didExceedLimit = false
+                coreDataManager.save()
+            } else {
+                // Create new record with 0 usage
+                _ = coreDataManager.createUsageRecord(
+                    for: goal,
+                    date: today,
+                    actualUsageMinutes: 0,
+                    didExceedLimit: false
+                )
+                coreDataManager.save()
+            }
+            
+            // ✅ CRITICAL: Update the effective limit to show 15 minutes in UI
+            // Store extension limit in usage record so getEffectiveDailyLimit returns 15
+            if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
+                record.extendedLimitMinutes = Int32(minutes)
+                coreDataManager.save()
+            }
+        }
         
         // Store extension end time
         let extensionEndTime = Date().addingTimeInterval(TimeInterval(minutes * 60))
         UserDefaults.standard.set(extensionEndTime, forKey: "extension_end_\(bundleID)")
         
-        print("✅ Granted \(minutes) minute extension for \(bundleID) until \(extensionEndTime)")
+        // ✅ CRITICAL: Also store in shared container so extensions can see it
+        let appGroupID = "group.com.se7en.app"
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            sharedDefaults.set(extensionEndTime.timeIntervalSince1970, forKey: "extension_end_\(bundleID)")
+            // Also reset usage in shared container
+            sharedDefaults.set(0, forKey: "usage_\(bundleID)")
+            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int],
+               let goal = goals.first(where: { $0.appBundleID == bundleID }),
+               let appName = goal.appName {
+                var updatedPerApp = perAppUsage
+                updatedPerApp[appName] = 0
+                sharedDefaults.set(updatedPerApp, forKey: "per_app_usage")
+            }
+            sharedDefaults.synchronize()
+        }
+        
+        // ✅ CRITICAL: Clear the blockedApps tracking so it doesn't get re-blocked immediately
+        blockedApps.remove(bundleID)
+        
+        // ✅ CRITICAL: Reload app goals to update UI immediately
+        NotificationCenter.default.post(name: .screenTimeDataUpdated, object: nil)
     }
     
     /// Check if app has active extension
@@ -1694,11 +1822,21 @@ final class ScreenTimeService: ObservableObject {
         let goals = coreDataManager.getActiveAppGoals()
         for goal in goals {
             guard let bundleID = goal.appBundleID else { continue }
-            let usage = getUsageMinutes(for: bundleID)
-            let limit = Int(goal.dailyLimitMinutes)
             
-            if usage >= limit {
+            // ✅ CRITICAL: Skip if app has active extension (puzzle was completed)
+            if hasActiveExtension(for: bundleID) {
+                continue // Don't re-block apps with active extensions
+            }
+            
+            let usage = getUsageMinutes(for: bundleID)
+            let effectiveLimit = getEffectiveLimit(for: bundleID) // Accounts for extensions
+            
+            // Only block if usage exceeds effective limit AND no active extension
+            if usage >= effectiveLimit {
                 blockApp(bundleID)
+            } else if usage < effectiveLimit && blockedApps.contains(bundleID) {
+                // Usage is now below limit, unblock if it was previously blocked
+                unblockApp(bundleID)
             }
         }
     }

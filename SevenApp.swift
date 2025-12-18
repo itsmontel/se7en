@@ -26,14 +26,15 @@ struct SE7ENApp: App {
                 .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environment(\.textCase, .none)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                    // ✅ CRITICAL: Check for puzzle mode FIRST when app enters foreground
+                    // This handles when app is opened from shield action
+                    appState.checkForPendingPuzzles()
+                    
                     // Sync data when app returns from background
                     appState.syncDataFromBackground()
                     
                     // Refresh Screen Time monitoring and data
                     ScreenTimeService.shared.refreshAllMonitoring()
-                    
-                    // Check for pending puzzles from shield action
-                    appState.checkForPendingPuzzles()
                 }
                 .onOpenURL { url in
                     // Handle se7en://puzzle URL scheme

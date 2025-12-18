@@ -159,6 +159,9 @@ struct PuzzleModeView: View {
         // Unblock the app temporarily (15 minutes)
         ScreenTimeService.shared.grantTemporaryExtension(for: tokenHash, minutes: 15)
         
+        // ✅ CRITICAL: Reload app goals to update UI immediately (show 0 of 15 minutes)
+        appState.loadAppGoals()
+        
         // Show success
         HapticFeedback.success.trigger()
         
@@ -168,5 +171,6 @@ struct PuzzleModeView: View {
         }
     }
 }
+
 
 
