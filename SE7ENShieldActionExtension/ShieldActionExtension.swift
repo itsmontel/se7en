@@ -55,6 +55,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             // ✅ CRITICAL: Use .defer to open the SE7EN app
             // .defer tells iOS to open the main app, which will check for puzzleMode flag
             // The puzzle flags are already set above, so the app will show the puzzle
+            // The monitor extension will check for puzzleRequested flag to prevent re-blocking
             completionHandler(.defer)
             
         case .secondaryButtonPressed:

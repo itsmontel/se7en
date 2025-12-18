@@ -14,8 +14,11 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     // MARK: - Application Shield Configuration
     
     override func configuration(shielding application: Application) -> ShieldConfiguration {
-        // Get app name - try to find from stored limits, otherwise use localized name
-        let appName = application.localizedDisplayName ?? "This app"
+        // ✅ CRITICAL: Get app name from stored limits first, then fallback to localized name
+        let tokenHash = String(application.hashValue)
+        let appName = getAppNameFromStoredLimits(tokenHash: tokenHash) ?? 
+                     application.localizedDisplayName ?? 
+                     "This app"
         
         return createShieldConfiguration(appName: appName)
     }
@@ -139,9 +142,17 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     
     // MARK: - Get App Name Helper
     
-    private func getAppName(for tokenHash: String) -> String? {
-        guard let defaults = UserDefaults(suiteName: appGroupID),
-              let data = defaults.data(forKey: "stored_app_limits_v2"),
+    /// Get app name from stored limits using token hash
+    private func getAppNameFromStoredLimits(tokenHash: String) -> String? {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return nil }
+        
+        // First try: Check if app name was stored directly by monitor extension
+        if let storedName = defaults.string(forKey: "limitAppName_\(tokenHash)"), !storedName.isEmpty {
+            return storedName
+        }
+        
+        // Second try: Look up in stored_app_limits_v2
+        guard let data = defaults.data(forKey: "stored_app_limits_v2"),
               let limits = try? JSONDecoder().decode([StoredAppLimitConfig].self, from: data) else {
             return nil
         }

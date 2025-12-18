@@ -1681,8 +1681,35 @@ final class ScreenTimeService: ObservableObject {
     func grantTemporaryExtension(for bundleID: String, minutes: Int) {
         let appGroupID = "group.com.se7en.app"
         
-        // ✅ 1. Unblock the app FIRST
+        // ✅ 1. Unblock the app FIRST (bundleID is actually tokenHash)
         unblockApp(bundleID)
+        
+        // ✅ 1b. Also try to unblock by finding token in all stored selections
+        // This ensures we unblock even if the selection wasn't cached
+        if let allApps = allAppsSelection {
+            for token in allApps.applicationTokens {
+                if String(token.hashValue) == bundleID {
+                    var blockedAppsSet = settingsStore.shield.applications ?? Set()
+                    blockedAppsSet.remove(token)
+                    settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
+                    print("✅ Unblocked app with token hash \(bundleID.prefix(8))... from allAppsSelection")
+                    break
+                }
+            }
+        }
+        
+        // ✅ 1c. Try to find and unblock from stored app selections
+        for (_, selection) in appSelections {
+            for token in selection.applicationTokens {
+                if String(token.hashValue) == bundleID {
+                    var blockedAppsSet = settingsStore.shield.applications ?? Set()
+                    blockedAppsSet.remove(token)
+                    settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
+                    print("✅ Unblocked app with token hash \(bundleID.prefix(8))... from appSelections")
+                    break
+                }
+            }
+        }
         
         // ✅ 2. Remove from blocked tracking
         blockedApps.remove(bundleID)

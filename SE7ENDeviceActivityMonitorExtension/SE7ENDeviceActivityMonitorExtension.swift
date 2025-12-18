@@ -122,6 +122,18 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         let rawValue = activity.rawValue
         print("🌅 Monitor: Interval started for \(rawValue)")
         
+        // ✅ CRITICAL: Check all active limits and unblock apps with active extensions
+        let limits = SharedStorage.shared.loadLimits()
+        for limit in limits where limit.isActive {
+            if let selection = limit.getSelection(),
+               let firstToken = selection.applicationTokens.first {
+                let tokenHash = String(firstToken.hashValue)
+                if hasActiveExtension(for: tokenHash) {
+                    unblockAppByTokenHash(tokenHash)
+                }
+            }
+        }
+        
         // New day started - clear any previous blocks and reset usage for this activity
         if let limitID = extractLimitID(from: activity) {
             SharedStorage.shared.clearLimitReached(limitID: limitID)
@@ -131,7 +143,6 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
             
             // Reset usage counter for this limit
             // Find the token hash for this limit
-            let limits = SharedStorage.shared.loadLimits()
             if let limit = limits.first(where: { $0.id == limitID }),
                let selection = limit.getSelection(),
                let firstToken = selection.applicationTokens.first {
@@ -265,6 +276,11 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     private func handleUpdateEvent(tokenHash: String) {
         guard !tokenHash.isEmpty else { return }
         
+        // ✅ CRITICAL: Check if app has active extension and unblock if needed
+        if hasActiveExtension(for: tokenHash) {
+            unblockAppByTokenHash(tokenHash)
+        }
+        
         // Find the limit to get the UUID
         let limits = SharedStorage.shared.loadLimits()
         var matchedLimitID: UUID?
@@ -375,6 +391,16 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         // Mark limit as reached in shared storage
         SharedStorage.shared.markLimitReached(limitID: limitID)
         
+        // ✅ CRITICAL: Store app name with token hash for shield configuration
+        if let firstToken = selection.applicationTokens.first {
+            let tokenHash = String(firstToken.hashValue)
+            if let sharedDefaults = UserDefaults(suiteName: SharedConstants.appGroupID) {
+                sharedDefaults.set(appName, forKey: "limitAppName_\(tokenHash)")
+                sharedDefaults.synchronize()
+                print("💾 Monitor: Stored app name '\(appName)' for token hash \(tokenHash.prefix(8))...")
+            }
+        }
+        
         print("🚫 Monitor: BLOCKED '\(appName)' (limit \(limitID.uuidString.prefix(8))...)")
     }
     
@@ -392,9 +418,55 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         for token in selection.applicationTokens {
             currentShielded.remove(token)
         }
-        store.shield.applications = currentShielded
+        store.shield.applications = currentShielded.isEmpty ? nil : currentShielded
         
         print("✅ Monitor: Unblocked apps for limit \(limitID.uuidString.prefix(8))...")
+    }
+    
+    /// ✅ NEW: Unblock app by token hash (used when extension is granted)
+    private func unblockAppByTokenHash(_ tokenHash: String) {
+        let limits = SharedStorage.shared.loadLimits()
+        
+        // Find the limit that matches this token hash
+        for limit in limits where limit.isActive {
+            guard let selection = limit.getSelection() else { continue }
+            
+            // Check if this selection contains the token
+            if let firstToken = selection.applicationTokens.first {
+                let computedHash = String(firstToken.hashValue)
+                if computedHash == tokenHash {
+                    // Found matching limit, unblock it
+                    var currentShielded = store.shield.applications ?? []
+                    for token in selection.applicationTokens {
+                        currentShielded.remove(token)
+                    }
+                    store.shield.applications = currentShielded.isEmpty ? nil : currentShielded
+                    
+                    // Also clear limit reached flag
+                    SharedStorage.shared.clearLimitReached(limitID: limit.id)
+                    
+                    print("✅ Monitor: Unblocked app with token hash \(tokenHash.prefix(8))... (has active extension)")
+                    return
+                }
+            }
+        }
+        
+        // Fallback: Try to find and remove token from all blocked apps
+        var currentShielded = store.shield.applications ?? []
+        var foundToken: ApplicationToken? = nil
+        
+        for token in currentShielded {
+            if String(token.hashValue) == tokenHash {
+                foundToken = token
+                break
+            }
+        }
+        
+        if let token = foundToken {
+            currentShielded.remove(token)
+            store.shield.applications = currentShielded.isEmpty ? nil : currentShielded
+            print("✅ Monitor: Unblocked app with token hash \(tokenHash.prefix(8))... (fallback method)")
+        }
     }
     
     // MARK: - Helpers
