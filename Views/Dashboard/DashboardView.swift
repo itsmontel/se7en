@@ -224,11 +224,10 @@ struct DashboardView: View {
         var totalUsage = 0
         var source = "none"
         
-        // Try UserDefaults
+        // Try UserDefaults (avoid explicit synchronize to keep UI responsive)
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-        sharedDefaults.synchronize()
             totalUsage = sharedDefaults.integer(forKey: "total_usage")
-        if totalUsage > 0 {
+            if totalUsage > 0 {
                 source = "UserDefaults"
             }
         }
@@ -257,7 +256,6 @@ struct DashboardView: View {
             return 0
         }
         
-        sharedDefaults.synchronize()
         return sharedDefaults.integer(forKey: "apps_count")
     }
     

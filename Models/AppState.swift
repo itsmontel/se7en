@@ -58,7 +58,7 @@ class AppState: ObservableObject {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        sharedDefaults.synchronize()
+        // Avoid forcing disk sync here; rely on system-managed UserDefaults buffering
         let totalUsage = sharedDefaults.integer(forKey: "total_usage")
         
         if totalUsage > 0 {
@@ -363,7 +363,6 @@ class AppState: ObservableObject {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return 0 }
         
-        sharedDefaults.synchronize()
         applyPendingGoalNameUpdates()
         
         var usage: Int = 0
@@ -764,7 +763,6 @@ class AppState: ObservableObject {
         // This ensures we have the latest data before calculating health
         let appGroupID = "group.com.se7en.app"
         if let sharedDefaults = UserDefaults(suiteName: appGroupID), !isRefreshingPetHealth {
-            sharedDefaults.synchronize()
             let totalUsage = sharedDefaults.integer(forKey: "total_usage")
             let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int]
             
@@ -828,7 +826,6 @@ class AppState: ObservableObject {
         if totalMinutes == 0 {
             let appGroupID = "group.com.se7en.app"
             if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-                sharedDefaults.synchronize()
                 totalMinutes = sharedDefaults.integer(forKey: "total_usage")
                 if totalMinutes > 0 {
                     self.todayScreenTimeMinutes = totalMinutes
@@ -879,9 +876,6 @@ class AppState: ObservableObject {
                 .reduce(0) { $0 + $1.usedToday }
         }
         
-        // Force synchronize to get latest data (same as dashboard does)
-        sharedDefaults.synchronize()
-        
         // Read total usage from shared container (same key as DashboardView)
         let totalUsage = sharedDefaults.integer(forKey: "total_usage")
         
@@ -897,9 +891,8 @@ class AppState: ObservableObject {
             let sumFromPerApp = perAppUsage.values.reduce(0, +)
             if sumFromPerApp > 0 {
                 print("📊 Pet health using per_app_usage sum: \(sumFromPerApp) minutes (total_usage was 0)")
-                // Also update total_usage for future reads
+                // Also update total_usage for future reads (no explicit synchronize needed)
                 sharedDefaults.set(sumFromPerApp, forKey: "total_usage")
-                sharedDefaults.synchronize()
                 return sumFromPerApp
             }
         }

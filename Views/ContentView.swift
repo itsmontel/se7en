@@ -53,7 +53,6 @@ struct ContentView: View {
             
             // Clear the flag
             defaults.set(false, forKey: "puzzleMode")
-            defaults.synchronize()
         }
     }
     

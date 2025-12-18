@@ -107,21 +107,16 @@ struct BlockingView: View {
                         }
                             
                         // Apps list
-                            if appState.monitoredApps.isEmpty {
+                        if appState.monitoredApps.isEmpty {
                             emptyStateView
                         } else {
                             VStack(spacing: 14) {
                                 ForEach(appState.monitoredApps) { app in
                                     appLimitRow(app)
                                         .id(app.id)
-                                        .transition(.asymmetric(
-                                            insertion: .opacity.combined(with: .move(edge: .leading)),
-                                            removal: .opacity.combined(with: .move(edge: .trailing))
-                                        ))
                                 }
                             }
                             .padding(.horizontal, 20)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: appState.monitoredApps.count)
                         }
                         
                         // Elegant Add App button
@@ -199,23 +194,15 @@ struct BlockingView: View {
                 }
             }
             .onAppear {
-                Task {
-                    screenTimeService.syncUsageFromSharedContainer()
-                    try? await Task.sleep(nanoseconds: 100_000_000)
-                    await MainActor.run {
-                        appState.loadAppGoals()
-                    }
+                // Keep this light: AppState.loadAppGoals() already handles syncing usage
+                Task { @MainActor in
+                    appState.loadAppGoals()
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                // ⚠️ FIX: Also refresh when app returns from background
-                print("🔄 BlockingView: Returning from background - forcing sync")
-                Task {
-                    screenTimeService.syncUsageFromSharedContainer()
-                    try? await Task.sleep(nanoseconds: 100_000_000)
-                    await MainActor.run {
-                        appState.loadAppGoals()
-                    }
+                // Refresh limits when app returns from background without extra sync work
+                Task { @MainActor in
+                    appState.loadAppGoals()
                 }
             }
             .alert("Delete Limit", isPresented: $showingDeleteConfirmation) {
@@ -289,8 +276,6 @@ struct BlockingView: View {
                     appState.loadAppGoals()
                 }
             }
-        } else {
-            print("❌ deleteLimit: No matching goal found for app \(app.name) with tokenHash \(app.tokenHash ?? "nil")")
         }
         
         // Clear the delete state
@@ -477,7 +462,7 @@ struct BlockingView: View {
                                     width: geometry.size.width * min(1.0, app.percentageUsed),
                                     height: 10
                                 )
-                                .animation(.spring(response: 0.6, dampingFraction: 0.8), value: app.percentageUsed)
+                                .animation(.easeOut(duration: 0.25), value: app.percentageUsed)
                         }
                     }
                     .frame(height: 10)
@@ -686,12 +671,12 @@ struct EditLimitSheet: View {
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
                                 ForEach(limitOptions, id: \.self) { limit in
                                     limitOptionButton(limit: limit)
-                                    }
                                 }
+                            }
                                 .padding(.horizontal, 20)
                             
                             Button(action: {
-                                withAnimation(.spring(response: 0.3)) {
+                                withAnimation(.easeOut(duration: 0.2)) {
                                     showingCustomLimit.toggle()
                                     if showingCustomLimit {
                                         customLimitText = "\(newLimit)"
@@ -757,7 +742,7 @@ struct EditLimitSheet: View {
                         // Refined Scheduling Options
                         VStack(alignment: .leading, spacing: 20) {
                             Button(action: {
-                                withAnimation(.spring(response: 0.3)) {
+                                withAnimation(.easeOut(duration: 0.2)) {
                                     showingScheduleOptions.toggle()
                                 }
                             }) {
@@ -1291,7 +1276,7 @@ struct SetLimitSheet: View {
                             .padding(.horizontal, 20)
                             
                             Button(action: {
-                                withAnimation(.spring(response: 0.3)) {
+                                withAnimation(.easeOut(duration: 0.2)) {
                                     showingCustomLimit.toggle()
                                     if showingCustomLimit {
                                         customLimitText = "\(selectedLimit)"
@@ -1355,7 +1340,7 @@ struct SetLimitSheet: View {
                         // Schedule options (keep existing code)
                         VStack(spacing: 18) {
                             Button(action: {
-                                withAnimation(.spring(response: 0.3)) {
+                                withAnimation(.easeOut(duration: 0.2)) {
                                     showingScheduleOptions.toggle()
                                 }
                             }) {
@@ -1431,9 +1416,9 @@ struct SetLimitSheet: View {
         let isSelected = selectedLimit == limit && !showingCustomLimit
         
                     Button(action: {
-            withAnimation(.spring(response: 0.3)) {
-                selectedLimit = limit
-                showingCustomLimit = false
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            selectedLimit = limit
+                            showingCustomLimit = false
                         }
                     }) {
             VStack(spacing: 8) {
@@ -1480,7 +1465,7 @@ struct SetLimitSheet: View {
                 
                 ForEach(DaySelection.allCases, id: \.self) { option in
                     Button(action: {
-                        withAnimation(.spring(response: 0.3)) {
+                        withAnimation(.easeOut(duration: 0.2)) {
                             schedule.daySelection = option
                         }
                     }) {
@@ -1519,7 +1504,7 @@ struct SetLimitSheet: View {
                 
                 ForEach(TimeRestrictionType.allCases, id: \.self) { option in
                     Button(action: {
-                        withAnimation(.spring(response: 0.3)) {
+                        withAnimation(.easeOut(duration: 0.2)) {
                             schedule.timeRestriction = option
                         }
                     }) {
@@ -1568,7 +1553,7 @@ struct SetLimitSheet: View {
             ForEach(0..<7) { day in
                 let dayName = Calendar.current.shortWeekdaySymbols[day]
                 Button(action: {
-                    withAnimation(.spring(response: 0.3)) {
+                    withAnimation(.easeOut(duration: 0.2)) {
                         if schedule.selectedDays.contains(day) {
                             schedule.selectedDays.remove(day)
                         } else {
@@ -1659,7 +1644,8 @@ struct SetLimitSheet: View {
         
         // Don't allow empty names
         guard !finalAppName.isEmpty else {
-            print("❌ App name is required")
+                // App name is required to track usage correctly
+                print("❌ App name is required")
             return
         }
         

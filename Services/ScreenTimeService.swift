@@ -822,12 +822,8 @@ final class ScreenTimeService: ObservableObject {
     // MARK: - Usage Tracking
     
     /// Get usage minutes for a specific app
-    /// First syncs from shared container to ensure we have latest data
-    /// Then gets from Core Data or creates a record if it doesn't exist
+    /// Uses the last synced Core Data values without forcing a new sync on every call
     func getUsageMinutes(for bundleID: String) -> Int {
-        // Sync from shared container first to get latest data from report extension
-        syncUsageFromSharedContainer()
-        
         // Get from Core Data (which is now updated by syncUsageFromSharedContainer)
         if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
             return Int(record.actualUsageMinutes)
@@ -884,8 +880,6 @@ final class ScreenTimeService: ObservableObject {
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return
         }
-        
-        sharedDefaults.synchronize()
         
         // First, try to read per-app usage from report extension (keyed by app name)
         let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
