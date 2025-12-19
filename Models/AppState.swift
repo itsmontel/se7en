@@ -152,14 +152,36 @@ class AppState: ObservableObject {
         let appGroupID = "group.com.se7en.app"
         guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        // Get all pending puzzle flags
+        // ✅ First check: Direct puzzleMode flag (set by shield action)
+        if defaults.bool(forKey: "puzzleMode") || defaults.bool(forKey: "shouldOpenPuzzle") {
+            if let tokenHash = defaults.string(forKey: "puzzleTokenHash") {
+                let appName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") ?? "App"
+                
+                print("🎯 AppState: Found pending puzzle via puzzleMode flag")
+                print("   - tokenHash: \(tokenHash.prefix(8))...")
+                print("   - appName: \(appName)")
+                
+                // Post notification to show puzzle (ContentView listens to this)
+                NotificationCenter.default.post(
+                    name: .appBlocked,
+                    object: nil,
+                    userInfo: [
+                        "appName": appName,
+                        "bundleID": tokenHash,
+                        "puzzleMode": true
+                    ]
+                )
+                return
+            }
+        }
+        
+        // ✅ Second check: needsPuzzle_ flags (legacy/fallback)
         var pendingTokenHashes: [String] = []
-        if let allKeys = defaults.dictionaryRepresentation().keys as? [String] {
-            for key in allKeys where key.hasPrefix("needsPuzzle_") {
-                if defaults.bool(forKey: key) {
-                    let tokenHash = String(key.dropFirst("needsPuzzle_".count))
-                    pendingTokenHashes.append(tokenHash)
-                }
+        let allKeys = Array(defaults.dictionaryRepresentation().keys)
+        for key in allKeys where key.hasPrefix("needsPuzzle_") {
+            if defaults.bool(forKey: key) {
+                let tokenHash = String(key.dropFirst("needsPuzzle_".count))
+                pendingTokenHashes.append(tokenHash)
             }
         }
         
@@ -168,24 +190,31 @@ class AppState: ObservableObject {
         // Find the first pending puzzle and show it
         for tokenHash in pendingTokenHashes {
             // Try to get app name from stored value
-            if let storedName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") {
-                // Post notification to show puzzle (DashboardView listens to this)
-                NotificationCenter.default.post(
-                    name: .appBlocked,
-                    object: nil,
-                    userInfo: [
-                        "appName": storedName,
-                        "bundleID": tokenHash
-                    ]
-                )
-                
-                // Clear the puzzle flag
-                defaults.removeObject(forKey: "needsPuzzle_\(tokenHash)")
-                defaults.synchronize()
-                
-                print("🎯 AppState: Showing puzzle for \(storedName) (from shield action)")
-                return
-            }
+            let storedName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") ?? "App"
+            
+            // ✅ Set puzzleMode flags so ContentView can detect it
+            defaults.set(true, forKey: "puzzleMode")
+            defaults.set(tokenHash, forKey: "puzzleTokenHash")
+            defaults.set(storedName, forKey: "puzzleAppName_\(tokenHash)")
+            defaults.synchronize()
+            
+            // Post notification to show puzzle
+            NotificationCenter.default.post(
+                name: .appBlocked,
+                object: nil,
+                userInfo: [
+                    "appName": storedName,
+                    "bundleID": tokenHash,
+                    "puzzleMode": true
+                ]
+            )
+            
+            // Clear the needsPuzzle flag (puzzleMode will be cleared by ContentView)
+            defaults.removeObject(forKey: "needsPuzzle_\(tokenHash)")
+            defaults.synchronize()
+            
+            print("🎯 AppState: Showing puzzle for \(storedName) (from needsPuzzle flag)")
+            return
         }
     }
     

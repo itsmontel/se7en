@@ -1678,111 +1678,145 @@ final class ScreenTimeService: ObservableObject {
     }
     
     /// Grant temporary extension after puzzle completion
-    func grantTemporaryExtension(for bundleID: String, minutes: Int) {
+    /// ✅ FIXED VERSION: Properly unblocks apps using stored selections
+    func grantTemporaryExtensionFixed(for bundleID: String, minutes: Int) {
         let appGroupID = "group.com.se7en.app"
         
-        // ✅ Check global unlock mode (applies to all apps)
+        // Check global unlock mode
         let unlockMode: UnlockMode
         if let sharedDefaults = UserDefaults(suiteName: appGroupID),
            let modeString = sharedDefaults.string(forKey: "globalUnlockMode"),
            let mode = UnlockMode(rawValue: modeString) {
             unlockMode = mode
         } else {
-            unlockMode = .extraTime // Default to Extra Time Mode
+            unlockMode = .extraTime
         }
         
-        // ✅ 1. Unblock the app FIRST (bundleID is actually tokenHash)
-        unblockApp(bundleID)
+        print("\n" + String(repeating: "=", count: 60))
+        print("🔓 GRANTING EXTENSION")
+        print("   Token/ID: \(bundleID.prefix(12))...")
+        print("   Mode: \(unlockMode.rawValue)")
+        print("   Minutes: \(minutes)")
+        print(String(repeating: "=", count: 60))
         
-        // ✅ 1b. Also try to unblock by finding token in all stored selections
-        // This ensures we unblock even if the selection wasn't cached
-        if let allApps = allAppsSelection {
+        // ✅ CRITICAL FIX: Use multiple strategies to ensure unblock works
+        var unblocked = false
+        
+        // Strategy 1: Direct lookup in appSelections
+        if let selection = appSelections[bundleID] {
+            unblockUsingSelection(selection)
+            unblocked = true
+            print("✅ Unblocked via appSelections lookup")
+        }
+        
+        // Strategy 2: Find in stored limits by token hash or UUID
+        if !unblocked {
+            let limits = LimitStorageManager.shared.loadLimits()
+            for limit in limits {
+                if let selection = limit.getSelection() {
+                    if let firstToken = selection.applicationTokens.first {
+                        let computedHash = String(firstToken.hashValue)
+                        if computedHash == bundleID || limit.id.uuidString == bundleID {
+                            unblockUsingSelection(selection)
+                            unblocked = true
+                            print("✅ Unblocked via stored limits lookup")
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Strategy 3: Search in allAppsSelection
+        if !unblocked, let allApps = allAppsSelection {
             for token in allApps.applicationTokens {
                 if String(token.hashValue) == bundleID {
                     var blockedAppsSet = settingsStore.shield.applications ?? Set()
                     blockedAppsSet.remove(token)
                     settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
-                    print("✅ Unblocked app with token hash \(bundleID.prefix(8))... from allAppsSelection")
+                    unblocked = true
+                    print("✅ Unblocked via allAppsSelection")
                     break
                 }
             }
         }
         
-        // ✅ 1c. Try to find and unblock from stored app selections
-        for (_, selection) in appSelections {
-            for token in selection.applicationTokens {
-                if String(token.hashValue) == bundleID {
-                    var blockedAppsSet = settingsStore.shield.applications ?? Set()
-                    blockedAppsSet.remove(token)
-                    settingsStore.shield.applications = blockedAppsSet.isEmpty ? nil : blockedAppsSet
-                    print("✅ Unblocked app with token hash \(bundleID.prefix(8))... from appSelections")
-                    break
-                }
-            }
+        // Strategy 4: Nuclear option - clear all shields and rebuild
+        if !unblocked {
+            print("⚠️ Using nuclear unblock - clearing and rebuilding shields")
+            clearShieldAndRebuildWithoutApp(tokenHash: bundleID)
+            unblocked = true
         }
         
-        // ✅ 2. Remove from blocked tracking
+        // Remove from blocked tracking
         blockedApps.remove(bundleID)
         
-        if unlockMode == .extraTime {
-            // ✅ 3. Extra Time Mode: Reset usage in CoreData and grant 15 minutes
-            let goals = coreDataManager.getActiveAppGoals()
-            if let goal = goals.first(where: { $0.appBundleID == bundleID }) {
-                if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
-                    // Reset usage to 0
-                    record.actualUsageMinutes = 0
-                    record.didExceedLimit = false
-                    record.extendedLimitMinutes = Int32(minutes)
-                    coreDataManager.save()
-                } else {
-                    // Create new record with 0 usage
-                    let today = Calendar.current.startOfDay(for: Date())
-                    let newRecord = coreDataManager.createUsageRecord(
-                        for: goal,
-                        date: today,
-                        actualUsageMinutes: 0,
-                        didExceedLimit: false
-                    )
-                    newRecord.extendedLimitMinutes = Int32(minutes)
-                    coreDataManager.save()
-                }
-            }
-            
-            // ✅ 4. Store extension end time in UserDefaults
-            let extensionEndTime = Date().addingTimeInterval(TimeInterval(minutes * 60))
-            UserDefaults.standard.set(extensionEndTime, forKey: "extension_end_\(bundleID)")
-            
-            // ✅ 5. CRITICAL: Update shared container for extensions to see
-            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+        // Update shared container based on unlock mode
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            if unlockMode == .extraTime {
+                // Extra Time Mode: Grant time extension (keep current usage, add to limit)
+        let extensionEndTime = Date().addingTimeInterval(TimeInterval(minutes * 60))
+                
+                // Get current usage before granting extension
+                let currentUsage = getUsageMinutes(for: bundleID)
+                
+                // Get base limit for logging
+                let goals = coreDataManager.getActiveAppGoals()
+                let baseLimit = goals.first(where: { $0.appBundleID == bundleID })?.dailyLimitMinutes ?? 0
+                
                 sharedDefaults.set(extensionEndTime.timeIntervalSince1970, forKey: "extension_end_\(bundleID)")
                 sharedDefaults.set(true, forKey: "hasActiveExtension_\(bundleID)")
-                sharedDefaults.set(0, forKey: "usage_\(bundleID)")
                 sharedDefaults.set(minutes, forKey: "extensionLimit_\(bundleID)")
                 sharedDefaults.set(false, forKey: "limitReached_\(bundleID)")
-                sharedDefaults.synchronize()
-            }
-            
-            print("✅ Granted \(minutes) minute extension for \(bundleID) (Extra Time Mode)")
-        } else {
-            // ✅ 3. One-Session Mode: Mark app as in one-session state (no time extension)
-            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                // Store current usage (don't reset to 0)
+                sharedDefaults.set(currentUsage, forKey: "usage_at_extension_\(bundleID)")
+                
+        UserDefaults.standard.set(extensionEndTime, forKey: "extension_end_\(bundleID)")
+        
+                // Update CoreData: keep current usage, add extension minutes
+                if let _ = goals.first(where: { $0.appBundleID == bundleID }) {
+                    if let record = coreDataManager.getTodaysUsageRecord(for: bundleID) {
+                        // Keep current usage, just add extension minutes
+                        record.extendedLimitMinutes = Int32(minutes)
+                        record.didExceedLimit = false
+                        coreDataManager.save()
+                    } else {
+                        // Get goal again for createUsageRecord
+                        if let goal = goals.first(where: { $0.appBundleID == bundleID }) {
+                            let today = Calendar.current.startOfDay(for: Date())
+                            let newRecord = coreDataManager.createUsageRecord(
+                                for: goal,
+                                date: today,
+                                actualUsageMinutes: currentUsage,
+                                didExceedLimit: false
+                            )
+                            newRecord.extendedLimitMinutes = Int32(minutes)
+                            coreDataManager.save()
+                        }
+                    }
+                }
+                
+                print("✅ Granted \(minutes) minute extension (Extra Time Mode) - Usage: \(currentUsage), New Limit: \(Int(baseLimit) + minutes)")
+            } else {
+                // One-Session Mode: Mark as active session
                 sharedDefaults.set(true, forKey: "oneSessionActive_\(bundleID)")
                 sharedDefaults.set(Date().timeIntervalSince1970, forKey: "oneSessionStartTime_\(bundleID)")
                 sharedDefaults.set(false, forKey: "hasActiveExtension_\(bundleID)")
-                sharedDefaults.synchronize()
+                sharedDefaults.set(false, forKey: "limitReached_\(bundleID)")
+                
+                print("✅ Unlocked for one session (One-Session Mode)")
             }
             
-            print("✅ Unlocked app for one session: \(bundleID) (One-Session Mode)")
-        }
-        
-        // ✅ 6. Clear puzzle flags
-        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            // Clear ALL puzzle flags
             sharedDefaults.removeObject(forKey: "needsPuzzle_\(bundleID)")
+            sharedDefaults.removeObject(forKey: "puzzleRequested_\(bundleID)")
+            sharedDefaults.removeObject(forKey: "puzzleRequestTime_\(bundleID)")
             sharedDefaults.synchronize()
         }
         
-        // ✅ 7. Notify UI to refresh
+        // Notify UI
         NotificationCenter.default.post(name: .screenTimeDataUpdated, object: nil)
+        print("✅ Extension grant complete\n")
     }
     
     /// Check for One-Session Mode apps and re-block them when app goes to background
@@ -1839,8 +1873,8 @@ final class ScreenTimeService: ObservableObject {
                     sharedDefaults.removeObject(forKey: "extensionLimit_\(bundleID)")
                     sharedDefaults.synchronize()
                 }
-                return false
-            }
+            return false
+        }
             
             if Date() < extensionEndTime {
                 return true
@@ -1878,41 +1912,47 @@ final class ScreenTimeService: ObservableObject {
     func getEffectiveDailyLimit(for bundleID: String) -> Int {
         let appGroupID = "group.com.se7en.app"
         
-        // ✅ Check if there's an active extension - use extension limit instead
+        // Get base limit from CoreData
+        let goals = coreDataManager.getActiveAppGoals()
+        guard let goal = goals.first(where: { $0.appBundleID == bundleID }) else {
+            return 0
+        }
+        let baseLimit = Int(goal.dailyLimitMinutes)
+        
+        // ✅ Check if there's an active extension - ADD extension minutes to base limit
         if hasActiveExtension(for: bundleID) {
             if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-                let extensionLimit = sharedDefaults.integer(forKey: "extensionLimit_\(bundleID)")
-                if extensionLimit > 0 {
-                    return extensionLimit
+                let extensionMinutes = sharedDefaults.integer(forKey: "extensionLimit_\(bundleID)")
+                if extensionMinutes > 0 {
+                    return baseLimit + extensionMinutes
                 }
             }
-            return 15 // Default extension is 15 minutes
+            return baseLimit + 15 // Default extension is 15 minutes
         }
         
-        // Otherwise use the normal daily limit from CoreData
-        let goals = coreDataManager.getActiveAppGoals()
-        if let goal = goals.first(where: { $0.appBundleID == bundleID }) {
-            return Int(goal.dailyLimitMinutes)
-        }
-        
-        return 0
+        // Otherwise use the normal daily limit
+        return baseLimit
     }
     
     /// Get usage minutes that accounts for extension reset
     func getEffectiveUsageMinutes(for bundleID: String) -> Int {
         let appGroupID = "group.com.se7en.app"
         
-        // ✅ If there's an active extension, use the usage since extension was granted
+        // ✅ If there's an active extension, use current usage (not reset)
         if hasActiveExtension(for: bundleID) {
-            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-                // Get usage from shared container (this is reset when extension is granted)
-                let usage = sharedDefaults.integer(forKey: "usage_\(bundleID)")
-                return usage
-            }
+            // Use normal usage tracking (keep current usage, don't reset)
+            return getUsageMinutes(for: bundleID)
         }
         
         // Otherwise use normal usage tracking
         return getUsageMinutes(for: bundleID)
+    }
+    
+    /// Check if app is in one-session mode
+    func isOneSessionActive(for bundleID: String) -> Bool {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return false }
+        return sharedDefaults.bool(forKey: "oneSessionActive_\(bundleID)")
     }
     
     /// Get effective limit (base limit + puzzle extensions)
@@ -2265,4 +2305,179 @@ final class ScreenTimeService: ObservableObject {
         print(String(repeating: "=", count: 60) + "\n")
     }
     
+    // MARK: - ✅ NEW: Unblock Helper Methods
+    
+    /// Unblock using a FamilyActivitySelection directly
+    private func unblockUsingSelection(_ selection: FamilyActivitySelection) {
+        var blockedApps = settingsStore.shield.applications ?? Set()
+        
+        for token in selection.applicationTokens {
+            blockedApps.remove(token)
+        }
+        
+        settingsStore.shield.applications = blockedApps.isEmpty ? nil : blockedApps
+        print("🔓 Removed \(selection.applicationTokens.count) tokens from shield")
+    }
+    
+    /// Nuclear option: Clear all shields and rebuild without specific app
+    private func clearShieldAndRebuildWithoutApp(tokenHash: String) {
+        // Clear everything first
+        settingsStore.shield.applications = nil
+        settingsStore.shield.applicationCategories = nil
+        
+        // Rebuild block list excluding the unblocked app
+        var newBlocked: Set<ApplicationToken> = []
+        let limits = LimitStorageManager.shared.loadLimits()
+        let appGroupID = "group.com.se7en.app"
+        
+        for limit in limits where limit.isActive {
+            guard let selection = limit.getSelection(),
+                  let defaults = UserDefaults(suiteName: appGroupID) else { continue }
+            
+            // Skip the app we're unblocking
+            if let firstToken = selection.applicationTokens.first {
+                let thisHash = String(firstToken.hashValue)
+                if thisHash == tokenHash || limit.id.uuidString == tokenHash {
+                    continue
+                }
+            }
+            
+            // Only re-block if limit was reached and no active extension
+            let limitReached = defaults.bool(forKey: "limit_reached_\(limit.id.uuidString)")
+            if limitReached {
+                if let firstToken = selection.applicationTokens.first {
+                    let hash = String(firstToken.hashValue)
+                    if !hasActiveExtension(for: hash) {
+                        for token in selection.applicationTokens {
+                            newBlocked.insert(token)
+                        }
+                    }
+                }
+            }
+        }
+        
+        settingsStore.shield.applications = newBlocked.isEmpty ? nil : newBlocked
+        print("🔄 Rebuilt shield with \(newBlocked.count) apps")
+    }
+    
+    // MARK: - ✅ NEW: Improved One-Session Mode
+    
+    /// Improved re-blocking that uses stored selections
+    func checkAndReBlockOneSessionAppsImproved() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        let modeString = sharedDefaults.string(forKey: "globalUnlockMode") ?? "Extra Time"
+        guard modeString == "One Session" else { return }
+        
+        print("🔍 Checking for One-Session apps to re-block...")
+        
+        let allKeys = Array(sharedDefaults.dictionaryRepresentation().keys)
+        for key in allKeys where key.hasPrefix("oneSessionActive_") {
+            if sharedDefaults.bool(forKey: key) {
+                let tokenHash = String(key.dropFirst("oneSessionActive_".count))
+                
+                print("🔒 Re-blocking \(tokenHash.prefix(8))... (One-Session expired)")
+                
+                // Find selection and block
+                var blocked = false
+                
+                if let selection = appSelections[tokenHash] {
+                    blockWithSelection(selection)
+                    blocked = true
+                }
+                
+                if !blocked {
+                    let limits = LimitStorageManager.shared.loadLimits()
+                    for limit in limits {
+                        if let selection = limit.getSelection(),
+                           let firstToken = selection.applicationTokens.first {
+                            let computedHash = String(firstToken.hashValue)
+                            if computedHash == tokenHash || limit.id.uuidString == tokenHash {
+                                blockWithSelection(selection)
+                                blocked = true
+                                break
+                            }
+                        }
+                    }
+                }
+                
+                // Clear flags and mark as blocked
+                sharedDefaults.set(false, forKey: key)
+                sharedDefaults.removeObject(forKey: "oneSessionStartTime_\(tokenHash)")
+                sharedDefaults.set(true, forKey: "limitReached_\(tokenHash)")
+                sharedDefaults.synchronize()
+            }
+        }
+    }
+    
+    /// Setup monitoring for stale one-session apps
+    func setupOneSessionMonitoring() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        let modeString = sharedDefaults.string(forKey: "globalUnlockMode") ?? "Extra Time"
+        guard modeString == "One Session" else { return }
+        
+        let allKeys = Array(sharedDefaults.dictionaryRepresentation().keys)
+        for key in allKeys where key.hasPrefix("oneSessionStartTime_") {
+            let startTime = sharedDefaults.double(forKey: key)
+            if startTime > 0 {
+                let elapsed = Date().timeIntervalSince1970 - startTime
+                
+                // If session started >5 min ago, check for stale session
+                if elapsed > 300 {
+                    let tokenHash = String(key.dropFirst("oneSessionStartTime_".count))
+                    let lastUpdate = sharedDefaults.double(forKey: "usage_last_update_\(tokenHash)")
+                    let timeSinceUpdate = Date().timeIntervalSince1970 - lastUpdate
+                    
+                    // No update in 2+ min means user left
+                    if timeSinceUpdate > 120 {
+                        print("🔒 Stale one-session for \(tokenHash.prefix(8))... - re-blocking")
+                        sharedDefaults.set(true, forKey: "oneSessionActive_\(tokenHash)")
+                        checkAndReBlockOneSessionAppsImproved()
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - ✅ NEW: Force Shield Check
+    
+    /// Force check all limits and apply shields (call on app foreground)
+    func forceCheckAndApplyShields() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        print("🔍 Force checking all limits...")
+        
+        let limits = LimitStorageManager.shared.loadLimits()
+        
+        for limit in limits where limit.isActive {
+            guard let selection = limit.getSelection(),
+                  let firstToken = selection.applicationTokens.first else { continue }
+            
+            let tokenHash = String(firstToken.hashValue)
+            
+            // Skip if has active extension
+            if hasActiveExtension(for: tokenHash) { continue }
+            
+            // Skip if has active one-session
+            if sharedDefaults.bool(forKey: "oneSessionActive_\(tokenHash)") { continue }
+            
+            // Get usage and check against limit
+            let usage = sharedDefaults.integer(forKey: "usage_\(tokenHash)")
+            
+            if usage >= limit.dailyLimitMinutes {
+                print("🚫 Force blocking \(limit.appName) - usage (\(usage)) >= limit (\(limit.dailyLimitMinutes))")
+                blockWithSelection(selection)
+                
+                sharedDefaults.set(true, forKey: "limitReached_\(tokenHash)")
+                sharedDefaults.set(limit.appName, forKey: "limitAppName_\(tokenHash)")
+                sharedDefaults.synchronize()
+            }
+        }
+    }
+    
 }
+

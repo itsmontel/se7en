@@ -2,7 +2,7 @@
 //  SE7ENDeviceActivityMonitorExtension.swift
 //  SE7ENDeviceActivityMonitorExtension
 //
-//  Handles app blocking when usage limits are reached
+//  FIXED VERSION: Handles one-session blocking, reliable shield detection, and proper unlock flow
 //
 
 import DeviceActivity
@@ -60,40 +60,33 @@ private class SharedStorage {
     
     // MARK: - Usage Tracking
     
-    /// Increment usage for a limit (called when update events fire)
     func incrementUsage(tokenHash: String, limitID: UUID?, minutes: Int = 1) {
         guard let defaults = sharedDefaults else { return }
         
-        // Store by token hash (primary key for matching)
         let usageKey = "usage_\(tokenHash)"
         let currentUsage = defaults.integer(forKey: usageKey)
         let newUsage = currentUsage + minutes
         defaults.set(newUsage, forKey: usageKey)
         
-        // Also store by limit UUID if available
         if let limitID = limitID {
             let uuidKey = "usage_v2_\(limitID.uuidString)"
             defaults.set(newUsage, forKey: uuidKey)
             
-            // Map token hash to limit UUID for the main app
             var hashToUUID = defaults.dictionary(forKey: "token_hash_to_limit_uuid") as? [String: String] ?? [:]
             hashToUUID[tokenHash] = limitID.uuidString
             defaults.set(hashToUUID, forKey: "token_hash_to_limit_uuid")
         }
         
-        // Store last update time
         defaults.set(Date().timeIntervalSince1970, forKey: "usage_last_update_\(tokenHash)")
         defaults.synchronize()
         
         print("📊 Monitor: Updated usage for \(tokenHash.prefix(8))...: \(newUsage) minutes")
     }
     
-    /// Get current usage for a token hash
     func getUsage(tokenHash: String) -> Int {
         return sharedDefaults?.integer(forKey: "usage_\(tokenHash)") ?? 0
     }
     
-    /// Reset usage for a limit (called at interval start - new day)
     func resetUsage(tokenHash: String, limitID: UUID?) {
         guard let defaults = sharedDefaults else { return }
         
@@ -126,17 +119,17 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         let sharedDefaults = UserDefaults(suiteName: appGroupID)
         let today = Calendar.current.startOfDay(for: Date())
         
-        // ✅ CRITICAL: Clear all extensions from previous days
+        // ✅ CRITICAL: Clear all extensions and one-session flags from previous days
         if let defaults = sharedDefaults {
             let allKeys = Array(defaults.dictionaryRepresentation().keys)
             for key in allKeys {
+                // Clear old extensions
                 if key.hasPrefix("extension_end_") {
                     let tokenHash = String(key.dropFirst("extension_end_".count))
                     let timestamp = defaults.double(forKey: key)
                     if timestamp > 0 {
                         let extensionDate = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: timestamp))
                         if extensionDate < today {
-                            // Extension from previous day, clear it
                             defaults.removeObject(forKey: key)
                             defaults.removeObject(forKey: "hasActiveExtension_\(tokenHash)")
                             defaults.removeObject(forKey: "extensionLimit_\(tokenHash)")
@@ -144,19 +137,22 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
                         }
                     }
                 }
+                
+                // ✅ NEW: Clear one-session flags at start of new day
+                if key.hasPrefix("oneSessionActive_") {
+                    defaults.set(false, forKey: key)
+                    let tokenHash = String(key.dropFirst("oneSessionActive_".count))
+                    defaults.removeObject(forKey: "oneSessionStartTime_\(tokenHash)")
+                }
             }
             defaults.synchronize()
         }
         
-        // New day started - clear any previous blocks and reset usage for this activity
+        // Reset usage for this activity
         if let limitID = extractLimitID(from: activity) {
             SharedStorage.shared.clearLimitReached(limitID: limitID)
-            
-            // Unblock apps for this limit (new day = fresh start)
             unblockAppsForLimit(limitID: limitID)
             
-            // Reset usage counter for this limit
-            // Find the token hash for this limit
             let limits = SharedStorage.shared.loadLimits()
             if let limit = limits.first(where: { $0.id == limitID }),
                let selection = limit.getSelection(),
@@ -166,15 +162,13 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
             }
         }
         
-        // Also handle token hash based activity names
+        // Handle token hash based activity names
         if rawValue.contains("se7en.") && !rawValue.contains("limit.") {
-            // Extract token hash from activity name (format: "se7en.<tokenHash>")
             let parts = rawValue.split(separator: ".")
             if parts.count >= 2 {
                 let tokenHash = String(parts.dropFirst().joined(separator: "."))
                     .replacingOccurrences(of: "_", with: ".")
                 
-                // Find matching limit
                 let limits = SharedStorage.shared.loadLimits()
                 for limit in limits where limit.isActive {
                     guard let selection = limit.getSelection() else { continue }
@@ -195,6 +189,9 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
         print("🌙 Monitor: Interval ended for \(activity.rawValue)")
+        
+        // ✅ NEW: Check and re-block any one-session apps when interval ends
+        checkAndReBlockOneSessionApps()
     }
     
     // MARK: - Event Thresholds
@@ -209,6 +206,10 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         if eventString.hasPrefix("update.") {
             let tokenHash = String(eventString.dropFirst(7))
             handleUpdateEvent(tokenHash: tokenHash)
+            
+            // ✅ NEW: Check one-session status on every update
+            // This detects when user leaves and returns to an app
+            checkOneSessionStatusForToken(tokenHash)
             return
         }
         
@@ -221,35 +222,127 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         if eventString.hasPrefix("limit.") {
             let tokenHash = String(eventString.dropFirst(6))
             
-            // ✅ CRITICAL: Check if puzzle was just requested (within last 5 seconds)
+            // Check if puzzle was just requested
             if hasRecentPuzzleRequest(for: tokenHash) {
                 print("⏭️ Monitor: Skipping block - puzzle was just requested")
                 return
             }
             
-            // ✅ CRITICAL: Check if there's an active extension before blocking
+            // Check if there's an active extension
             if hasActiveExtension(for: tokenHash) {
                 print("⏭️ Monitor: Skipping block - app has active extension")
                 return
             }
             
+            // ✅ CRITICAL: Block immediately
             handleLimitEvent(tokenHash: tokenHash)
+            return
+        }
+        
+        // ✅ NEW: Handle global reporting events for real-time usage
+        if eventString.hasPrefix("global.") {
+            print("📊 Monitor: Global reporting event fired")
+            checkAllLimitsAndBlock()
             return
         }
     }
     
-    /// ✅ Check if puzzle was just requested (within last 5 seconds)
+    // MARK: - One-Session Mode Handling
+    
+    /// ✅ NEW: Check one-session status when app usage is detected
+    private func checkOneSessionStatusForToken(_ tokenHash: String) {
+        let appGroupID = "group.com.se7en.app"
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        // Check if this app was in one-session mode
+        let oneSessionKey = "oneSessionActive_\(tokenHash)"
+        let wasInOneSession = defaults.bool(forKey: oneSessionKey)
+        
+        if wasInOneSession {
+            // Check if user left the app (usage gap > 30 seconds indicates they left)
+            let lastUpdateKey = "usage_last_update_\(tokenHash)"
+            let lastUpdate = defaults.double(forKey: lastUpdateKey)
+            let now = Date().timeIntervalSince1970
+            let timeSinceLastUpdate = now - lastUpdate
+            
+            // If it's been more than 2 minutes since last update, they left and came back
+            // Re-block them!
+            if timeSinceLastUpdate > 120 && lastUpdate > 0 {
+                print("🔒 Monitor: One-Session expired - user left app (gap: \(Int(timeSinceLastUpdate))s)")
+                
+                // Clear the one-session flag
+                defaults.set(false, forKey: oneSessionKey)
+                defaults.removeObject(forKey: "oneSessionStartTime_\(tokenHash)")
+                defaults.synchronize()
+                
+                // Re-block the app
+                blockAppByTokenHash(tokenHash)
+            }
+        }
+    }
+    
+    /// ✅ NEW: Check and re-block all one-session apps
+    private func checkAndReBlockOneSessionApps() {
+        let appGroupID = "group.com.se7en.app"
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        // Check global unlock mode
+        let unlockMode: String = defaults.string(forKey: "globalUnlockMode") ?? "Extra Time"
+        guard unlockMode == "One Session" else { return }
+        
+        let allKeys = Array(defaults.dictionaryRepresentation().keys)
+        for key in allKeys where key.hasPrefix("oneSessionActive_") {
+            if defaults.bool(forKey: key) {
+                let tokenHash = String(key.dropFirst("oneSessionActive_".count))
+                
+                print("🔒 Monitor: Re-blocking app \(tokenHash.prefix(8))... (One-Session Mode)")
+                
+                // Clear flags
+                defaults.set(false, forKey: key)
+                defaults.removeObject(forKey: "oneSessionStartTime_\(tokenHash)")
+                defaults.synchronize()
+                
+                // Re-block
+                blockAppByTokenHash(tokenHash)
+            }
+        }
+    }
+    
+    /// ✅ NEW: Check all limits and block apps that exceed them
+    private func checkAllLimitsAndBlock() {
+        let limits = SharedStorage.shared.loadLimits()
+        
+        for limit in limits where limit.isActive {
+            guard let selection = limit.getSelection(),
+                  let firstToken = selection.applicationTokens.first else { continue }
+            
+            let tokenHash = String(firstToken.hashValue)
+            let usage = SharedStorage.shared.getUsage(tokenHash: tokenHash)
+            
+            // Skip if has active extension
+            if hasActiveExtension(for: tokenHash) {
+                continue
+            }
+            
+            // Check if usage exceeds limit
+            if usage >= limit.dailyLimitMinutes {
+                print("🚫 Monitor: Usage (\(usage)) >= limit (\(limit.dailyLimitMinutes)) for \(limit.appName)")
+                blockApps(selection: selection, limitID: limit.id, appName: limit.appName)
+            }
+        }
+    }
+    
+    // MARK: - Extension Checks
+    
     private func hasRecentPuzzleRequest(for tokenHash: String) -> Bool {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return false }
         
-        // Check if puzzle was requested
         if sharedDefaults.bool(forKey: "puzzleRequested_\(tokenHash)") {
-            // Check if it was requested recently (within last 5 seconds)
             let requestTime = sharedDefaults.double(forKey: "puzzleRequestTime_\(tokenHash)")
             if requestTime > 0 {
                 let timeSinceRequest = Date().timeIntervalSince1970 - requestTime
-                if timeSinceRequest < 5.0 {
+                if timeSinceRequest < 60.0 { // Extended to 60 seconds for reliability
                     print("✅ Monitor: Puzzle was requested \(String(format: "%.1f", timeSinceRequest))s ago")
                     return true
                 }
@@ -259,7 +352,6 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         return false
     }
     
-    /// ✅ Check if there's an active extension for this token
     private func hasActiveExtension(for tokenHash: String) -> Bool {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return false }
@@ -269,7 +361,7 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         if timestamp > 0 {
             let extensionEndTime = Date(timeIntervalSince1970: timestamp)
             
-            // ✅ Check if extension was granted today (not yesterday)
+            // Check if extension was granted today
             let today = Calendar.current.startOfDay(for: Date())
             let extensionDate = Calendar.current.startOfDay(for: extensionEndTime)
             if extensionDate < today {
@@ -295,7 +387,6 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
                 let today = Calendar.current.startOfDay(for: Date())
                 let extensionDate = Calendar.current.startOfDay(for: extensionEndTime)
                 if extensionDate < today {
-                    // Extension from previous day, clear it
                     sharedDefaults.removeObject(forKey: "extension_end_\(tokenHash)")
                     sharedDefaults.removeObject(forKey: "hasActiveExtension_\(tokenHash)")
                     sharedDefaults.removeObject(forKey: "extensionLimit_\(tokenHash)")
@@ -313,11 +404,9 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     
     // MARK: - Event Handlers
     
-    /// Handle update events (fires every minute when app is being used)
     private func handleUpdateEvent(tokenHash: String) {
         guard !tokenHash.isEmpty else { return }
         
-        // Find the limit to get the UUID
         let limits = SharedStorage.shared.loadLimits()
         var matchedLimitID: UUID?
         
@@ -340,22 +429,34 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         
         // Increment usage by 1 minute
         SharedStorage.shared.incrementUsage(tokenHash: tokenHash, limitID: matchedLimitID, minutes: 1)
+        
+        // ✅ NEW: Check if this increment pushes over the limit
+        if let limitID = matchedLimitID,
+           let limit = limits.first(where: { $0.id == limitID }) {
+            let currentUsage = SharedStorage.shared.getUsage(tokenHash: tokenHash)
+            if currentUsage >= limit.dailyLimitMinutes {
+                // Check for extensions before blocking
+                if !hasActiveExtension(for: tokenHash) && !hasRecentPuzzleRequest(for: tokenHash) {
+                    print("🚫 Monitor: Usage threshold reached during update event")
+                    if let selection = limit.getSelection() {
+                        blockApps(selection: selection, limitID: limit.id, appName: limit.appName)
+                    }
+                }
+            }
+        }
     }
     
-    /// Handle warning events (user at 80% of limit)
     private func handleWarningEvent(tokenHash: String) {
         print("⏰ Monitor: User approaching limit for \(tokenHash.prefix(8))...")
-        // Could send a local notification here if desired
     }
     
-    /// Handle limit events (user reached limit - BLOCK)
     private func handleLimitEvent(tokenHash: String) {
         guard !tokenHash.isEmpty else {
             print("⚠️ Monitor: Empty token hash in limit event")
             return
         }
         
-        // ✅ Double-check extension status before blocking
+        // Double-check extension status
         if hasActiveExtension(for: tokenHash) {
             print("⏭️ Monitor: Not blocking - active extension exists")
             return
@@ -371,6 +472,9 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     
     override func intervalWillEndWarning(for activity: DeviceActivityName) {
         super.intervalWillEndWarning(for: activity)
+        
+        // ✅ NEW: Check one-session apps before interval ends
+        checkAndReBlockOneSessionApps()
     }
     
     override func eventWillReachThresholdWarning(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
@@ -380,15 +484,10 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
     
     // MARK: - Blocking Logic
     
-    /// Block app using token hash (the primary method - matches how limits are stored)
     private func blockAppByTokenHash(_ tokenHash: String) {
         let limits = SharedStorage.shared.loadLimits()
         
-        // Find the limit that matches this token hash
-        // The main app stores token hash in appBundleID field of AppGoal
-        // But limits are stored with UUID - we need to find by matching the selection
-        
-        // Method 1: Check if tokenHash is a UUID (new system)
+        // Method 1: Check if tokenHash is a UUID
         if let uuid = UUID(uuidString: tokenHash) {
             if let limit = limits.first(where: { $0.id == uuid && $0.isActive }),
                let selection = limit.getSelection() {
@@ -397,11 +496,10 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
             }
         }
         
-        // Method 2: Try to match by stored selection's token hash
+        // Method 2: Match by token hash
         for limit in limits where limit.isActive {
             guard let selection = limit.getSelection() else { continue }
             
-            // Compute hash from first token and compare
             if let firstToken = selection.applicationTokens.first {
                 let computedHash = String(firstToken.hashValue)
                 if computedHash == tokenHash {
@@ -414,23 +512,36 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         print("⚠️ Monitor: No matching limit found for token hash: \(tokenHash.prefix(12))...")
     }
     
-    /// Block apps in a selection
     private func blockApps(selection: FamilyActivitySelection, limitID: UUID, appName: String) {
-        // Block all apps in the selection
-        store.shield.applications = Set(selection.applicationTokens)
+        // ✅ CRITICAL: Use additive blocking - don't replace existing blocks
+        var currentShielded = store.shield.applications ?? Set()
+        for token in selection.applicationTokens {
+            currentShielded.insert(token)
+        }
+        store.shield.applications = currentShielded.isEmpty ? nil : currentShielded
         
         // Also block categories if any
         if !selection.categoryTokens.isEmpty {
             store.shield.applicationCategories = .specific(selection.categoryTokens)
         }
         
-        // Mark limit as reached in shared storage
+        // Mark limit as reached
         SharedStorage.shared.markLimitReached(limitID: limitID)
+        
+        // ✅ NEW: Store the app name for shield configuration
+        let appGroupID = "group.com.se7en.app"
+        if let defaults = UserDefaults(suiteName: appGroupID) {
+            if let firstToken = selection.applicationTokens.first {
+                let tokenHash = String(firstToken.hashValue)
+                defaults.set(appName, forKey: "limitAppName_\(tokenHash)")
+                defaults.set(true, forKey: "limitReached_\(tokenHash)")
+                defaults.synchronize()
+            }
+        }
         
         print("🚫 Monitor: BLOCKED '\(appName)' (limit \(limitID.uuidString.prefix(8))...)")
     }
     
-    /// Unblock apps for a specific limit
     private func unblockAppsForLimit(limitID: UUID) {
         let limits = SharedStorage.shared.loadLimits()
         
@@ -444,18 +555,16 @@ class SE7ENDeviceActivityMonitor: DeviceActivityMonitor {
         for token in selection.applicationTokens {
             currentShielded.remove(token)
         }
-        store.shield.applications = currentShielded
+        store.shield.applications = currentShielded.isEmpty ? nil : currentShielded
         
         print("✅ Monitor: Unblocked apps for limit \(limitID.uuidString.prefix(8))...")
     }
     
     // MARK: - Helpers
     
-    /// Extract limit ID from activity name (format: "se7en.limit.<UUID>" or "limit_<UUID>")
     private func extractLimitID(from activity: DeviceActivityName) -> UUID? {
         let rawValue = activity.rawValue
         
-        // Try various formats
         if rawValue.hasPrefix("se7en.limit.") {
             let uuidString = String(rawValue.dropFirst(12))
             return UUID(uuidString: uuidString)

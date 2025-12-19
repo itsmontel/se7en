@@ -59,6 +59,9 @@ struct BlockingView: View {
     @State private var selectedToken: AnyHashable?
     @State private var appToDelete: MonitoredApp?
     @State private var showingDeleteConfirmation = false
+    @State private var showingUnlockModeConfirmation = false
+    @State private var pendingUnlockMode: UnlockMode = .extraTime
+    @State private var currentDisplayedMode: UnlockMode = .extraTime
     
     var body: some View {
         NavigationStack {
@@ -124,8 +127,14 @@ struct BlockingView: View {
                                 Spacer(minLength: 8)
                                 
                                 Picker("", selection: Binding(
-                                    get: { getGlobalUnlockMode() },
-                                    set: { newMode in setGlobalUnlockMode(mode: newMode) }
+                                    get: { currentDisplayedMode },
+                                    set: { newMode in
+                                        // Only show confirmation if mode is actually changing
+                                        if newMode != getGlobalUnlockMode() {
+                                            pendingUnlockMode = newMode
+                                            showingUnlockModeConfirmation = true
+                                        }
+                                    }
                                 )) {
                                     ForEach(UnlockMode.allCases, id: \.self) { mode in
                                         Text(mode.rawValue).tag(mode)
@@ -144,6 +153,9 @@ struct BlockingView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 8)
+                        .onAppear {
+                            currentDisplayedMode = getGlobalUnlockMode()
+                        }
                         
                         // Apps list
                             if appState.monitoredApps.isEmpty {
@@ -252,6 +264,40 @@ struct BlockingView: View {
             } message: {
                 Text("Are you sure you want to delete this limit? This action can't be undone.")
             }
+            .alert(getUnlockModeAlertTitle(), isPresented: $showingUnlockModeConfirmation) {
+                Button("Cancel", role: .cancel) {
+                    // Reset picker to current value
+                    currentDisplayedMode = getGlobalUnlockMode()
+                }
+                Button("Switch Mode", role: .none) {
+                    // Actually apply the mode change
+                    setGlobalUnlockMode(mode: pendingUnlockMode)
+                    currentDisplayedMode = pendingUnlockMode
+                    HapticFeedback.success.trigger()
+                }
+            } message: {
+                Text(getUnlockModeAlertMessage())
+            }
+        }
+    }
+    
+    // MARK: - Unlock Mode Alert Helpers
+    
+    private func getUnlockModeAlertTitle() -> String {
+        switch pendingUnlockMode {
+        case .extraTime:
+            return "Switch to Extra Time Mode?"
+        case .oneSession:
+            return "Switch to One Session Mode?"
+        }
+    }
+    
+    private func getUnlockModeAlertMessage() -> String {
+        switch pendingUnlockMode {
+        case .extraTime:
+            return "Extra Time Mode gives you +15 minutes after solving a puzzle. Your usage continues from where you left off, and you get bonus time added to your daily limit.\n\nExample: If you used 60 of 60 minutes, after solving you'll have 60 of 75 minutes."
+        case .oneSession:
+            return "One Session Mode unlocks the app until you leave it. Once you close or switch away from the app, it will be blocked again until tomorrow.\n\nThis is great for finishing a specific task without time pressure."
         }
     }
     
@@ -381,6 +427,18 @@ struct BlockingView: View {
                         Text("of \(formatMinutes(app.dailyLimit))")
                             .font(.system(size: 16, weight: .medium, design: .rounded))
                             .foregroundColor(.secondary)
+                        
+                        // Show One-Session indicator
+                        if let tokenHash = app.tokenHash,
+                           screenTimeService.isOneSessionActive(for: tokenHash) {
+                            Text("(One Session)")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(.orange)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.15))
+                                .cornerRadius(6)
+                        }
                     }
                     
                     // Schedule info
@@ -495,10 +553,20 @@ struct BlockingView: View {
     
     private func setGlobalUnlockMode(mode: UnlockMode) {
         let appGroupID = "group.com.se7en.app"
+        
+        // Save to shared defaults (for extensions)
         if let defaults = UserDefaults(suiteName: appGroupID) {
             defaults.set(mode.rawValue, forKey: "globalUnlockMode")
             defaults.synchronize()
+            print("✅ Global unlock mode set to: \(mode.rawValue)")
         }
+        
+        // Also save to standard UserDefaults (for main app)
+        UserDefaults.standard.set(mode.rawValue, forKey: "globalUnlockMode")
+        UserDefaults.standard.synchronize()
+        
+        // Update the displayed mode
+        currentDisplayedMode = mode
     }
     
     private func getGlobalUnlockModeDescription() -> String {

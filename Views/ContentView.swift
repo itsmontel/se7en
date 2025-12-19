@@ -56,23 +56,44 @@ struct ContentView: View {
         let appGroupID = "group.com.se7en.app"
         guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        // ✅ Check if puzzle mode is requested
-        if defaults.bool(forKey: "puzzleMode") {
-            if let tokenHash = defaults.string(forKey: "puzzleTokenHash") {
-                // Get app name (use stored name or default)
-                let appName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") ?? "App"
-                
-            puzzleAppName = appName
-            puzzleTokenHash = tokenHash
-            showPuzzleMode = true
+        // Don't check if already showing puzzle
+        guard !showPuzzleMode else { return }
+        
+        // ✅ Check multiple flags for puzzle mode request
+        let puzzleModeFlag = defaults.bool(forKey: "puzzleMode")
+        let shouldOpenPuzzle = defaults.bool(forKey: "shouldOpenPuzzle")
+        let tokenHash = defaults.string(forKey: "puzzleTokenHash")
+        
+        // Check if any puzzle request flags are set
+        if (puzzleModeFlag || shouldOpenPuzzle) && tokenHash != nil {
+            let hash = tokenHash!
             
-                // ✅ Clear the puzzle mode flag immediately
+            // Get app name (use stored name or default)
+            let appName = defaults.string(forKey: "puzzleAppName_\(hash)") ?? "App"
+            
+            print("🧩 ContentView: Puzzle mode detected!")
+            print("   - puzzleMode flag: \(puzzleModeFlag)")
+            print("   - shouldOpenPuzzle flag: \(shouldOpenPuzzle)")
+            print("   - tokenHash: \(hash.prefix(8))...")
+            print("   - appName: \(appName)")
+            
+            puzzleAppName = appName
+            puzzleTokenHash = hash
+            
+            // ✅ Clear the puzzle mode flags BEFORE showing puzzle
             defaults.set(false, forKey: "puzzleMode")
-                defaults.removeObject(forKey: "shouldOpenPuzzle")
+            defaults.set(false, forKey: "shouldOpenPuzzle")
+            defaults.removeObject(forKey: "puzzleRequested_\(hash)")
             defaults.synchronize()
-                
-                print("✅ ContentView: Entering puzzle mode for \(appName)")
+            
+            // Show puzzle with slight delay to ensure UI is ready
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showPuzzleMode = true
+                }
             }
+            
+            print("✅ ContentView: Entering puzzle mode for \(appName)")
         }
     }
     
@@ -135,7 +156,7 @@ struct ContentView: View {
         print("   - Extension ends at \(extensionEndTime)")
         
         // 8. Also call ScreenTimeService to unblock and update CoreData
-        ScreenTimeService.shared.grantTemporaryExtension(for: tokenHash, minutes: minutes)
+        ScreenTimeService.shared.grantTemporaryExtensionFixed(for: tokenHash, minutes: minutes)
     }
     
     private func openBlockedApp() {
@@ -392,7 +413,7 @@ struct FullscreenPuzzleView: View {
         puzzleManager.grantExtension(for: tokenHash, puzzleType: puzzleType)
         
         // Unblock the app temporarily (15 minutes)
-        ScreenTimeService.shared.grantTemporaryExtension(for: tokenHash, minutes: 15)
+        ScreenTimeService.shared.grantTemporaryExtensionFixed(for: tokenHash, minutes: 15)
         
         // Show success
         HapticFeedback.success.trigger()

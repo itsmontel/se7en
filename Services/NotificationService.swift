@@ -310,6 +310,20 @@ class NotificationService: ObservableObject {
             options: []
         )
         
+        // ✅ NEW: Puzzle unlock category with action to open app
+        let openPuzzleAction = UNNotificationAction(
+            identifier: "OPEN_PUZZLE_ACTION",
+            title: "🧩 Open SE7EN",
+            options: [.foreground] // Opens the app in foreground
+        )
+        
+        let puzzleUnlockCategory = UNNotificationCategory(
+            identifier: "PUZZLE_UNLOCK",
+            actions: [openPuzzleAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+        
         UNUserNotificationCenter.current().setNotificationCategories([
             creditLossCategory,
             warningCategory,
@@ -319,7 +333,8 @@ class NotificationService: ObservableObject {
             streakMilestoneCategory,
             petHealthCategory,
             appBlockedCategory,
-            creditUsedCategory
+            creditUsedCategory,
+            puzzleUnlockCategory
         ])
     }
     

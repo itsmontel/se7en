@@ -219,7 +219,7 @@ struct LimitReachedPuzzleView: View {
         puzzleManager.grantExtension(for: bundleID, puzzleType: puzzleType)
         
         // Unblock the app temporarily (15 minutes)
-        ScreenTimeService.shared.grantTemporaryExtension(for: bundleID, minutes: 15)
+        ScreenTimeService.shared.grantTemporaryExtensionFixed(for: bundleID, minutes: 15)
         
         // ✅ CRITICAL: Reload app goals to update UI immediately (show 0 of 15 minutes)
         appState.loadAppGoals()
