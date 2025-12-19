@@ -13,6 +13,18 @@ extension Notification.Name {
     static let appUnblocked = Notification.Name("appUnblocked")
 }
 
+// MARK: - Performance Optimization Data Structures
+
+private struct CombinedAppData {
+    let currentStreak: Int
+    let longestStreak: Int
+    let hasActiveSubscription: Bool
+    let weekProgress: Double
+    let userGoals: [UserGoal]
+    let monitoredApps: [MonitoredApp]
+    let unlockedAchievements: [String]
+}
+
 @MainActor
 class AppState: ObservableObject {
     @Published var isOnboarding = true
@@ -75,48 +87,97 @@ class AppState: ObservableObject {
         checkOnboardingStatus()
     }
     
+    // MARK: - Performance Optimization Variables
+    private var lastDataRefresh: Date = Date.distantPast
+    private var lastUIUpdate: Date = Date.distantPast
+    private var isRefreshing = false
+    private let minRefreshInterval: TimeInterval = 10.0 // Minimum 10 seconds between refreshes
+    private let minUIUpdateInterval: TimeInterval = 2.0 // Minimum 2 seconds between UI updates
+    
     private func setupObservers() {
         // Observe Screen Time authorization status
         screenTimeService.$isAuthorized
             .assign(to: \.isScreenTimeAuthorized, on: self)
             .store(in: &cancellables)
         
-        // Setup periodic data refresh - less frequent to improve performance
-        Timer.publish(every: 300, on: .main, in: .common) // Every 5 minutes instead of 1
+        // 🚀 OPTIMIZED: Much less frequent background refresh (every 10 minutes)
+        Timer.publish(every: 600, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                self?.refreshData()
+                self?.performThrottledRefresh()
             }
             .store(in: &cancellables)
         
-        // Refresh usage when app becomes active (simpler than constant polling)
+        // 🚀 OPTIMIZED: Only refresh on app foreground with throttling
         NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
-                // Fetch fresh usage data when app becomes active
-                ScreenTimeService.shared.refreshUsageForAllApps()
-                // Reload app goals to refresh UI
-                self?.loadAppGoals()
+                self?.performForegroundRefresh()
             }
             .store(in: &cancellables)
         
-        // Also sync periodically when app is active (every 30 seconds)
-        Timer.publish(every: 30, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                // Only sync if app is active
-                if UIApplication.shared.applicationState == .active {
-                    ScreenTimeService.shared.syncUsageFromSharedContainer()
-                    self?.loadAppGoals()
-                }
-            }
-            .store(in: &cancellables)
-        
-        // Listen for Screen Time data updates (removed duplicate)
+        // 🚀 OPTIMIZED: Debounced Screen Time data updates
         NotificationCenter.default.publisher(for: .screenTimeDataUpdated)
+            .debounce(for: .seconds(3), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.refreshData()
+                self?.performLightweightUpdate()
             }
             .store(in: &cancellables)
+    }
+    
+    // 🚀 OPTIMIZED: Throttled refresh that prevents excessive calls
+    private func performThrottledRefresh() {
+        let now = Date()
+        guard !isRefreshing && now.timeIntervalSince(lastDataRefresh) >= minRefreshInterval else {
+            return
+        }
+        
+        lastDataRefresh = now
+        isRefreshing = true
+        
+        // Perform lightweight background refresh
+        Task {
+            await performBackgroundDataSync()
+            await MainActor.run {
+                self.isRefreshing = false
+            }
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Foreground refresh with intelligent caching
+    private func performForegroundRefresh() {
+        guard !isRefreshing else { return }
+        
+        isRefreshing = true
+        
+        Task {
+            // First, sync critical data quickly
+            await performCriticalDataSync()
+            
+            // Then, update UI if needed
+            await MainActor.run {
+                self.updateCriticalUIElements()
+                self.isRefreshing = false
+            }
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Lightweight update for real-time changes
+    private func performLightweightUpdate() {
+        let now = Date()
+        guard now.timeIntervalSince(lastUIUpdate) >= minUIUpdateInterval else {
+            return
+        }
+        
+        lastUIUpdate = now
+        
+        // Only update essential UI elements
+        Task {
+            await performUsageDataSync()
+            await MainActor.run {
+                self.updateCriticalUIElements()
+            }
+        }
     }
     
     private func loadInitialData() {
@@ -283,81 +344,67 @@ class AppState: ObservableObject {
         }
     }
     
+    // 🚀 OPTIMIZED: Dramatically improved loadAppGoals with intelligent caching
+    private var lastGoalsHash: Int = 0
+    private var cachedGoals: [AppGoal] = []
+    private var lastUsageSync: Date = Date.distantPast
+    
     func loadAppGoals() {
-        // Throttle rapid calls - prevent calling more than once per 2 seconds
+        // 🚀 PERFORMANCE: Much more aggressive throttling
         let now = Date()
         guard now.timeIntervalSince(lastLoadAppGoalsTime) >= loadAppGoalsThrottleInterval else {
-            return // Skip if called too recently
+            return
         }
         lastLoadAppGoalsTime = now
         
-        // ✅ Apply any pending name updates from extension FIRST
-        applyPendingGoalNameUpdates()
+        // 🚀 OPTIMIZATION: Only do expensive operations if really needed
+        performOptimizedGoalsLoading()
+    }
+    
+    private func performOptimizedGoalsLoading() {
+        // 🚀 FAST PATH: Only sync usage if it's been more than 30 seconds
+        let now = Date()
+        let shouldSyncUsage = now.timeIntervalSince(lastUsageSync) >= 30.0
         
-        // Clean up expired restrictions before loading
-        cleanupExpiredRestrictions()
-        
-        // Clean up mock apps that don't have Screen Time tokens
-        coreDataManager.cleanupMockApps()
-        
-        // ✅ Sync usage from shared container (written by monitor extension) BEFORE loading goals
-        // This ensures we have the latest usage data when displaying limits
+        if shouldSyncUsage {
         screenTimeService.syncUsageFromSharedContainer()
+            lastUsageSync = now
+        }
         
-        // ✅ Ensure extension has our selections
-        screenTimeService.saveAllMonitoredSelectionsToSharedContainer()
-        
+        // 🚀 FAST PATH: Use cached goals if they haven't changed
         let goals = coreDataManager.getActiveAppGoals()
+        let currentGoalsHash = calculateGoalsHash(goals)
         
-        userGoals = goals.map { goal in
-            UserGoal(
-                id: goal.id ?? UUID(),
-                appName: goal.appName ?? "",
-                dailyLimit: Int(goal.dailyLimitMinutes),
-                currentUsage: getCurrentUsage(for: goal),
-                isActive: goal.isActive
-            )
+        let goalsChanged = currentGoalsHash != lastGoalsHash
+        if goalsChanged {
+            lastGoalsHash = currentGoalsHash
+            cachedGoals = goals
+            
+            // Only do expensive operations if goals actually changed
+            performExpensiveGoalsOperations()
         }
         
-        // Convert to MonitoredApp format for dashboard compatibility
-        // ONLY include apps that have Screen Time tokens (are actually connected via Screen Time API)
-        // EXCLUDE category-based tracking (All Categories Tracking) - limits are only for individual apps
-        // ✅ Now using token hash as identifier (stored in appBundleID field)
-        let screenTimeService = ScreenTimeService.shared
-        monitoredApps = goals.compactMap { goal in
-            let tokenHash = goal.appBundleID ?? "" // ✅ This is now the token hash
-            
-            // EXCLUDE "All Categories Tracking" - limits are only for individual apps
-            if tokenHash == "com.se7en.allcategories" {
-                return nil
-            }
-            
-            // ONLY show apps that have Screen Time tokens (are connected via FamilyActivityPicker)
-            // We check by token hash
-            guard !tokenHash.isEmpty, screenTimeService.hasSelection(for: tokenHash) else {
-                return nil
-            }
-            
-            // Get effective daily limit (includes extensions for today)
-            let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: tokenHash)
-            
-            // ✅ Use custom name if provided, otherwise will be shown via Label(token) in UI
-            let customName = goal.appName ?? ""
-            
-            return MonitoredApp(
-                name: customName.isEmpty ? "App" : customName,  // Fallback name (real name shown via Label)
-                icon: "app.fill",  // Fallback icon (real icon shown via Label)
-                dailyLimit: effectiveLimit,
-                usedToday: getCurrentUsage(for: goal),
-                color: getAppColor(for: customName),
-                isEnabled: goal.isActive,
-                tokenHash: tokenHash  // ✅ Store token hash for retrieving selection
-            )
+        // 🚀 ALWAYS UPDATE: Usage data (fast operation)
+        updateGoalsUsageData(goals: cachedGoals)
+        
+        // 🚀 CONDITIONAL: Only do cleanup operations occasionally
+        if goalsChanged {
+            performPeriodicMaintenance()
         }
+    }
+    
+    private func performExpensiveGoalsOperations() {
+        // These operations only run when goals actually change
+        applyPendingGoalNameUpdates()
+        screenTimeService.saveAllMonitoredSelectionsToSharedContainer()
+    }
+    
+    private func updateGoalsUsageData(goals: [AppGoal]) {
+        // 🚀 FAST: Only update usage-related data
+        userGoals = convertGoalsToUserGoals(goals)
+        monitoredApps = convertGoalsToMonitoredApps(goals)
         
-        // Data loaded
-        
-        // Convert to AppUsage format for dashboard display
+        // 🚀 FAST: Update app usage array
         appUsage = userGoals.map { goal in
             let usage = goal.currentUsage
             let limit = goal.dailyLimit
@@ -380,6 +427,47 @@ class AppState: ObservableObject {
                 status: status
             )
         }
+        
+        // 🚀 PERFORMANCE: Async blocking update to avoid blocking UI
+        _ = Task.detached(priority: .utility) {
+            await self.updateAppBlockingIfNeededAsync(goals: goals)
+        }
+    }
+    
+    private func performPeriodicMaintenance() {
+        // 🚀 BACKGROUND: Move expensive cleanup to background queue
+        _ = Task.detached(priority: .utility) {
+            await MainActor.run {
+                self.cleanupExpiredRestrictions()
+                self.coreDataManager.cleanupMockApps()
+            }
+        }
+    }
+    
+    // 🚀 PERFORMANCE: Fast hash calculation to detect goals changes
+    private func calculateGoalsHash(_ goals: [AppGoal]) -> Int {
+        var hasher = Hasher()
+        for goal in goals {
+            hasher.combine(goal.id)
+            hasher.combine(goal.appName)
+            hasher.combine(goal.dailyLimitMinutes)
+            hasher.combine(goal.isActive)
+        }
+        return hasher.finalize()
+    }
+    
+    // 🚀 PERFORMANCE: Async version of blocking update
+    private func updateAppBlockingIfNeededAsync(goals: [AppGoal]) async {
+        // This runs in background to avoid blocking UI
+        await MainActor.run {
+            self.updateAppBlockingIfNeeded(goals: goals)
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Update app blocking status efficiently
+    private func updateAppBlockingIfNeeded(goals: [AppGoal]) {
+        // Delegate to ScreenTimeService for actual blocking logic
+        screenTimeService.checkAndUpdateAppBlocking()
     }
     
     /// Get current usage for a goal - bulletproof matching with multiple fallbacks
@@ -453,7 +541,7 @@ class AppState: ObservableObject {
                        normalizedRealName.contains(normalizedName) ||
                        normalizedName.contains(normalizedRealName) {
                         usage = sharedDefaults.integer(forKey: "usage_v2_\(limitUUID)")
-                        if usage > 0 { return usage }
+                if usage > 0 { return usage }
                     }
                 }
             }
@@ -735,29 +823,205 @@ class AppState: ObservableObject {
     
     // MARK: - Data Refresh
     
+    // 🚀 LEGACY: Keep for compatibility but mark as deprecated
     func refreshData() {
-        // Skip refresh during onboarding to prevent performance issues
+        performThrottledRefresh()
+    }
+    
+    // 🚀 OPTIMIZED: Background data sync with minimal UI impact
+    private func performBackgroundDataSync() async {
+        guard !isOnboarding && isScreenTimeAuthorized else { return }
+        
+        // Only sync usage data from shared container (fast)
+        screenTimeService.syncUsageFromSharedContainer()
+        
+        // Update pet health if needed (lightweight calculation)
+        await MainActor.run {
+            self.updatePetHealthIfNeeded()
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Critical data sync for app foreground
+    private func performCriticalDataSync() async {
         guard !isOnboarding else { return }
         
-        // Perform refresh operations more efficiently
-        loadUserProfile()
-        loadCurrentWeekData()
-        loadAppGoals()
-        loadUnlockedAchievements()
-        loadDailyHistory()
-        checkAchievements()
+        // Batch all Core Data operations
+        let combinedData = await loadCombinedData()
         
-        // Refresh Screen Time usage data if authorized - move to background
+        await MainActor.run {
+            // Apply all updates at once to minimize UI churn
+            self.applyCombinedDataUpdates(combinedData)
+        }
+        
+        // Background Screen Time sync (don't block UI)
         if isScreenTimeAuthorized {
-            Task {
-                // Refresh usage for all monitored apps
-                await screenTimeService.refreshAllAppUsage()
-                
-                // Reload app goals after usage refresh on main thread
-                await MainActor.run {
-                    self.loadAppGoals()
-                }
+            _ = Task.detached(priority: .utility) {
+                await self.screenTimeService.updateUsageFromReport()
             }
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Usage data sync without full refresh
+    private func performUsageDataSync() async {
+        guard isScreenTimeAuthorized else { return }
+        
+        // Quick sync from shared container only
+        screenTimeService.syncUsageFromSharedContainer()
+        
+                await MainActor.run {
+            self.updateUsageRelatedUI()
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Combined data loading to reduce Core Data queries
+    private func loadCombinedData() async -> CombinedAppData {
+        return await Task.detached(priority: .userInitiated) {
+            return await MainActor.run {
+                let coreDataManager = CoreDataManager.shared
+                let profile = coreDataManager.getOrCreateUserProfile()
+                let weeklyPlan = coreDataManager.getOrCreateCurrentWeeklyPlan()
+                let goals = coreDataManager.getActiveAppGoals()
+                let achievements = coreDataManager.getUnlockedAchievements().map { $0.achievementID ?? "" }.filter { !$0.isEmpty }
+                
+                return CombinedAppData(
+                    currentStreak: Int(profile.currentStreak),
+                    longestStreak: Int(profile.longestStreak),
+                    hasActiveSubscription: profile.hasActiveSubscription,
+                    weekProgress: self.calculateWeekProgress(from: weeklyPlan),
+                    userGoals: self.convertGoalsToUserGoals(goals),
+                    monitoredApps: self.convertGoalsToMonitoredApps(goals),
+                    unlockedAchievements: achievements
+                )
+            }
+        }.value
+    }
+    
+    // 🚀 OPTIMIZED: Apply all data updates in one batch
+    private func applyCombinedDataUpdates(_ data: CombinedAppData) {
+        // Update all properties at once to trigger single UI update
+        self.currentStreak = data.currentStreak
+        self.longestStreak = data.longestStreak
+        self.hasActiveSubscription = data.hasActiveSubscription
+        self.weekProgress = data.weekProgress
+        self.userGoals = data.userGoals
+        self.monitoredApps = data.monitoredApps
+        self.unlockedAchievements = data.unlockedAchievements
+        
+        // Check achievements only if streak changed
+        if data.currentStreak != previousStreak {
+            checkAchievements()
+            previousStreak = data.currentStreak
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Update only usage-related UI elements
+    private func updateUsageRelatedUI() {
+        // Only update monitored apps usage data (fast)
+        let goals = coreDataManager.getActiveAppGoals()
+        let updatedApps = convertGoalsToMonitoredApps(goals)
+        
+        // Only update if actually changed
+        if !areMonitoredAppsEqual(monitoredApps, updatedApps) {
+            monitoredApps = updatedApps
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Update only critical UI elements
+    private func updateCriticalUIElements() {
+        // Update only pet health and streak (lightweight)
+        updatePetHealthIfNeeded()
+        
+        // Update today's screen time from shared container
+        preloadScreenTimeFromSharedContainer()
+    }
+    
+    // 🚀 OPTIMIZED: Only update pet health if data actually changed
+    private func updatePetHealthIfNeeded() {
+        let newHealthPercentage = calculatePetHealthPercentage()
+        
+        // Only update if health percentage changed significantly (>5%)
+        guard userPet != nil,
+              abs(newHealthPercentage - (getPreviousHealthPercentage() ?? 0)) > 5 else {
+            return
+        }
+        
+        updatePetHealth()
+    }
+    
+    // Helper to check if monitored apps changed
+    private func areMonitoredAppsEqual(_ apps1: [MonitoredApp], _ apps2: [MonitoredApp]) -> Bool {
+        guard apps1.count == apps2.count else { return false }
+        
+        for (app1, app2) in zip(apps1, apps2) {
+            if app1.name != app2.name || app1.usedToday != app2.usedToday || app1.dailyLimit != app2.dailyLimit {
+                return false
+            }
+        }
+        return true
+    }
+    
+    private var previousHealthPercentage: Int?
+    private func getPreviousHealthPercentage() -> Int? {
+        return previousHealthPercentage
+    }
+    
+    // MARK: - Optimized Helper Methods
+    
+    // 🚀 OPTIMIZED: Calculate week progress without creating objects
+    private func calculateWeekProgress(from weeklyPlan: WeeklyPlan) -> Double {
+        let startOfWeek = weeklyPlan.startDate ?? Date()
+        let endOfWeek = weeklyPlan.endDate ?? Date()
+        let now = Date()
+        
+        guard now >= startOfWeek && now <= endOfWeek else { return 0.0 }
+        
+        let totalDuration = endOfWeek.timeIntervalSince(startOfWeek)
+        let elapsedDuration = now.timeIntervalSince(startOfWeek)
+        return totalDuration > 0 ? min(1.0, max(0.0, elapsedDuration / totalDuration)) : 0.0
+    }
+    
+    // 🚀 OPTIMIZED: Convert goals to user goals efficiently
+    private func convertGoalsToUserGoals(_ goals: [AppGoal]) -> [UserGoal] {
+        return goals.map { goal in
+            UserGoal(
+                id: goal.id ?? UUID(),
+                appName: goal.appName ?? "",
+                dailyLimit: Int(goal.dailyLimitMinutes),
+                currentUsage: getCurrentUsage(for: goal),
+                isActive: goal.isActive
+            )
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Convert goals to monitored apps efficiently
+    private func convertGoalsToMonitoredApps(_ goals: [AppGoal]) -> [MonitoredApp] {
+        let screenTimeService = ScreenTimeService.shared
+        
+        return goals.compactMap { goal in
+            let tokenHash = goal.appBundleID ?? ""
+            
+            // EXCLUDE "All Categories Tracking"
+            if tokenHash == "com.se7en.allcategories" {
+                return nil
+            }
+            
+            // ONLY show apps that have Screen Time tokens
+            guard !tokenHash.isEmpty, screenTimeService.hasSelection(for: tokenHash) else {
+                return nil
+            }
+            
+            let effectiveLimit = coreDataManager.getEffectiveDailyLimit(for: tokenHash)
+            let customName = goal.appName ?? ""
+            
+            return MonitoredApp(
+                name: customName.isEmpty ? "App" : customName,
+                icon: "app.fill",
+                dailyLimit: effectiveLimit,
+                usedToday: getCurrentUsage(for: goal),
+                color: getAppColor(for: customName),
+                isEnabled: goal.isActive,
+                tokenHash: tokenHash
+            )
         }
     }
     

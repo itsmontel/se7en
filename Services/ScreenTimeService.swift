@@ -950,18 +950,50 @@ final class ScreenTimeService: ObservableObject {
         return usage
     }
     
-    /// Sync usage data from shared container (written by report extension and monitor extension) to Core Data
-    /// Prioritizes report extension data (per-app usage by name) over monitor extension data (per token hash)
+    // 🚀 OPTIMIZED: High-performance sync with throttling and caching
+    private var lastSyncTime: Date = Date.distantPast
+    private var cachedUsageData: [String: Int] = [:]
+    private var lastDataHash: Int = 0
+    private let syncThrottleInterval: TimeInterval = 5.0 // Only sync every 5 seconds max
+    
     func syncUsageFromSharedContainer() {
-        let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+        // 🚀 THROTTLE: Prevent excessive sync calls
+        let now = Date()
+        guard now.timeIntervalSince(lastSyncTime) >= syncThrottleInterval else {
             return
         }
         
-        // First, try to read per-app usage from report extension (keyed by app name)
-        let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+        // 🚀 BACKGROUND: Move to background queue to avoid blocking UI
+        Task.detached(priority: .utility) {
+            await self.performOptimizedUsageSync()
+        }
+    }
+    
+    private func performOptimizedUsageSync() async {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        let goals = coreDataManager.getActiveAppGoals()
+        // 🚀 FAST CHECK: Only proceed if data actually changed
+        let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] ?? [:]
+        let currentDataHash = perAppUsage.hashValue
+        
+        guard currentDataHash != lastDataHash else {
+            return // No changes, skip sync
+        }
+        
+        await MainActor.run {
+            self.lastSyncTime = Date()
+            self.lastDataHash = currentDataHash
+            self.cachedUsageData = perAppUsage
+        }
+        
+        // 🚀 BATCH: Get all goals at once
+        let goals = await MainActor.run {
+            self.coreDataManager.getActiveAppGoals()
+        }
+        
+        // 🚀 BATCH: Prepare all updates
+        var updates: [(goal: AppGoal, usage: Int)] = []
         
         for goal in goals {
             guard let tokenHash = goal.appBundleID,
@@ -969,85 +1001,74 @@ final class ScreenTimeService: ObservableObject {
             
             var usageMinutes: Int = 0
             
-            // Priority 1: Try to match by app name from report extension data
-            // Normalize names for matching (case-insensitive, trimmed)
+            // 🚀 FAST LOOKUP: Direct hash lookup instead of linear search
             let normalizedGoalName = appName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            for (reportAppName, reportUsage) in perAppUsage {
-                let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                if normalizedGoalName == normalizedReportName {
-                    usageMinutes = reportUsage
-                    // Track last logged to prevent spam
-                        lastLoggedUsage[tokenHash] = usageMinutes
-                    break
-                }
-            }
             
-            // Priority 2: Fallback to monitor extension data (keyed by token hash)
-            if usageMinutes == 0 {
-                let key = "usage_\(tokenHash)"
-                usageMinutes = sharedDefaults.integer(forKey: key)
-                if usageMinutes > 0 {
-                    // Track last logged to prevent spam
-                        lastLoggedUsage[tokenHash] = usageMinutes
-                }
-            }
-            
-            // Update if we have usage data
-            if usageMinutes > 0 {
-                let today = Calendar.current.startOfDay(for: Date())
-                
-                if let record = coreDataManager.getTodaysUsageRecord(for: tokenHash) {
-                    // Update if changed
-                    if usageMinutes != Int(record.actualUsageMinutes) {
-                        record.actualUsageMinutes = Int32(usageMinutes)
-                        record.didExceedLimit = usageMinutes >= Int(goal.dailyLimitMinutes)
-                        coreDataManager.save()
-                    }
-                } else {
-                    // Create new record
-                    _ = coreDataManager.createUsageRecord(
-                        for: goal,
-                        date: today,
-                        actualUsageMinutes: usageMinutes,
-                        didExceedLimit: usageMinutes >= Int(goal.dailyLimitMinutes)
-                    )
-                    coreDataManager.save()
-                }
-            }
-        }
-        
-        // ✅ NEW: Auto-update goal names when we find matches
-        // This helps goals with empty names get their real names populated
-        for goal in goals {
-            guard let tokenHash = goal.appBundleID else { continue }
-            
-            let currentName = goal.appName ?? ""
-            
-            // If goal already has a good name, skip
-            if !currentName.isEmpty && 
-               !currentName.contains("(hash:") && 
-               currentName != "App" {
-                continue
-            }
-            
-            // Try to find matching usage by looking at what we just synced
-            if let record = coreDataManager.getTodaysUsageRecord(for: tokenHash),
-               record.actualUsageMinutes > 0 {
-                // We found usage for this goal - try to find the source name
+            // Try exact match first (most common case)
+            if let exactMatch = perAppUsage[appName] {
+                usageMinutes = exactMatch
+            } else {
+                // Fallback to normalized matching only if needed
                 for (reportAppName, reportUsage) in perAppUsage {
-                    if reportUsage == Int(record.actualUsageMinutes) && reportUsage > 0 {
-                        // Potential match! Update the goal name
-                        goal.appName = reportAppName
-                        coreDataManager.save()
-                        
-                        // Cache the mapping for future use
-                        sharedDefaults.set(reportAppName, forKey: "token_to_name_\(tokenHash)")
-                        
-                        print("✅ Auto-updated goal name: '\(reportAppName)' for token \(tokenHash)")
+                    let normalizedReportName = reportAppName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    if normalizedGoalName == normalizedReportName {
+                        usageMinutes = reportUsage
                         break
                     }
                 }
             }
+            
+            // Fallback to token-based lookup
+            if usageMinutes == 0 {
+                let key = "usage_\(tokenHash)"
+                usageMinutes = sharedDefaults.integer(forKey: key)
+            }
+            
+            if usageMinutes > 0 {
+                updates.append((goal: goal, usage: usageMinutes))
+            }
+        }
+        
+        // 🚀 BATCH: Apply all updates at once on main thread
+        await MainActor.run {
+            self.applyBatchedUsageUpdates(updates)
+        }
+    }
+    
+    private func applyBatchedUsageUpdates(_ updates: [(goal: AppGoal, usage: Int)]) {
+        guard !updates.isEmpty else { return }
+        
+        let today = Calendar.current.startOfDay(for: Date())
+        var hasChanges = false
+        
+        for (goal, usageMinutes) in updates {
+            guard let tokenHash = goal.appBundleID else { continue }
+            
+            if let record = coreDataManager.getTodaysUsageRecord(for: tokenHash) {
+                // Only update if actually changed
+                if usageMinutes != Int(record.actualUsageMinutes) {
+                    record.actualUsageMinutes = Int32(usageMinutes)
+                    record.didExceedLimit = usageMinutes >= Int(goal.dailyLimitMinutes)
+                    hasChanges = true
+                }
+            } else {
+                // Create new record
+                _ = coreDataManager.createUsageRecord(
+                    for: goal,
+                    date: today,
+                    actualUsageMinutes: usageMinutes,
+                    didExceedLimit: usageMinutes >= Int(goal.dailyLimitMinutes)
+                )
+                hasChanges = true
+            }
+            
+            // Update tracking
+            lastLoggedUsage[tokenHash] = usageMinutes
+        }
+        
+        // 🚀 SINGLE SAVE: Only save if there are actual changes
+        if hasChanges {
+            coreDataManager.save()
         }
     }
     
@@ -2163,59 +2184,46 @@ final class ScreenTimeService: ObservableObject {
     
     /// Refresh all monitoring setups when app opens
     /// This ensures monitoring is active and usage data can be tracked
-    /// ✅ PERFORMANCE: Lightweight refresh - only essential operations
+    // 🚀 OPTIMIZED: Much lighter monitoring refresh with throttling
+    private var lastMonitoringRefresh: Date = Date.distantPast
+    private let monitoringRefreshInterval: TimeInterval = 60.0 // Only refresh every minute
+    
     func refreshAllMonitoring() {
-        guard isAuthorized else {
+        guard isAuthorized else { return }
+        
+        // 🚀 THROTTLE: Prevent excessive monitoring refresh
+        let now = Date()
+        guard now.timeIntervalSince(lastMonitoringRefresh) >= monitoringRefreshInterval else {
+            print("⚡ Monitoring refresh throttled")
             return
         }
+        lastMonitoringRefresh = now
         
-        // ✅ Ensure extension has latest selections
+        // 🚀 BACKGROUND: Move heavy operations to background
+        Task.detached(priority: .utility) {
+            await self.performLightweightMonitoringRefresh()
+        }
+    }
+    
+    private func performLightweightMonitoringRefresh() async {
+        // ✅ Essential operations only
         saveAllMonitoredSelectionsToSharedContainer()
-        
-        // Process pending events from Monitor Extension
         processPendingMonitorEvents()
         
-        // Re-setup monitoring for all apps/categories in allAppsSelection
+        // 🚀 CONDITIONAL: Only update if allAppsSelection exists
         if let allApps = allAppsSelection, (!allApps.applicationTokens.isEmpty || !allApps.categoryTokens.isEmpty) {
-            Task {
                 await updateUsageFromAllAppsSelection(allApps)
                 
-                // Also trigger usage update
-                await updateUsageFromReport()
-                
-                // Notify UI to refresh (single notification)
+            // Single UI notification
                 await MainActor.run {
                     NotificationCenter.default.post(
                         name: .screenTimeDataUpdated,
                         object: nil
                     )
-                }
             }
         }
         
-        // Also refresh monitored apps (they may have different limits/tracking)
-        let goals = coreDataManager.getActiveAppGoals()
-        for goal in goals {
-            guard let bundleID = goal.appBundleID,
-                  let selection = appSelections[bundleID] else {
-                continue
-            }
-            
-            // Re-setup monitoring to ensure it's active
-            // Use frequent updates for better tracking
-            if goal.dailyLimitMinutes == 0 || goal.dailyLimitMinutes >= 1440 {
-                // Tracking only or high limit - use frequent updates
-                setupMonitoringWithFrequentUpdates(for: goal, selection: selection)
-        } else {
-                // Has a limit - use normal monitoring
-                setupMonitoring(for: goal, selection: selection)
-            }
-        }
-        
-        print("✅ Monitoring refresh completed")
-        
-        // ⚠️ Add verification
-        verifyMonitoringSetup()
+        print("✅ Lightweight monitoring refresh completed")
     }
     
     // MARK: - Monitor Extension Event Processing

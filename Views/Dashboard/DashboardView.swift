@@ -42,6 +42,11 @@ struct DashboardView: View {
     @State private var cachedTopDistractions: [MonitoredApp] = []
     @State private var topDistractionsLastRefresh: Date = Date.distantPast
     private let topDistractionsCacheTimeout: TimeInterval = 300 // 5 minutes - only refresh on foreground
+    
+    // 🚀 PERFORMANCE: Additional optimization variables
+    @State private var lastScreenTimeRefresh: Date = Date.distantPast
+    @State private var isInitializing = false
+    private let minScreenTimeRefreshInterval: TimeInterval = 30.0 // Only refresh every 30 seconds
 
     
     
@@ -614,27 +619,12 @@ struct DashboardView: View {
                     .environmentObject(appState)
             }
             .onAppear {
-                // Ensure Screen Time is authorized (only refresh if needed)
-                if !screenTimeService.isAuthorized {
-                    Task {
-                        await screenTimeService.requestAuthorization()
-                    }
-                }
-                
-                // Load data with single delay (only on first app launch)
-                if !hasLoadedInitialData {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        loadScreenTimeData(showLoading: true)
-                        appState.refreshScreenTimeData()
-                    }
-                }
+                // 🚀 OPTIMIZED: Only load if really needed
+                performOptimizedOnAppear()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                // Refresh data when app enters foreground (only show loading if first time)
-                // This only triggers when app comes back from background, not when switching tabs
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    loadScreenTimeData(showLoading: !hasLoadedInitialData)
-                }
+                // 🚀 OPTIMIZED: Throttled foreground refresh
+                performOptimizedForegroundRefresh()
             }
         }
     }
@@ -886,6 +876,119 @@ struct DashboardView: View {
             }
                         }
                         .padding(.bottom, 24)
+    }
+    
+    // MARK: - Performance Optimizations
+    
+    // 🚀 OPTIMIZED: Smart onAppear that prevents excessive loading
+    private func performOptimizedOnAppear() {
+        guard !isInitializing else { return }
+        
+        // 🚀 FAST PATH: If we already have recent data, skip expensive operations
+        let now = Date()
+        let hasRecentData = now.timeIntervalSince(lastScreenTimeRefresh) < minScreenTimeRefreshInterval
+        
+        if hasLoadedInitialData && hasRecentData {
+            return
+        }
+        
+        isInitializing = true
+        
+        // 🚀 BACKGROUND: Authorization check in background
+        if !screenTimeService.isAuthorized {
+            Task {
+                await screenTimeService.requestAuthorization()
+                await MainActor.run {
+                    self.performInitialDataLoad()
+                }
+            }
+        } else {
+            performInitialDataLoad()
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Streamlined initial data loading
+    private func performInitialDataLoad() {
+        guard !hasLoadedInitialData || Date().timeIntervalSince(lastScreenTimeRefresh) >= minScreenTimeRefreshInterval else {
+            isInitializing = false
+            return
+        }
+        
+        // 🚀 FAST: Try shared container first (no network delay)
+        let quickUpdate = tryQuickUpdate()
+        
+        if !hasLoadedInitialData {
+            // 🚀 DELAY: Only show loading for first-time load
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                if !quickUpdate {
+                    self.loadScreenTimeData(showLoading: true)
+                }
+                self.hasLoadedInitialData = true
+                self.lastScreenTimeRefresh = Date()
+                self.isInitializing = false
+            }
+        } else {
+            // 🚀 INSTANT: Background refresh for subsequent loads
+            Task.detached(priority: .utility) {
+                await self.performBackgroundRefresh()
+                await MainActor.run {
+                    self.lastScreenTimeRefresh = Date()
+                    self.isInitializing = false
+                }
+            }
+        }
+    }
+    
+    // 🚀 FAST: Try to get data from shared container immediately
+    private func tryQuickUpdate() -> Bool {
+        let sharedUsage = readUsageFromSharedContainer()
+        let sharedApps = readAppsCountFromSharedContainer()
+        
+        if sharedUsage > 0 || sharedApps > 0 {
+            totalScreenTimeMinutes = sharedUsage
+            appsUsedToday = sharedApps
+            appState.todayScreenTimeMinutes = sharedUsage
+            
+            // Quick refresh of top distractions
+            if Date().timeIntervalSince(topDistractionsLastRefresh) >= topDistractionsCacheTimeout {
+                refreshTopDistractions()
+            }
+            
+            return true
+        }
+        return false
+    }
+    
+    // 🚀 BACKGROUND: Perform refresh without blocking UI
+    private func performBackgroundRefresh() async {
+        // Light refresh only
+        await screenTimeService.updateUsageFromReport()
+        
+        await MainActor.run {
+            let _ = tryQuickUpdate()
+        }
+    }
+    
+    // 🚀 OPTIMIZED: Foreground refresh with throttling
+    private func performOptimizedForegroundRefresh() {
+        let now = Date()
+        
+        // 🚀 THROTTLE: Only refresh if it's been more than 10 seconds
+        guard now.timeIntervalSince(lastScreenTimeRefresh) >= 10.0 else {
+            return
+        }
+        
+        // 🚀 FAST: Try quick update first
+        if tryQuickUpdate() {
+            lastScreenTimeRefresh = now
+            return
+        }
+        
+        // 🚀 FALLBACK: Load data if quick update failed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.loadScreenTimeData(showLoading: false)
+            self.lastScreenTimeRefresh = now
+        }
     }
                         
     // MARK: - DeviceActivityReport Helpers
