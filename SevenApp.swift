@@ -67,6 +67,9 @@ struct SE7ENApp: App {
                 .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environment(\.textCase, .none)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                    // Check for pending puzzle notification from shield
+                    checkAndSendPendingPuzzleNotification()
+                    
                     // Check for puzzle mode FIRST
                     appState.checkForPendingPuzzles()
                     
@@ -102,6 +105,9 @@ struct SE7ENApp: App {
     private func handleAppWillEnterForeground() {
         print("📱 App entering foreground")
         
+        // ✅ Check for pending puzzle notification from shield
+        checkAndSendPendingPuzzleNotification()
+        
         // ✅ CRITICAL: Check for puzzle mode FIRST
         appState.checkForPendingPuzzles()
         
@@ -117,6 +123,44 @@ struct SE7ENApp: App {
         
         // Refresh Screen Time monitoring and data
         ScreenTimeService.shared.refreshAllMonitoring()
+    }
+    
+    /// Check if shield action set a pending puzzle notification flag
+    private func checkAndSendPendingPuzzleNotification() {
+        let appGroupID = "group.com.se7en.app"
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        // Check if there's a pending puzzle notification
+        if defaults.bool(forKey: "pendingPuzzleNotification") {
+            let appName = defaults.string(forKey: "pendingPuzzleAppName") ?? "App"
+            
+            // Clear the flag first
+            defaults.removeObject(forKey: "pendingPuzzleNotification")
+            defaults.removeObject(forKey: "pendingPuzzleAppName")
+            defaults.synchronize()
+            
+            // Send local notification from main app (this works reliably)
+            let content = UNMutableNotificationContent()
+            content.title = "🧩 Puzzle Time!"
+            content.body = "Solve a puzzle to unlock \(appName)"
+            content.sound = .default
+            content.categoryIdentifier = "PUZZLE_UNLOCK"
+            
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.5, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: "puzzle_unlock_\(Date().timeIntervalSince1970)",
+                content: content,
+                trigger: trigger
+            )
+            
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    print("❌ Failed to send puzzle notification: \(error)")
+                } else {
+                    print("✅ Puzzle notification sent from main app")
+                }
+            }
+        }
     }
     
     private func handleAppDidEnterBackground() {

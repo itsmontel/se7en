@@ -20,7 +20,7 @@ struct PrivacyPolicyView: View {
                         .font(.title2.bold())
                         .foregroundColor(.textPrimary)
                     
-                    Text("Last updated: November 2024")
+                    Text("Last updated: December 2024")
                         .font(.subheadline)
                         .foregroundColor(.textSecondary)
                 }
@@ -33,10 +33,11 @@ struct PrivacyPolicyView: View {
                     title: "Information We Collect",
                     icon: "doc.text.magnifyingglass",
                     content: [
-                        "App usage data for apps you choose to monitor",
+                        "App usage data for apps you explicitly choose to monitor via Screen Time",
                         "Account information (email, subscription status)",
                         "Device information (iOS version, device model)",
-                        "Payment information (processed securely by Apple)"
+                        "Payment information (processed securely by Apple)",
+                        "Puzzle completion data (to track unlock extensions)"
                     ]
                 )
                 
@@ -44,7 +45,9 @@ struct PrivacyPolicyView: View {
                     title: "How We Use Your Information",
                     icon: "gearshape.2",
                     content: [
-                        "Monitor your chosen apps to enforce time limits",
+                        "Monitor your chosen apps to enforce daily time limits",
+                        "Display shield UI when apps are blocked",
+                        "Track puzzle completions to grant unlock extensions",
                         "Calculate credit usage and billing",
                         "Provide customer support and app improvements",
                         "Send important account and billing notifications"
@@ -67,7 +70,8 @@ struct PrivacyPolicyView: View {
                     icon: "lock.shield",
                     content: [
                         "All data is encrypted in transit and at rest",
-                        "Screen time data stays on your device when possible",
+                        "Screen time data stays on your device using Apple's Screen Time API",
+                        "App selections and limits stored securely in App Groups",
                         "Regular security audits and updates",
                         "Secure payment processing through Apple"
                     ]
@@ -118,7 +122,7 @@ struct PrivacyPolicyView: View {
                             .foregroundColor(.textPrimary)
                     }
                     
-                    Text("If you have questions about this Privacy Policy, please contact us at privacy@se7en.app or through the Support section in Settings.")
+                    Text("If you have questions about this Privacy Policy, please contact us through the Support section in Settings.")
                         .font(.body)
                         .foregroundColor(.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

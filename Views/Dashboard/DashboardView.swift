@@ -16,8 +16,6 @@ struct DashboardView: View {
     private let screenTimeService = ScreenTimeService.shared
     @State private var showingSuccessToast = false
     @State private var showingAddAppSheet = false
-    @State private var selectedDate = Date()
-    @State private var showingDatePicker = false
     @State private var showingLimitReachedPuzzle = false
     @State private var limitReachedAppName: String = ""
     @State private var limitReachedBundleID: String = ""
@@ -590,16 +588,11 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        showingDatePicker = true
-                    }) {
                         HStack(spacing: 6) {
                             Image(systemName: "calendar")
                                 .font(.system(size: 14, weight: .semibold))
-                            Text(selectedDate.formatted(date: .abbreviated, time: .omitted))
+                        Text(Date().formatted(date: .abbreviated, time: .omitted))
                                 .font(.system(size: 14, weight: .semibold))
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .semibold))
                         }
                         .foregroundColor(.textPrimary)
                         .padding(.horizontal, 12)
@@ -611,8 +604,6 @@ struct DashboardView: View {
                         .background(Color.cardBackground.opacity(0.8))
                         .cornerRadius(16)
                     }
-                }
-
             }
             .sheet(isPresented: $showingAddAppSheet) {
                 CategoryAppSelectionView()
@@ -621,13 +612,6 @@ struct DashboardView: View {
             .sheet(isPresented: $showingSelectAllApps) {
                 SelectAllAppsView(selection: $allAppsSelection)
                     .environmentObject(appState)
-            }
-            .sheet(isPresented: $showingDatePicker) {
-                DateHistoryPicker(
-                    selectedDate: $selectedDate,
-                    isPresented: $showingDatePicker,
-                    appState: appState
-                )
             }
             .onAppear {
                 // Ensure Screen Time is authorized (only refresh if needed)
@@ -1730,6 +1714,7 @@ struct TimeLimitCard: View {
 
 struct CompactStreakView: View {
     let streak: Int
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         HStack(spacing: 10) {
@@ -1769,8 +1754,8 @@ struct CompactStreakView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.cardBackground,
-                            Color.cardBackground.opacity(0.96)
+                            backgroundColor,
+                            backgroundColor.opacity(0.96)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -1778,6 +1763,11 @@ struct CompactStreakView: View {
                 )
                 .shadow(color: streakColor.opacity(0.12), radius: 6, x: 0, y: 2)
         )
+    }
+    
+    private var backgroundColor: Color {
+        // Use appBackground in light mode to match page background, cardBackground in dark mode
+        colorScheme == .light ? Color.appBackground : Color.cardBackground
     }
     
     private var streakColor: Color {
@@ -1817,161 +1807,5 @@ struct CompactStreakView: View {
     }
 }
 
-// MARK: - Date History Picker
-
-struct DateHistoryPicker: View {
-    @Binding var selectedDate: Date
-    @Binding var isPresented: Bool
-    let appState: AppState
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                Color.appBackground.ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // Header
-                    VStack(spacing: 16) {
-                        Text("Health History")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundColor(.textPrimary)
-                        
-                        Text("View your pet's health on different days")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.textSecondary)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 20)
-                    
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            // Show last 30 days
-                            ForEach((0..<30).reversed(), id: \.self) { daysAgo in
-                                let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
-                                let isSelected = Calendar.current.isDate(date, inSameDayAs: selectedDate)
-                                let healthData = getHealthData(for: date)
-                                
-                                Button(action: {
-                                    selectedDate = date
-                                    isPresented = false
-                                }) {
-                                    HStack(spacing: 16) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(date.formatted(date: .abbreviated, time: .omitted))
-                                                .font(.system(size: 16, weight: .semibold))
-                                                .foregroundColor(.textPrimary)
-                                            
-                                            Text(dayName(date))
-                                                .font(.system(size: 13, weight: .medium))
-                                                .foregroundColor(.textSecondary)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        // Health indicator
-                                        VStack(alignment: .trailing, spacing: 4) {
-                                            HStack(spacing: 8) {
-                                                Image(systemName: "heart.fill")
-                                                    .font(.system(size: 12, weight: .semibold))
-                                                Text("\(healthData.score)")
-                                                    .font(.system(size: 14, weight: .semibold))
-                                            }
-                                            .foregroundColor(healthData.color)
-                                            
-                                            Text(healthData.status)
-                                                .font(.system(size: 12, weight: .medium))
-                                                .foregroundColor(.textSecondary)
-                                        }
-                                        
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .foregroundColor(.textSecondary.opacity(0.5))
-                                    }
-                                    .padding(16)
-                                    .background(isSelected ? Color.blue.opacity(0.1) : Color.cardBackground)
-                                    .cornerRadius(12)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
-                                    )
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 20)
-                    }
-                    
-                    // Close button
-                    Button(action: { isPresented = false }) {
-                        Text("Done")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Color.blue)
-                            .cornerRadius(16)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-    
-    private func dayName(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: date)
-    }
-    
-    private func getHealthData(for date: Date) -> (score: Int, color: Color, status: String) {
-        // Calculate health score based on actual pet health data
-        let isToday = Calendar.current.isDateInToday(date)
-        
-        if isToday {
-            // Use current pet health for today
-            if let pet = appState.userPet {
-                let healthPercentage = appState.calculatePetHealthPercentage()
-                let healthState = pet.healthState
-                
-                let score: Int
-                let color: Color
-                let status: String
-                
-                switch healthState {
-                case .fullHealth:
-                    score = healthPercentage
-                    color = .green
-                    status = "Full Health"
-                case .happy:
-                    score = healthPercentage
-                    color = Color(red: 0.5, green: 0.85, blue: 0.7)
-                    status = "Happy"
-                case .content:
-                    score = healthPercentage
-                    color = .yellow
-                    status = "Content"
-                case .sad:
-                    score = healthPercentage
-                    color = .orange
-                    status = "Sad"
-                case .sick:
-                    score = healthPercentage
-                    color = .red
-                    status = "Sick"
-                }
-                
-                return (score, color, status)
-            }
-        }
-        
-        // For past dates, we don't have historical health data
-        // Return "No data" indication
-        return (0, .gray, "No data")
-    }
-    
-}
 
 

@@ -47,6 +47,9 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         // Get pet type for sick image
         let petType = getUserPetType()
         
+        // Get unlock mode
+        let unlockMode = getUnlockMode()
+        
         // Custom colors - light mode
         let backgroundColor = UIColor.systemBackground
         let primaryColor = UIColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1.0)
@@ -57,8 +60,13 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         // Build personalized title: "Bad News, [Name]" at top
         let titleText = firstName.isEmpty ? "Bad News" : "Bad News, \(firstName)"
         
-        // Subtitle contains "Daily Limit Reached" + heart emoji + app info
-        let subtitleText = "Daily Limit Reached ❤️\n\nYou hit your \(appName) limit.\nSolve a puzzle for 15 more minutes!"
+        // Subtitle based on unlock mode
+        let subtitleText: String
+        if unlockMode == "One Session" {
+            subtitleText = "Daily Limit Reached ❤️\n\nYou hit your \(appName) limit.\nSolve a puzzle in SE7EN for one more session!"
+        } else {
+            subtitleText = "Daily Limit Reached ❤️\n\nYou hit your \(appName) limit.\nSolve a puzzle in SE7EN for 15 more minutes!"
+        }
         
         return ShieldConfiguration(
             backgroundBlurStyle: .systemMaterial,
@@ -73,7 +81,7 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor.secondaryLabel
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: "🧩 Start Puzzle",
+                text: "🧩 Open SE7EN to Solve",
                 color: .white
             ),
             primaryButtonBackgroundColor: primaryColor,
@@ -82,6 +90,15 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor.secondaryLabel
             )
         )
+    }
+    
+    // MARK: - Get Unlock Mode
+    
+    private func getUnlockMode() -> String {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            return "Extra Time"
+        }
+        return defaults.string(forKey: "globalUnlockMode") ?? "Extra Time"
     }
     
     // MARK: - Get User First Name

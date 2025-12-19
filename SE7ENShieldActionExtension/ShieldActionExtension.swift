@@ -2,7 +2,6 @@ import Foundation
 import ManagedSettings
 import ManagedSettingsUI
 import UIKit
-import UserNotifications
 
 class ShieldActionExtension: ShieldActionDelegate {
     
@@ -21,7 +20,7 @@ class ShieldActionExtension: ShieldActionDelegate {
         
         switch action {
         case .primaryButtonPressed:
-            print("🟢 ShieldAction: Primary button (Start Puzzle) pressed")
+            print("🟢 ShieldAction: Primary button (Open SE7EN) pressed")
             
             // ✅ CRITICAL: Set ALL puzzle mode flags
             defaults.set(true, forKey: "puzzleMode")
@@ -39,16 +38,18 @@ class ShieldActionExtension: ShieldActionDelegate {
             // ✅ CRITICAL: Set flag to open SE7EN app
             defaults.set(true, forKey: "shouldOpenPuzzle")
             
+            // ✅ Set flag for main app to send notification when it becomes active
+            defaults.set(true, forKey: "pendingPuzzleNotification")
+            defaults.set(appName, forKey: "pendingPuzzleAppName")
+            
             // Synchronize BEFORE responding
             defaults.synchronize()
             
             print("📝 ShieldAction: Stored puzzle data for token \(tokenHash.prefix(8))...")
             print("   App Name: \(appName)")
+            print("   ℹ️ User should now open SE7EN to solve the puzzle")
             
-            // ✅ Send notification to open SE7EN app
-            sendPuzzleNotification(appName: appName)
-            
-            // Use .defer to dismiss the shield
+            // Use .defer to dismiss the shield (user needs to manually open SE7EN)
             completionHandler(.defer)
             
         case .secondaryButtonPressed:
@@ -83,10 +84,9 @@ class ShieldActionExtension: ShieldActionDelegate {
             defaults.set(true, forKey: "puzzleRequested_\(tokenHash)")
             defaults.set(Date().timeIntervalSince1970, forKey: "puzzleRequestTime_\(tokenHash)")
             defaults.set(true, forKey: "shouldOpenPuzzle")
+            defaults.set(true, forKey: "pendingPuzzleNotification")
+            defaults.set("Website", forKey: "pendingPuzzleAppName")
             defaults.synchronize()
-            
-            // Send notification to open SE7EN app
-            sendPuzzleNotification(appName: "Website")
             
             completionHandler(.defer)
             
@@ -119,10 +119,9 @@ class ShieldActionExtension: ShieldActionDelegate {
             defaults.set(true, forKey: "puzzleRequested_\(tokenHash)")
             defaults.set(Date().timeIntervalSince1970, forKey: "puzzleRequestTime_\(tokenHash)")
             defaults.set(true, forKey: "shouldOpenPuzzle")
+            defaults.set(true, forKey: "pendingPuzzleNotification")
+            defaults.set("Category", forKey: "pendingPuzzleAppName")
             defaults.synchronize()
-            
-            // Send notification to open SE7EN app
-            sendPuzzleNotification(appName: "Category")
             
             completionHandler(.defer)
             
@@ -166,35 +165,6 @@ class ShieldActionExtension: ShieldActionDelegate {
         }
         
         return "App"
-    }
-    
-    // MARK: - Notification Methods
-    
-    /// Send a notification that opens SE7EN app when tapped
-    private func sendPuzzleNotification(appName: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "🧩 Puzzle Time!"
-        content.body = "Tap here to open SE7EN and solve a puzzle to unlock \(appName)"
-        content.sound = .default
-        content.categoryIdentifier = "PUZZLE_UNLOCK"
-        content.userInfo = ["action": "open_puzzle", "appName": appName]
-        
-        // Trigger immediately (0.1 second delay minimum required)
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
-        
-        let request = UNNotificationRequest(
-            identifier: "puzzle_unlock_\(Date().timeIntervalSince1970)",
-            content: content,
-            trigger: trigger
-        )
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("❌ ShieldAction: Failed to send notification: \(error)")
-            } else {
-                print("✅ ShieldAction: Notification sent - tap to open SE7EN")
-            }
-        }
     }
 }
 

@@ -20,7 +20,7 @@ struct TermsOfServiceView: View {
                         .font(.title2.bold())
                         .foregroundColor(.textPrimary)
                     
-                    Text("Last updated: November 2024")
+                    Text("Last updated: December 2024")
                         .font(.subheadline)
                         .foregroundColor(.textSecondary)
                 }
@@ -44,31 +44,24 @@ struct TermsOfServiceView: View {
                     title: "How SE7EN Works",
                     icon: "app.badge",
                     content: [
-                        "You start each day with 7 credits at no charge",
-                        "If you exceed your daily app limit, you have two options:",
-                        "1. Pay 99¢ to restore your credits and continue using the app today",
-                        "2. Wait until midnight when your credits reset automatically",
-                        "Perfect days (staying within limits) are completely free"
+                        "Set daily time limits for apps you want to monitor",
+                        "When you exceed a limit, that app is blocked with a shield",
+                        "To unlock: Solve a puzzle in SE7EN (choose Extra Time or One Session mode)",
+                        "Extra Time: Get +15 minutes added to your daily limit",
+                        "One Session: App unlocks until you close it, then re-locks until tomorrow",
+                        "Or wait until midnight when limits reset automatically",
+                        "Staying within limits is completely free"
                     ]
                 )
                 
                 TermsSectionView(
-                    title: "Billing and Payments",
-                    icon: "creditcard",
-                    content: [
-                        "Accountability fee (99¢) is charged immediately when you choose to renew for the day",
-                        "Payments are handled securely through Apple's App Store",
-                        "All sales are final - no refunds for accountability fee payments",
-                        "Credits reset to 7 daily at midnight at no charge"
-                    ]
-                )
-                
-                TermsSectionView(
-                    title: "App Monitoring",
+                    title: "App Monitoring & Blocking",
                     icon: "eye.circle",
                     content: [
                         "SE7EN requires Screen Time permissions to function",
-                        "Only apps you explicitly select are monitored",
+                        "Only apps you explicitly select via Family Activity Picker are monitored",
+                        "When limits are exceeded, apps are blocked using iOS Screen Time shields",
+                        "Shield UI guides you to open SE7EN to solve a puzzle for unlock",
                         "Monitoring data is used solely for limit enforcement",
                         "You can modify or remove app limits at any time"
                     ]
@@ -78,10 +71,10 @@ struct TermsOfServiceView: View {
                     title: "User Responsibilities",
                     icon: "person.circle",
                     content: [
-                        "Provide accurate account and payment information",
                         "Use the service in accordance with its intended purpose",
                         "Respect system limitations and don't attempt workarounds",
-                        "Report technical issues or billing concerns promptly"
+                        "Report technical issues promptly through Support",
+                        "Keep your device and iOS updated for best experience"
                     ]
                 )
                 
@@ -89,10 +82,11 @@ struct TermsOfServiceView: View {
                     title: "Prohibited Uses",
                     icon: "exclamationmark.triangle",
                     content: [
-                        "Attempting to circumvent app limits or monitoring",
+                        "Attempting to circumvent app limits, shields, or monitoring",
                         "Sharing your account with other users",
                         "Using automated scripts or bots with the service",
-                        "Reverse engineering or modifying the app"
+                        "Reverse engineering or modifying the app",
+                        "Attempting to bypass puzzle requirements or unlock mechanisms"
                     ]
                 )
                 
@@ -103,7 +97,7 @@ struct TermsOfServiceView: View {
                         "SE7EN requires internet connection for full functionality",
                         "We strive for 99.9% uptime but don't guarantee continuous service",
                         "Scheduled maintenance will be announced in advance",
-                        "Service interruptions don't excuse overages or pause billing"
+                        "Service interruptions may temporarily affect limit tracking"
                     ]
                 )
                 
@@ -113,7 +107,7 @@ struct TermsOfServiceView: View {
                     content: [
                         "SE7EN is provided 'as is' without warranties",
                         "We're not liable for indirect or consequential damages",
-                        "Maximum liability is limited to amount paid in past 12 months",
+                        "We're not responsible for data loss or app usage tracking errors",
                         "Some jurisdictions don't allow these limitations"
                     ]
                 )
@@ -122,10 +116,10 @@ struct TermsOfServiceView: View {
                     title: "Account Termination",
                     icon: "person.crop.circle.badge.xmark",
                     content: [
-                        "You may cancel your account at any time in Settings",
+                        "You may stop using SE7EN at any time",
                         "We may suspend accounts for terms violations",
-                        "Outstanding charges remain due after cancellation",
-                        "Account data is deleted within 30 days of termination"
+                        "Account data is deleted within 30 days of termination",
+                        "You can reinstall and start fresh anytime"
                     ]
                 )
                 
@@ -152,7 +146,7 @@ struct TermsOfServiceView: View {
                             .foregroundColor(.textPrimary)
                     }
                     
-                    Text("If you have questions about these Terms of Service, please contact us at legal@se7en.app or through the Support section in Settings.")
+                    Text("If you have questions about these Terms of Service, please contact us through the Support section in Settings.")
                         .font(.body)
                         .foregroundColor(.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

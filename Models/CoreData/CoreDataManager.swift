@@ -339,44 +339,51 @@ class CoreDataManager: ObservableObject {
             return 0
         }
         
-        // ✅ CRITICAL FIX: Check if there's an active extension (puzzle was completed)
-        // If extension is active, return ONLY the extension limit (15 minutes), not base + extension
+        let baseLimit = Int(goal.dailyLimitMinutes)
         let appGroupID = "group.com.se7en.app"
+        
+        // ✅ CRITICAL: Check if One Session mode is active - return BASE limit only
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            if sharedDefaults.bool(forKey: "oneSessionActive_\(bundleID)") {
+                // One Session mode: return original limit (no +15 extension)
+                return baseLimit
+            }
+        }
+        
+        // ✅ Check if Extra Time extension is active (puzzle was completed)
         if let sharedDefaults = UserDefaults(suiteName: appGroupID),
            let extensionEndTime = sharedDefaults.object(forKey: "extension_end_\(bundleID)") as? TimeInterval {
             let endDate = Date(timeIntervalSince1970: extensionEndTime)
             if Date() < endDate {
-                // Extension is active - return the extension limit (15 minutes)
-                if let usageRecord = getTodaysUsageRecord(for: bundleID),
-                   usageRecord.extendedLimitMinutes > 0 {
-                    return Int(usageRecord.extendedLimitMinutes)
+                // Extra Time mode: return base + extension (15 minutes)
+                let extensionMinutes = sharedDefaults.integer(forKey: "extensionLimit_\(bundleID)")
+                if extensionMinutes > 0 {
+                    return baseLimit + extensionMinutes
                 }
-                // Fallback: if no record, return 15 minutes (standard extension time)
-                return 15
+                // Fallback: add 15 minutes
+                return baseLimit + 15
             }
         }
         
-        // Also check UserDefaults for extension
+        // Also check UserDefaults for extension (legacy)
         if let extensionEndTime = UserDefaults.standard.object(forKey: "extension_end_\(bundleID)") as? Date,
            Date() < extensionEndTime {
-            // Extension is active - return extension limit
+            // Extra Time mode: return base + extension
             if let usageRecord = getTodaysUsageRecord(for: bundleID),
                usageRecord.extendedLimitMinutes > 0 {
-                return Int(usageRecord.extendedLimitMinutes)
+                return baseLimit + Int(usageRecord.extendedLimitMinutes)
             }
-            return 15
+            return baseLimit + 15
         }
         
-        let baseLimit = Int(goal.dailyLimitMinutes)
-        
-        // ✅ NEW: Add puzzle extensions (for non-active extensions, just add to base)
+        // ✅ Add puzzle extensions (for non-active extensions, just add to base)
         let puzzleExtensionMinutes = PuzzleManager.shared.getTotalExtensionMinutes(for: bundleID)
         
         // Check if there's an extension for today (legacy system)
         var extendedLimit = baseLimit + puzzleExtensionMinutes
         if let usageRecord = getTodaysUsageRecord(for: bundleID),
            usageRecord.extendedLimitMinutes > 0 {
-            extendedLimit = max(extendedLimit, Int(usageRecord.extendedLimitMinutes))
+            extendedLimit = max(extendedLimit, baseLimit + Int(usageRecord.extendedLimitMinutes))
         }
         
         // Check restriction period settings

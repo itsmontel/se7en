@@ -418,28 +418,6 @@ struct Achievement: Identifiable {
         
         // MARK: - Challenge Achievements
         Achievement(
-            id: "zero_tolerance",
-            title: "Zero Tolerance",
-            description: "Go 30 days without losing any credits",
-            icon: "shield.righthalf.fill",
-            color: .success,
-            category: .challenges,
-            rarity: .epic,
-            isUnlocked: { _ in false }
-        ),
-        
-        Achievement(
-            id: "recovery_master",
-            title: "Recovery Master", 
-            description: "Bounce back from 0 credits 5 times",
-            icon: "arrow.clockwise.circle.fill",
-            color: .primary,
-            category: .challenges,
-            rarity: .rare,
-            isUnlocked: { _ in false }
-        ),
-        
-        Achievement(
             id: "app_destroyer",
             title: "App Destroyer",
             description: "Remove an app from monitoring after 30 days under limit",
@@ -649,6 +627,58 @@ struct Achievement: Identifiable {
             }
         ),
         
+        // MARK: - Screen Time Achievements
+        Achievement(
+            id: "low_screen_time_day",
+            title: "Low Screen Time Day",
+            description: "Use less than 1 hour of screen time in a single day",
+            icon: "hourglass",
+            color: .success,
+            category: .usage,
+            rarity: .uncommon,
+            isUnlocked: { appState in appState.todayScreenTimeMinutes < 60 }
+        ),
+        
+        Achievement(
+            id: "ultra_low_day",
+            title: "Ultra Low Day",
+            description: "Use less than 30 minutes of screen time in a single day",
+            icon: "leaf.fill",
+            color: .green,
+            category: .usage,
+            rarity: .rare,
+            isUnlocked: { appState in appState.todayScreenTimeMinutes < 30 }
+        ),
+        
+        Achievement(
+            id: "week_under_5_hours",
+            title: "Week Under 5 Hours",
+            description: "Average less than 5 hours of screen time per day for a week",
+            icon: "calendar.badge.checkmark",
+            color: .primary,
+            category: .usage,
+            rarity: .rare,
+            isUnlocked: { appState in
+                // Check if user has 7+ day streak and current screen time suggests low weekly average
+                // This is a proxy until we have proper weekly historical data
+                appState.currentStreak >= 7 && appState.todayScreenTimeMinutes < 60
+            }
+        ),
+        
+        Achievement(
+            id: "week_under_3_hours",
+            title: "Week Under 3 Hours",
+            description: "Average less than 3 hours of screen time per day for a week",
+            icon: "star.circle.fill",
+            color: .success,
+            category: .usage,
+            rarity: .epic,
+            isUnlocked: { appState in
+                // Check if user has 7+ day streak and very low current screen time
+                appState.currentStreak >= 7 && appState.todayScreenTimeMinutes < 30
+            }
+        ),
+        
         Achievement(
             id: "digital_monk",
             title: "Digital Monk",
@@ -657,7 +687,23 @@ struct Achievement: Identifiable {
             color: .success,
             category: .mastery,
             rarity: .legendary,
-            isUnlocked: { _ in false }
+            isUnlocked: { appState in
+                // Check if user has 7+ day streak and consistently low screen time
+                appState.currentStreak >= 7 && appState.todayScreenTimeMinutes < 60
+            }
+        ),
+        
+        Achievement(
+            id: "minimal_screen_week",
+            title: "Minimal Screen Week",
+            description: "Average less than 2 hours of screen time per day for a week",
+            icon: "minus.circle.fill",
+            color: .green,
+            category: .minimalism,
+            rarity: .epic,
+            isUnlocked: { appState in
+                appState.currentStreak >= 7 && appState.todayScreenTimeMinutes < 30
+            }
         ),
         
         // MARK: - Bonus Hidden Achievements
@@ -1333,7 +1379,7 @@ struct Achievement: Identifiable {
 enum AchievementCategory: String, CaseIterable {
     case gettingStarted = "Getting Started"
     case streaks = "Streaks"
-    case credits = "Credit Management"
+    case screenTime = "Screen Time"
     case usage = "App Usage"
     case habits = "Daily Habits"
     case milestones = "Milestones"
@@ -1355,7 +1401,7 @@ enum AchievementCategory: String, CaseIterable {
         switch self {
         case .gettingStarted: return "star.fill"
         case .streaks: return "flame.fill"
-        case .credits: return "creditcard.fill"
+        case .screenTime: return "clock.fill"
         case .usage: return "apps.iphone"
         case .habits: return "repeat.circle.fill"
         case .milestones: return "flag.fill"
@@ -1379,7 +1425,7 @@ enum AchievementCategory: String, CaseIterable {
         switch self {
         case .gettingStarted: return .success
         case .streaks: return .error  
-        case .credits: return .primary
+        case .screenTime: return .blue
         case .usage: return .secondary
         case .habits: return .success
         case .milestones: return .warning

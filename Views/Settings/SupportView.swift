@@ -1,44 +1,32 @@
 import SwiftUI
 
 struct SupportView: View {
-    @State private var selectedTopic = "General"
     @State private var message = ""
     @State private var email = ""
-    @State private var includeDiagnostics = true
     @State private var showSuccessMessage = false
-    
-    let supportTopics = [
-        "General",
-        "Billing & Payments",
-        "Technical Issues",
-        "Feature Request",
-        "Account & Privacy",
-        "App Limits & Monitoring"
-    ]
     
     var body: some View {
         ScrollView {
-            HStack {
-                Spacer()
-                VStack(spacing: 24) {
-                    // Simple header matching settings style
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Contact Support")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.textPrimary)
-                        
-                        Text("We're here to help")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                
-                    // Contact Form - Simple settings style
-                    SettingsGroup(title: "Contact Information") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Email Address")
+            VStack(spacing: 24) {
+                // Simple header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Contact Support")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("We're here to help with any questions or issues")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.top, 10)
+            
+                // Simple Contact Form
+                SettingsGroup(title: "Send us a message") {
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Your Email")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.textSecondary)
                             
@@ -48,84 +36,50 @@ struct SupportView: View {
                                 .autocapitalization(.none)
                                 .font(.system(size: 16))
                                 .foregroundColor(.textPrimary)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 16)
+                                .background(Color.secondary.opacity(0.1))
+                                .cornerRadius(12)
                         }
-                        .padding(.vertical, 8)
                         
-                        Divider()
-                        
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Topic")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.textSecondary)
-                            
-                            Menu {
-                                ForEach(supportTopics, id: \.self) { topic in
-                                    Button(topic) {
-                                        selectedTopic = topic
-                                    }
-                                }
-                            } label: {
-                                HStack {
-                                    Text(selectedTopic)
-                                        .foregroundColor(.textPrimary)
-                                    Spacer()
-                                    Image(systemName: "chevron.down")
-                                        .font(.caption)
-                                        .foregroundColor(.textSecondary)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 8)
-                        
-                        Divider()
-                        
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("Message")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.textSecondary)
                             
                             TextEditor(text: $message)
-                                .frame(minHeight: 120)
+                                .frame(minHeight: 150)
                                 .font(.system(size: 16))
                                 .foregroundColor(.textPrimary)
+                                .padding(12)
+                                .background(Color.secondary.opacity(0.1))
+                                .cornerRadius(12)
                         }
-                        .padding(.vertical, 8)
-                        
-                        Divider()
-                        
-                        SettingToggle(
-                            isOn: $includeDiagnostics,
-                            icon: "info.circle.fill",
-                            color: .blue,
-                            title: "Include diagnostic information",
-                            subtitle: "Helps us troubleshoot issues faster"
-                        )
                     }
-                    .padding(.horizontal, 20)
-                    
-                    // Send Button
-                    Button(action: sendMessage) {
-                        HStack {
-                            if showSuccessMessage {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.white)
-                            }
-                            
-                            Text(showSuccessMessage ? "Message Sent!" : "Send Message")
-                                .font(.system(size: 17, weight: .semibold))
+                    .padding(.vertical, 8)
+                }
+                .padding(.horizontal, 20)
+                
+                // Send Button
+                Button(action: sendMessage) {
+                    HStack {
+                        if showSuccessMessage {
+                            Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.white)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(isFormValid ? Color.primary : Color.gray.opacity(0.3))
-                        .cornerRadius(16)
+                        
+                        Text(showSuccessMessage ? "Message Sent!" : "Send Message")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
                     }
-                    .disabled(!isFormValid)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 32)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(isFormValid ? Color.primary : Color.gray.opacity(0.3))
+                    .cornerRadius(16)
                 }
-                .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
-                Spacer()
+                .disabled(!isFormValid)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
             }
         }
         .background(Color.appBackground)
@@ -154,7 +108,6 @@ struct SupportView: View {
                 showSuccessMessage = false
                 message = ""
                 email = ""
-                selectedTopic = "General"
             }
         }
         
