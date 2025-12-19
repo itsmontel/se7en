@@ -464,57 +464,74 @@ class CoreDataManager: ObservableObject {
     
     func checkAndUpdateStreakForYesterday() {
         let userProfile = getOrCreateUserProfile()
-        let goals = getActiveAppGoals()
-        let screenTimeService = ScreenTimeService.shared
-        
-        // Check if any limits were exceeded yesterday
-        // At midnight reset, we check yesterday's final usage
-        // Since usage resets at midnight, we check if current usage is 0 (new day just started)
-        // and look at yesterday's usage records if available
         let calendar = Calendar.current
         let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) ?? Date()
         let startOfYesterday = calendar.startOfDay(for: yesterday)
+        let endOfYesterday = calendar.date(byAdding: .day, value: 1, to: startOfYesterday) ?? yesterday
         
-        var hasExceededLimit = false
-        
-        // Check each goal to see if it was exceeded yesterday
-        for goal in goals {
-            guard let bundleID = goal.appBundleID else { continue }
-            
-            // Try to get yesterday's usage from Core Data
-            if let usageRecord = getAppUsageRecord(for: bundleID, on: startOfYesterday) {
-                if Int(usageRecord.actualUsageMinutes) >= Int(goal.dailyLimitMinutes) {
-                    hasExceededLimit = true
-                    break
-                }
-            } else {
-                // If no record exists, check current usage (should be 0 at reset, but check anyway)
-                let currentUsage = screenTimeService.getUsageMinutes(for: bundleID)
-                if currentUsage >= Int(goal.dailyLimitMinutes) {
-                    hasExceededLimit = true
-                    break
-                }
-            }
+        // Check if app was opened yesterday (just using the app counts, not staying within limits)
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            userProfile.updatedAt = Date()
+            save()
+            return
         }
         
-        if !hasExceededLimit {
-            // No limits exceeded yesterday - increment streak
+        // Get last app open date
+        let lastAppOpenTimestamp = sharedDefaults.double(forKey: "last_app_open_date")
+        let lastAppOpenDate = lastAppOpenTimestamp > 0 ? Date(timeIntervalSince1970: lastAppOpenTimestamp) : nil
+        
+        // Check if app was opened yesterday
+        let appWasOpenedYesterday: Bool
+        if let lastOpen = lastAppOpenDate {
+            appWasOpenedYesterday = lastOpen >= startOfYesterday && lastOpen < endOfYesterday
+        } else {
+            // If no record exists, assume app was used (for existing users)
+            // This prevents breaking streaks for users who already have streaks
+            appWasOpenedYesterday = userProfile.currentStreak > 0
+        }
+        
+        if appWasOpenedYesterday {
+            // App was opened yesterday - increment streak
             let previousStreak = Int(userProfile.currentStreak)
             userProfile.currentStreak += 1
             if userProfile.currentStreak > userProfile.longestStreak {
                 userProfile.longestStreak = userProfile.currentStreak
             }
-            print("🔥 Streak updated: \(previousStreak) → \(userProfile.currentStreak) days")
+            print("🔥 Streak updated: \(previousStreak) → \(userProfile.currentStreak) days (app was opened yesterday)")
         } else {
-            // Limits were exceeded yesterday - reset streak
+            // App was not opened yesterday - reset streak
             if userProfile.currentStreak > 0 {
-                print("💔 Streak broken: Was \(userProfile.currentStreak) days")
+                print("💔 Streak broken: Was \(userProfile.currentStreak) days (app was not opened yesterday)")
             }
             userProfile.currentStreak = 0
         }
         
         userProfile.updatedAt = Date()
         save()
+    }
+    
+    /// Mark that the app was opened today (call this when app becomes active)
+    func markAppOpened() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        let today = Calendar.current.startOfDay(for: Date())
+        let lastOpenTimestamp = sharedDefaults.double(forKey: "last_app_open_date")
+        let lastOpenDate = lastOpenTimestamp > 0 ? Date(timeIntervalSince1970: lastOpenTimestamp) : nil
+        
+        // Only update if we haven't already marked today
+        if let lastOpen = lastOpenDate {
+            let lastOpenDay = Calendar.current.startOfDay(for: lastOpen)
+            if lastOpenDay >= today {
+                return // Already marked today
+            }
+        }
+        
+        // Mark that app was opened today
+        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_app_open_date")
+        sharedDefaults.synchronize()
+        print("📱 Marked app as opened today")
     }
     
     func getAppUsageRecord(for bundleID: String, on date: Date) -> AppUsageRecord? {

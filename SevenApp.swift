@@ -57,6 +57,9 @@ struct SE7ENApp: App {
         
         // Perform Core Data migration if needed
         CoreDataManager.shared.performMigrationIfNeeded()
+        
+        // Mark app as opened for streak tracking
+        CoreDataManager.shared.markAppOpened()
     }
     
     var body: some Scene {
@@ -90,6 +93,8 @@ struct SE7ENApp: App {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     handleAppDidBecomeActive()
+                    // Mark that app was opened today for streak tracking
+                    CoreDataManager.shared.markAppOpened()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
                     handleAppWillResignActive()

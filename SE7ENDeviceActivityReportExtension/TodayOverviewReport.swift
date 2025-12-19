@@ -31,10 +31,14 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         var tokenToDuration: [Application: TimeInterval] = [:]
         var tokenToName: [Application: String] = [:]
         var uniqueApps: Set<String> = []
+        var totalAppOpens: Int = 0
         
         // Process all device activity data
         for await deviceActivityData in data {
             for await segment in deviceActivityData.activitySegments {
+                // Note: numberOfPickups is not available on ActivitySegment in current iOS versions
+                // We'll track app launches by counting unique app opens instead
+                
                 for await category in segment.categories {
                     for await app in category.applications {
                         let application = app.application
@@ -47,15 +51,23 @@ struct TodayOverviewReport: DeviceActivityReportScene {
                         
                         let appDuration = app.totalActivityDuration
                         
-                        // Aggregate by app name (for display)
-                        uniqueApps.insert(name)
-                        perAppDuration[name, default: 0] += appDuration
-                        totalDuration += appDuration
-                        
-                        // Aggregate by application (for reliable limit matching)
-                        tokenToDuration[application, default: 0] += appDuration
-                        if tokenToName[application] == nil {
-                            tokenToName[application] = name
+                        // Only count apps with actual usage (duration > 0)
+                        if appDuration > 0 {
+                            // Count unique apps that were opened/used
+                            if !uniqueApps.contains(name) {
+                                uniqueApps.insert(name)
+                                totalAppOpens += 1
+                            }
+                            
+                            // Aggregate by app name (for display)
+                            perAppDuration[name, default: 0] += appDuration
+                            totalDuration += appDuration
+                            
+                            // Aggregate by application (for reliable limit matching)
+                            tokenToDuration[application, default: 0] += appDuration
+                            if tokenToName[application] == nil {
+                                tokenToName[application] = name
+                            }
                         }
                     }
                 }
@@ -63,7 +75,7 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         }
         
         let totalMinutes = Int(totalDuration / 60)
-        print("📊 TodayOverviewReport: \(totalMinutes) min total, \(uniqueApps.count) apps")
+        print("📊 TodayOverviewReport: \(totalMinutes) min total, \(uniqueApps.count) apps, \(totalAppOpens) app opens")
         
         // Sort apps by duration and get top 10
         let sortedApps = perAppDuration.sorted { $0.value > $1.value }
@@ -72,7 +84,8 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         let summary = UsageSummary(
             totalDuration: totalDuration,
             appCount: uniqueApps.count,
-            topApps: topApps
+            topApps: topApps,
+            totalPickups: totalAppOpens
         )
         
         // Save to shared container for main app
@@ -80,7 +93,8 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             summary: summary,
             perAppDuration: perAppDuration,
             tokenToDuration: tokenToDuration,
-            tokenToName: tokenToName
+            tokenToName: tokenToName,
+            totalPickups: totalAppOpens
         )
         
         return summary
@@ -92,7 +106,8 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         summary: UsageSummary,
         perAppDuration: [String: TimeInterval],
         tokenToDuration: [Application: TimeInterval],
-        tokenToName: [Application: String]
+        tokenToName: [Application: String],
+        totalPickups: Int
     ) {
         let appGroupID = "group.com.se7en.app"
         
@@ -124,6 +139,10 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
         sharedDefaults.set(topAppsPayload, forKey: "top_apps")
         sharedDefaults.set(perAppUsage, forKey: "per_app_usage")
+        sharedDefaults.set(totalPickups, forKey: "total_app_opens")
+        
+        // Save daily app opens history (for stats page)
+        saveDailyAppOpens(totalPickups, to: sharedDefaults)
         
         // Match tokens to limits and write usage by token hash
         matchTokensToLimits(
@@ -209,6 +228,35 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         sharedDefaults.set(updatedHashMap, forKey: "token_hash_to_limit_uuid")
         
         print("✅ REPORT: Matched \(usageByLimitUUID.count) limits")
+    }
+    
+    // MARK: - Daily App Opens History
+    
+    private func saveDailyAppOpens(_ appOpens: Int, to sharedDefaults: UserDefaults) {
+        // Get today's date key
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayKey = dateFormatter.string(from: Date())
+        
+        // Load existing daily app opens history
+        var dailyAppOpens = sharedDefaults.dictionary(forKey: "daily_app_opens") as? [String: Int] ?? [:]
+        
+        // Update today's app opens
+        dailyAppOpens[todayKey] = appOpens
+        
+        // Keep only last 30 days
+        let calendar = Calendar.current
+        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+        let cutoffKey = dateFormatter.string(from: thirtyDaysAgo)
+        
+        // Remove old entries
+        dailyAppOpens = dailyAppOpens.filter { key, _ in
+            key >= cutoffKey
+        }
+        
+        // Save back
+        sharedDefaults.set(dailyAppOpens, forKey: "daily_app_opens")
+        print("📱 REPORT: Saved \(appOpens) app opens for \(todayKey)")
     }
     
     // MARK: - Helpers

@@ -250,13 +250,15 @@ struct Achievement: Identifiable {
         Achievement(
             id: "perfect_week",
             title: "Perfect Week",
-            description: "Stay within all app limits for 7 days straight",
+            description: "Maintain a 7-day streak and stay within all app limits",
             icon: "checkmark.seal.fill",
             color: .success,
             category: .streaks,
             rarity: .uncommon,
             isUnlocked: { appState in 
-                // Check if all apps stayed within limits (no limits exceeded)
+                // Require 7+ day streak AND all apps currently within limits
+                // This is a proxy - proper implementation would check historical daily data
+                guard appState.currentStreak >= 7 else { return false }
                 let goals = CoreDataManager.shared.getActiveAppGoals()
                 return goals.allSatisfy { goal in
                     guard let bundleID = goal.appBundleID else { return true }
@@ -636,7 +638,15 @@ struct Achievement: Identifiable {
             color: .success,
             category: .usage,
             rarity: .uncommon,
-            isUnlocked: { appState in appState.todayScreenTimeMinutes < 60 }
+            isUnlocked: { appState in 
+                // Only unlock if it's very late in the day (after 11 PM) and screen time is still low
+                // This prevents false unlocks early in the day or when data hasn't loaded (0 minutes)
+                let calendar = Calendar.current
+                let now = Date()
+                let hour = calendar.component(.hour, from: now)
+                // Require: very late in day (11 PM+) AND data has loaded (not 0) AND screen time is actually low
+                return hour >= 23 && appState.todayScreenTimeMinutes > 0 && appState.todayScreenTimeMinutes < 60
+            }
         ),
         
         Achievement(
@@ -647,7 +657,14 @@ struct Achievement: Identifiable {
             color: .green,
             category: .usage,
             rarity: .rare,
-            isUnlocked: { appState in appState.todayScreenTimeMinutes < 30 }
+            isUnlocked: { appState in 
+                // Only unlock if it's very late in the day (after 11 PM) and screen time is still low
+                let calendar = Calendar.current
+                let now = Date()
+                let hour = calendar.component(.hour, from: now)
+                // Require: very late in day (11 PM+) AND data has loaded (not 0) AND screen time is actually low
+                return hour >= 23 && appState.todayScreenTimeMinutes > 0 && appState.todayScreenTimeMinutes < 30
+            }
         ),
         
         Achievement(
@@ -846,36 +863,37 @@ struct Achievement: Identifiable {
             rarity: .uncommon,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                // Check if pet is at full health and all apps within limits
+                // Require 3+ day streak AND pet at full health AND all apps within limits
+                guard appState.currentStreak >= 3 && pet.healthState == .fullHealth else { return false }
                 let goals = CoreDataManager.shared.getActiveAppGoals()
-                let allWithinLimits = goals.allSatisfy { goal in
+                return goals.allSatisfy { goal in
                     guard let bundleID = goal.appBundleID else { return true }
                     let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
                     return usage < Int(goal.dailyLimitMinutes)
                 }
-                return pet.healthState == .fullHealth && allWithinLimits
             }
         ),
         
         Achievement(
             id: "pet_happy_week",
             title: "Happy Companion",
-            description: "Keep your pet happy or healthier for a full week",
+            description: "Maintain a 7-day streak with your pet happy or healthier",
             icon: "face.smiling.fill",
             color: .yellow,
             category: .pet,
             rarity: .uncommon,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                // Check if pet is healthy and most apps within limits
+                // Require 7+ day streak AND pet is healthy AND most apps within limits
+                guard appState.currentStreak >= 7 else { return false }
+                guard pet.healthState == .fullHealth || pet.healthState == .happy else { return false }
                 let goals = CoreDataManager.shared.getActiveAppGoals()
                 let withinLimitsCount = goals.filter { goal in
                     guard let bundleID = goal.appBundleID else { return true }
                     let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
                     return usage < Int(goal.dailyLimitMinutes)
                 }.count
-                let mostWithinLimits = goals.isEmpty || (Double(withinLimitsCount) / Double(goals.count)) >= 0.7
-                return (pet.healthState == .fullHealth || pet.healthState == .happy) && mostWithinLimits
+                return goals.isEmpty || (Double(withinLimitsCount) / Double(goals.count)) >= 0.7
             }
         ),
         

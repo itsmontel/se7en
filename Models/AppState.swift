@@ -848,6 +848,42 @@ class AppState: ObservableObject {
                 )
             }
         }
+        
+        // Save daily health snapshot for stats page
+        saveDailyHealthSnapshot(healthPercentage: healthPercentage, mood: newHealthState)
+    }
+    
+    /// Save daily pet health snapshot for weekly stats
+    private func saveDailyHealthSnapshot(healthPercentage: Int, mood: PetHealthState) {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        // Get today's date key
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayKey = dateFormatter.string(from: Date())
+        
+        // Load existing daily health history
+        var dailyHealth = sharedDefaults.dictionary(forKey: "daily_health") as? [String: [String: Any]] ?? [:]
+        
+        // Update today's health
+        dailyHealth[todayKey] = [
+            "score": healthPercentage,
+            "mood": mood.rawValue
+        ]
+        
+        // Keep only last 30 days
+        let calendar = Calendar.current
+        if let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) {
+            let cutoffKey = dateFormatter.string(from: thirtyDaysAgo)
+            dailyHealth = dailyHealth.filter { key, _ in
+                key >= cutoffKey
+            }
+        }
+        
+        // Save back
+        sharedDefaults.set(dailyHealth, forKey: "daily_health")
+        sharedDefaults.synchronize()
     }
     
     /// Calculate pet health based on daily screen time

@@ -48,16 +48,25 @@ struct GoalsView: View {
     
     // Calculate the start of the selected week (Monday)
     private var weekStart: Date {
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2 // Monday = 2
+        
         let now = Date()
-        let currentWeekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)) ?? now
+        let today = calendar.startOfDay(for: now)
         
-        // Adjust to Monday (weekday 2)
-        let weekday = calendar.component(.weekday, from: currentWeekStart)
-        let daysToMonday = (weekday + 5) % 7 // Convert to Monday-based week
-        let monday = calendar.date(byAdding: .day, value: -daysToMonday + (selectedWeekOffset * 7), to: currentWeekStart) ?? currentWeekStart
+        // Get the weekday (1 = Sunday, 2 = Monday, etc)
+        let weekday = calendar.component(.weekday, from: today)
         
-        return monday
+        // Calculate days since Monday (if today is Monday, daysFromMonday = 0)
+        let daysFromMonday = (weekday - 2 + 7) % 7
+        
+        // Get this week's Monday
+        guard let thisMonday = calendar.date(byAdding: .day, value: -daysFromMonday, to: today) else {
+            return today
+        }
+        
+        // Apply week offset
+        return calendar.date(byAdding: .weekOfYear, value: selectedWeekOffset, to: thisMonday) ?? thisMonday
     }
     
     // Check if we can go forward (can't go past current week)
@@ -467,6 +476,8 @@ struct WeeklyHealthReport: View {
     let weekStart: Date
     let appState: AppState
     
+    private let appGroupID = "group.com.se7en.app"
+    
     private var weekDays: [Date] {
         (0..<7).compactMap { dayOffset in
             Calendar.current.date(byAdding: .day, value: dayOffset, to: weekStart)
@@ -506,8 +517,27 @@ struct WeeklyHealthReport: View {
             return (healthPercentage, mood)
         }
         
-        // For past days, return 0 if no actual data exists
-        // In the future, this could load from CoreData if historical data is stored
+        // For past days, read from stored daily health history
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return (0, .sick)
+        }
+        
+        sharedDefaults.synchronize()
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateKey = dateFormatter.string(from: date)
+        
+        // Load daily health history
+        if let dailyHealth = sharedDefaults.dictionary(forKey: "daily_health") as? [String: [String: Any]],
+           let dayData = dailyHealth[dateKey] {
+            let score = dayData["score"] as? Int ?? 0
+            let moodString = dayData["mood"] as? String ?? PetHealthState.sick.rawValue
+            let mood = PetHealthState(rawValue: moodString) ?? .sick
+            return (score, mood)
+        }
+        
+        // No historical data available
         return (0, .sick)
     }
     
@@ -618,14 +648,17 @@ struct AppLaunchesReport: View {
     let weekStart: Date
     let appState: AppState
     
+    private let appGroupID = "group.com.se7en.app"
+    
     private var weekDays: [Date] {
         (0..<7).compactMap { dayOffset in
             Calendar.current.date(byAdding: .day, value: dayOffset, to: weekStart)
         }
     }
     
-    // Get TOTAL app launches for a specific date (all apps combined)
-    // Returns 0 until real Screen Time API data is available
+    // Get TOTAL app opens for a specific date (all apps combined)
+    // Reads from the shared container populated by DeviceActivityReport extension
+    // Note: Tracks unique apps opened rather than actual pickups (iOS limitation)
     private func getTotalLaunches(for date: Date) -> Int {
         let calendar = Calendar.current
         let isToday = calendar.isDateInToday(date)
@@ -635,8 +668,31 @@ struct AppLaunchesReport: View {
             return 0
         }
         
-        // NO MOCK DATA - Return 0 until DeviceActivityReport provides real launch data
-        // In the future, this will use Screen Time API to get actual app launch counts
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return 0
+        }
+        
+        sharedDefaults.synchronize()
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateKey = dateFormatter.string(from: date)
+        
+        // For today, try both the daily_app_opens history and the live total_app_opens
+        if isToday {
+            // First try the live total
+            let liveAppOpens = sharedDefaults.integer(forKey: "total_app_opens")
+            if liveAppOpens > 0 {
+                return liveAppOpens
+            }
+        }
+        
+        // Load from daily app opens history
+        if let dailyAppOpens = sharedDefaults.dictionary(forKey: "daily_app_opens") as? [String: Int],
+           let appOpens = dailyAppOpens[dateKey] {
+            return appOpens
+        }
+        
         return 0
     }
     
@@ -690,15 +746,15 @@ struct AppLaunchesReport: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("App Launches Per Day")
+            Text("App Opens Per Day")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.textPrimary)
             
-            // Show TOTAL launches per day (Monday-Sunday) - all apps combined
+            // Show TOTAL app opens per day (Monday-Sunday) - all apps combined
                     VStack(alignment: .leading, spacing: 12) {
                 // Header showing total for week
                 HStack {
-                    Text("Total Launches This Week")
+                    Text("Total App Opens This Week")
                                     .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.textSecondary)
                             
@@ -713,7 +769,7 @@ struct AppLaunchesReport: View {
                         }
                 .padding(.horizontal, 12)
                         
-                // Daily launches bars - showing TOTAL launches per day
+                // Daily app opens bars - showing TOTAL app opens per day
                         ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                                 ForEach(weekDays, id: \.self) { date in

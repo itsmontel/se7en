@@ -27,6 +27,7 @@ struct UsageSummary {
     let totalDuration: TimeInterval
     let appCount: Int
     let topApps: [AppUsage]
+    let totalPickups: Int
     
     var totalMinutes: Int {
         Int(totalDuration / 60)
@@ -34,6 +35,13 @@ struct UsageSummary {
     
     var appsCount: Int {
         appCount
+    }
+    
+    init(totalDuration: TimeInterval, appCount: Int, topApps: [AppUsage], totalPickups: Int = 0) {
+        self.totalDuration = totalDuration
+        self.appCount = appCount
+        self.topApps = topApps
+        self.totalPickups = totalPickups
     }
 }
 
