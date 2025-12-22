@@ -1563,11 +1563,21 @@ struct GoalProgressOverview: View {
                 DisciplineBadge(score: disciplineScore)
             }
             
-            HStack(spacing: 16) {
-                MetricPill(title: "Screen Time", value: formatMinutes(todayScreenTime), color: .blue.opacity(0.15), icon: "iphone")
+            TabView {
+                // Puzzles (first/default)
                 MetricPill(title: "Puzzles", value: "\(puzzlesSolvedThisWeek)", color: .purple.opacity(0.15), icon: "puzzlepiece.fill", subtitle: "This week")
+                    .tag(0)
+                
+                // Screen Time
+                MetricPill(title: "Screen Time", value: formatMinutes(todayScreenTime), color: .blue.opacity(0.15), icon: "iphone")
+                    .tag(1)
+                
+                // Streak
                 MetricPill(title: "Streak", value: "\(streak)d", color: .primary.opacity(0.2), icon: "bolt.fill", subtitle: "Best \(longestStreak)d")
+                    .tag(2)
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 100)
         }
         .padding(20)
         .cardStyle()

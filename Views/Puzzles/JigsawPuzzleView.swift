@@ -10,7 +10,7 @@ struct JigsawPuzzleView: View {
     @State private var selectedPieceID: UUID? = nil
     @State private var showSuccess = false
     @State private var moves: Int = 0
-    @State private var showReference = true
+    @State private var showReference = false
     @State private var wrongPlacements: Set<Int> = [] // Track slots with wrong pieces for feedback
     
     private let gridSize = 3

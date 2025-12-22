@@ -343,16 +343,16 @@ struct FailureOverlay: View {
                 
                 Text(attemptsLeft > 0 ? "Wrong Order!" : "Out of Attempts!")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 
                 if attemptsLeft > 0 {
                     Text("You have \(attemptsLeft) attempt\(attemptsLeft == 1 ? "" : "s") left")
                         .font(.system(size: 18, weight: .medium, design: .rounded))
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(.secondary)
                 } else {
                     Text("Try a new pattern")
                         .font(.system(size: 18, weight: .medium, design: .rounded))
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(.secondary)
                 }
                 
                 HStack(spacing: 16) {
@@ -369,10 +369,10 @@ struct FailureOverlay: View {
                     Button(action: onDismiss) {
                         Text("Cancel")
                             .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.gray)
+                            .background(Color.gray.opacity(0.2))
                             .cornerRadius(12)
                     }
                 }
@@ -380,7 +380,7 @@ struct FailureOverlay: View {
             .padding(40)
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(UIColor.systemBackground))
+                    .fill(Color(UIColor.secondarySystemGroupedBackground))
             )
             .shadow(color: Color.black.opacity(0.3), radius: 20)
             .padding(40)

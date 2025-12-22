@@ -183,13 +183,13 @@ struct Achievement: Identifiable {
         
         Achievement(
             id: "goal_setter",
-            title: "Goal Setter",
-            description: "Set limits for 3 or more apps",
-            icon: "target",
+            title: "Block Master",
+            description: "Block 3 or more apps",
+            icon: "hand.raised.fill",
             color: .secondary,
             category: .gettingStarted,
             rarity: .common,
-            isUnlocked: { appState in appState.monitoredApps.count >= 3 }
+            isUnlocked: { _ in BlockedAppsManager.shared.blockedCount >= 3 }
         ),
         
         // MARK: - Streak Achievements
@@ -248,26 +248,38 @@ struct Achievement: Identifiable {
             isUnlocked: { appState in appState.longestStreak >= 100 }
         ),
         
-        // MARK: - Limit Management
+        // MARK: - Blocked Apps Achievements
         Achievement(
-            id: "perfect_week",
-            title: "Perfect Week",
-            description: "Maintain a 7-day streak and stay within all app limits",
-            icon: "checkmark.seal.fill",
-            color: .success,
-            category: .streaks,
+            id: "blocker_5",
+            title: "Focused Five",
+            description: "Block 5 apps",
+            icon: "hand.raised.fill",
+            color: .blue,
+            category: .usage,
+            rarity: .common,
+            isUnlocked: { _ in BlockedAppsManager.shared.blockedCount >= 5 }
+        ),
+        
+        Achievement(
+            id: "blocker_10",
+            title: "Digital Defender",
+            description: "Block 10 apps",
+            icon: "shield.fill",
+            color: .secondary,
+            category: .usage,
             rarity: .uncommon,
-            isUnlocked: { appState in 
-                // Require 7+ day streak AND all apps currently within limits
-                // This is a proxy - proper implementation would check historical daily data
-                guard appState.currentStreak >= 7 else { return false }
-                let goals = CoreDataManager.shared.getActiveAppGoals()
-                return goals.allSatisfy { goal in
-                    guard let bundleID = goal.appBundleID else { return true }
-                    let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
-                    return usage < Int(goal.dailyLimitMinutes)
-                }
-            }
+            isUnlocked: { _ in BlockedAppsManager.shared.blockedCount >= 10 }
+        ),
+        
+        Achievement(
+            id: "blocker_20",
+            title: "Focus Master",
+            description: "Block 20 apps",
+            icon: "lock.shield.fill",
+            color: .primary,
+            category: .usage,
+            rarity: .rare,
+            isUnlocked: { _ in BlockedAppsManager.shared.blockedCount >= 20 }
         ),
         
         Achievement(
@@ -302,38 +314,115 @@ struct Achievement: Identifiable {
             }
         ),
         
-        // MARK: - App Usage
+        // MARK: - Puzzle Solving Achievements
         Achievement(
-            id: "social_detox",
-            title: "Social Detox",
-            description: "Stay under limits on all social apps for 7 days",
-            icon: "person.slash.fill",
-            color: .secondary,
-            category: .usage,
+            id: "puzzle_first",
+            title: "Puzzle Solver",
+            description: "Solve your first puzzle",
+            icon: "puzzlepiece.fill",
+            color: .purple,
+            category: .habits,
+            rarity: .common,
+            isUnlocked: { _ in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                return puzzleHistory.values.reduce(0, +) >= 1
+            }
+        ),
+        
+        Achievement(
+            id: "puzzle_10",
+            title: "Puzzle Pro",
+            description: "Solve 10 puzzles",
+            icon: "puzzlepiece.extension.fill",
+            color: .purple,
+            category: .habits,
             rarity: .uncommon,
-            isUnlocked: { _ in false }
+            isUnlocked: { _ in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                return puzzleHistory.values.reduce(0, +) >= 10
+            }
         ),
         
         Achievement(
-            id: "minimalist",
-            title: "Digital Minimalist",
-            description: "Use less than 50% of daily limits for a week",
-            icon: "leaf.fill",
-            color: .success,
-            category: .usage,
+            id: "puzzle_50",
+            title: "Puzzle Master",
+            description: "Solve 50 puzzles",
+            icon: "puzzlepiece.extension.fill",
+            color: .purple,
+            category: .habits,
             rarity: .rare,
-            isUnlocked: { _ in false }
+            isUnlocked: { _ in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                return puzzleHistory.values.reduce(0, +) >= 50
+            }
         ),
         
         Achievement(
-            id: "efficiency_expert",
-            title: "Efficiency Expert", 
-            description: "Use less than 25% of daily limits for a week",
-            icon: "speedometer",
-            color: .primary,
-            category: .usage,
+            id: "puzzle_100",
+            title: "Puzzle Legend",
+            description: "Solve 100 puzzles",
+            icon: "puzzlepiece.extension.fill",
+            color: .purple,
+            category: .habits,
             rarity: .epic,
-            isUnlocked: { _ in false }
+            isUnlocked: { _ in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                return puzzleHistory.values.reduce(0, +) >= 100
+            }
+        ),
+        
+        // MARK: - No Puzzle Achievements (Self-Control)
+        Achievement(
+            id: "no_puzzle_day",
+            title: "Self Control",
+            description: "Go a full day without solving a puzzle",
+            icon: "hand.raised.slash.fill",
+            color: .success,
+            category: .habits,
+            rarity: .uncommon,
+            isUnlocked: { _ in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+                let yesterdayKey = dateFormatter.string(from: yesterday)
+                
+                return (puzzleHistory[yesterdayKey] ?? 0) == 0
+            }
+        ),
+        
+        Achievement(
+            id: "no_puzzle_week",
+            title: "Discipline Champion",
+            description: "Go 7 days without solving any puzzles",
+            icon: "hand.raised.slash.fill",
+            color: .success,
+            category: .habits,
+            rarity: .rare,
+            isUnlocked: { _ in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                let calendar = Calendar.current
+                
+                // Check last 7 days
+                for dayOffset in 1...7 {
+                    guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: Date()) else { return false }
+                    let dateKey = dateFormatter.string(from: date)
+                    if (puzzleHistory[dateKey] ?? 0) > 0 {
+                        return false
+                    }
+                }
+                return true
+            }
         ),
         
         // MARK: - Time-based Achievements
@@ -356,7 +445,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "night_owl",
             title: "Night Owl",
-            description: "Check limits after 10 PM for 7 days",
+            description: "Check the app after 10 PM for 7 days",
             icon: "moon.fill",
             color: .purple,
             category: .habits,
@@ -367,12 +456,15 @@ struct Achievement: Identifiable {
         Achievement(
             id: "weekend_warrior_v2",
             title: "Weekend Warrior",
-            description: "Maintain limits during weekends for 4 weeks",
+            description: "Keep apps blocked during weekends for 4 weeks",
             icon: "gamecontroller.fill",
             color: .secondary,
             category: .habits,
             rarity: .rare,
-            isUnlocked: { _ in false }
+            isUnlocked: { _ in
+                // Check if user has blocked apps and maintained streak for 4 weeks
+                BlockedAppsManager.shared.blockedCount > 0
+            }
         ),
         
         // MARK: - Milestone Achievements
@@ -422,37 +514,31 @@ struct Achievement: Identifiable {
         
         // MARK: - Challenge Achievements
         Achievement(
-            id: "app_destroyer",
-            title: "App Destroyer",
-            description: "Remove an app from monitoring after 30 days under limit",
-            icon: "trash.circle.fill",
-            color: .error,
+            id: "app_unlocker",
+            title: "App Unlocker",
+            description: "Unblock apps 10 times by solving puzzles",
+            icon: "lock.open.fill",
+            color: .blue,
             category: .challenges,
             rarity: .uncommon,
-            isUnlocked: { _ in false }
+            isUnlocked: { _ in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                return puzzleHistory.values.reduce(0, +) >= 10
+            }
         ),
         
-        // MARK: - Social Features (Future)
         Achievement(
-            id: "trendsetter",
-            title: "Trendsetter",
-            description: "Be the first among friends to reach 50-day streak",
-            icon: "chart.line.uptrend.xyaxis",
-            color: .secondary,
-            category: .social,
+            id: "blocker_streak",
+            title: "Committed Blocker",
+            description: "Keep at least 5 apps blocked for 30 days straight",
+            icon: "lock.shield.fill",
+            color: .primary,
+            category: .challenges,
             rarity: .rare,
-            isUnlocked: { _ in false }
-        ),
-        
-        Achievement(
-            id: "supportive_friend",
-            title: "Supportive Friend",
-            description: "Help 5 friends set up their goals",
-            icon: "hand.raised.fill",
-            color: .success,
-            category: .social,
-            rarity: .uncommon,
-            isUnlocked: { _ in false }
+            isUnlocked: { appState in
+                BlockedAppsManager.shared.blockedCount >= 5 && appState.longestStreak >= 30
+            }
         ),
         
         // MARK: - Special Events
@@ -470,12 +556,16 @@ struct Achievement: Identifiable {
         Achievement(
             id: "spring_cleaner",
             title: "Spring Cleaner",
-            description: "Reduce all app limits during spring",
+            description: "Block 10+ apps during spring months",
             icon: "leaf.arrow.circlepath",
             color: .success,
             category: .special,
             rarity: .uncommon,
-            isUnlocked: { _ in false }
+            isUnlocked: { _ in
+                let month = Calendar.current.component(.month, from: Date())
+                let isSpring = (3...5).contains(month) // March, April, May
+                return isSpring && BlockedAppsManager.shared.blockedCount >= 10
+            }
         ),
         
         // MARK: - Meta Achievements
@@ -535,27 +625,37 @@ struct Achievement: Identifiable {
             isUnlocked: { _ in false }
         ),
         
-        // MARK: - Improvement Achievements
+        // MARK: - Screen Time Achievements
         Achievement(
-            id: "gradual_improver",
-            title: "Gradual Improver",
-            description: "Reduce total daily limits by 2+ hours over a month",
+            id: "low_screen_time",
+            title: "Screen Time Warrior",
+            description: "Keep daily screen time under 2 hours for a week",
             icon: "chart.line.downtrend.xyaxis",
-            color: .primary,
+            color: .success,
             category: .improvement,
             rarity: .rare,
-            isUnlocked: { _ in false }
+            isUnlocked: { appState in
+                // Check if average screen time over last 7 days is under 120 minutes
+                let recentHistory = appState.dailyHistory.suffix(7)
+                guard recentHistory.count >= 7 else { return false }
+                let avgScreenTime = recentHistory.reduce(0) { $0 + $1.screenTimeMinutes } / recentHistory.count
+                return avgScreenTime < 120
+            }
         ),
         
         Achievement(
-            id: "goal_adjuster",
-            title: "Goal Adjuster",
-            description: "Fine-tune your limits 10 times",
-            icon: "slider.horizontal.3",
-            color: .secondary,
+            id: "minimal_usage",
+            title: "Digital Minimalist",
+            description: "Keep daily screen time under 1 hour for 3 days",
+            icon: "leaf.fill",
+            color: .success,
             category: .improvement,
-            rarity: .common,
-            isUnlocked: { _ in false }
+            rarity: .uncommon,
+            isUnlocked: { appState in
+                let recentHistory = appState.dailyHistory.suffix(3)
+                guard recentHistory.count >= 3 else { return false }
+                return recentHistory.allSatisfy { $0.screenTimeMinutes < 60 }
+            }
         ),
         
         // MARK: - Seasonal Achievements
@@ -585,7 +685,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "midnight_warrior",
             title: "Midnight Warrior",
-            description: "Successfully transition day limits at exactly midnight",
+            description: "Check your blocked apps at exactly midnight",
             icon: "clock.fill",
             color: .purple,
             category: .fun,
@@ -611,7 +711,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "self_control_sensei",
             title: "Self-Control Sensei",
-            description: "Master all aspects: 50+ day streak, 20+ achievements, perfect week",
+            description: "Master all aspects: 50+ day streak, 20+ achievements, 10+ blocked apps",
             icon: "figure.martial.arts",
             color: .purple,
             category: .mastery,
@@ -619,15 +719,7 @@ struct Achievement: Identifiable {
             isUnlocked: { appState in 
                 appState.longestStreak >= 50 && 
                 appState.unlockedAchievements.count >= 20 && 
-                // Check if all apps stayed within limits
-                {
-                    let goals = CoreDataManager.shared.getActiveAppGoals()
-                    return goals.allSatisfy { goal in
-                        guard let bundleID = goal.appBundleID else { return true }
-                        let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
-                        return usage < Int(goal.dailyLimitMinutes)
-                    }
-                }()
+                BlockedAppsManager.shared.blockedCount >= 10
             }
         ),
         
@@ -763,7 +855,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "morning_person",
             title: "Morning Person",
-            description: "Check your limits before 8 AM for 10 days",
+            description: "Check your blocked apps before 8 AM for 10 days",
             icon: "sunrise.fill",
             color: .yellow,
             category: .habits,
@@ -772,14 +864,21 @@ struct Achievement: Identifiable {
         ),
         
         Achievement(
-            id: "limit_ninja",
-            title: "Limit Ninja",
-            description: "Stay exactly at your limit (within 5 minutes) for 5 apps",
-            icon: "figure.martial.arts",
-            color: .indigo,
+            id: "puzzle_speed_demon",
+            title: "Puzzle Speed Demon",
+            description: "Solve 5 puzzles in a single day",
+            icon: "bolt.fill",
+            color: .yellow,
             category: .precision,
             rarity: .rare,
-            isUnlocked: { _ in false }
+            isUnlocked: { _ in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                let todayKey = dateFormatter.string(from: Date())
+                return (puzzleHistory[todayKey] ?? 0) >= 5
+            }
         ),
         
         Achievement(
@@ -796,37 +895,42 @@ struct Achievement: Identifiable {
         Achievement(
             id: "consistency_master",
             title: "Consistency Master",
-            description: "Stay within limits for 10 consecutive weeks",
+            description: "Maintain a 70-day streak with apps blocked",
             icon: "checkmark.circle.fill",
             color: .green,
             category: .mastery,
             rarity: .epic,
             isUnlocked: { appState in
-                // Check if user has maintained streak for 70 days (10 weeks)
-                return appState.longestStreak >= 70
+                appState.longestStreak >= 70 && BlockedAppsManager.shared.blockedCount > 0
             }
         ),
         
         Achievement(
             id: "app_minimalist",
             title: "App Minimalist",
-            description: "Successfully monitor only 1 app for 30 days",
+            description: "Block only 1 app for 30 days straight",
             icon: "minus.circle.fill",
             color: .gray,
             category: .minimalism,
             rarity: .uncommon,
-            isUnlocked: { _ in false }
+            isUnlocked: { appState in
+                BlockedAppsManager.shared.blockedCount == 1 && appState.longestStreak >= 30
+            }
         ),
         
         Achievement(
             id: "digital_detox_master",
             title: "Digital Detox Master",
-            description: "Go 7 days without opening any monitored apps",
+            description: "Keep screen time under 30 minutes for 7 days",
             icon: "power.circle.fill",
             color: .red,
             category: .mastery,
             rarity: .legendary,
-            isUnlocked: { _ in false }
+            isUnlocked: { appState in
+                let recentHistory = appState.dailyHistory.suffix(7)
+                guard recentHistory.count >= 7 else { return false }
+                return recentHistory.allSatisfy { $0.screenTimeMinutes < 30 }
+            }
         ),
         
         // MARK: - Pet-Based Achievements
@@ -865,14 +969,7 @@ struct Achievement: Identifiable {
             rarity: .uncommon,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                // Require 3+ day streak AND pet at full health AND all apps within limits
-                guard appState.currentStreak >= 3 && pet.healthState == .fullHealth else { return false }
-                let goals = CoreDataManager.shared.getActiveAppGoals()
-                return goals.allSatisfy { goal in
-                    guard let bundleID = goal.appBundleID else { return true }
-                    let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
-                    return usage < Int(goal.dailyLimitMinutes)
-                }
+                return appState.currentStreak >= 3 && pet.healthState == .fullHealth
             }
         ),
         
@@ -886,16 +983,8 @@ struct Achievement: Identifiable {
             rarity: .uncommon,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                // Require 7+ day streak AND pet is healthy AND most apps within limits
-                guard appState.currentStreak >= 7 else { return false }
-                guard pet.healthState == .fullHealth || pet.healthState == .happy else { return false }
-                let goals = CoreDataManager.shared.getActiveAppGoals()
-                let withinLimitsCount = goals.filter { goal in
-                    guard let bundleID = goal.appBundleID else { return true }
-                    let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
-                    return usage < Int(goal.dailyLimitMinutes)
-                }.count
-                return goals.isEmpty || (Double(withinLimitsCount) / Double(goals.count)) >= 0.7
+                return appState.currentStreak >= 7 && 
+                       (pet.healthState == .fullHealth || pet.healthState == .happy)
             }
         ),
         
@@ -909,15 +998,7 @@ struct Achievement: Identifiable {
             rarity: .rare,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                // This would need to track if pet was sick and is now healthy
-                // Check if pet is at full health and all apps within limits
-                let goals = CoreDataManager.shared.getActiveAppGoals()
-                let allWithinLimits = goals.allSatisfy { goal in
-                    guard let bundleID = goal.appBundleID else { return true }
-                    let usage = ScreenTimeService.shared.getUsageMinutes(for: bundleID)
-                    return usage < Int(goal.dailyLimitMinutes)
-                }
-                return pet.healthState == .fullHealth && allWithinLimits
+                return pet.healthState == .fullHealth && appState.currentStreak >= 3
             }
         ),
         
@@ -970,12 +1051,7 @@ struct Achievement: Identifiable {
             rarity: .uncommon,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                // Health score of 100 means perfect usage
-                let totalUsage = appState.monitoredApps.reduce(0) { $0 + $1.usedToday }
-                let totalLimits = appState.monitoredApps.reduce(0) { $0 + $1.dailyLimit }
-                guard totalLimits > 0 else { return false }
-                let usagePercentage = Double(totalUsage) / Double(totalLimits)
-                return usagePercentage <= 0.5 && pet.healthState == .fullHealth
+                return pet.healthState == .fullHealth && appState.todayScreenTimeMinutes < 60
             }
         ),
         
@@ -993,104 +1069,96 @@ struct Achievement: Identifiable {
         // MARK: - Expansion: Progression (adds up to 100 total)
         ,
         Achievement(
-            id: "apps_5",
-            title: "Starter Set",
-            description: "Add limits for 5 apps",
-            icon: "hand.tap.fill",
-            color: .primary,
-            category: .usage,
-            rarity: .common,
-            isUnlocked: { appState in appState.monitoredApps.count >= 5 }
-        ),
-        Achievement(
-            id: "apps_10",
-            title: "Double Digits",
-            description: "Add limits for 10 apps",
-            icon: "hand.tap.fill",
+            id: "low_screen_week",
+            title: "Low Screen Week",
+            description: "Keep screen time under 3 hours per day for a week",
+            icon: "chart.line.downtrend.xyaxis",
             color: .success,
             category: .usage,
-            rarity: .common,
-            isUnlocked: { appState in appState.monitoredApps.count >= 10 }
-        ),
-        Achievement(
-            id: "apps_15",
-            title: "App Manager",
-            description: "Add limits for 15 apps",
-            icon: "rectangle.stack.badge.person.crop",
-            color: .secondary,
-            category: .usage,
             rarity: .uncommon,
-            isUnlocked: { appState in appState.monitoredApps.count >= 15 }
+            isUnlocked: { appState in
+                let recentHistory = appState.dailyHistory.suffix(7)
+                guard recentHistory.count >= 7 else { return false }
+                return recentHistory.allSatisfy { $0.screenTimeMinutes < 180 }
+            }
         ),
         Achievement(
-            id: "apps_20",
-            title: "App Tamer",
-            description: "Add limits for 20 apps",
-            icon: "apps.iphone",
-            color: .warning,
-            category: .usage,
-            rarity: .rare,
-            isUnlocked: { appState in appState.monitoredApps.count >= 20 }
-        ),
-        Achievement(
-            id: "apps_25",
-            title: "Total Control",
-            description: "Add limits for 25 apps",
-            icon: "sparkles.rectangle.stack",
+            id: "puzzle_marathon",
+            title: "Puzzle Marathon",
+            description: "Solve 25 puzzles total",
+            icon: "puzzlepiece.extension.fill",
             color: .purple,
             category: .usage,
-            rarity: .epic,
-            isUnlocked: { appState in appState.monitoredApps.count >= 25 }
-        ),
-        Achievement(
-            id: "goals_5",
-            title: "Goal Getter",
-            description: "Create 5 app goals",
-            icon: "target",
-            color: .primary,
-            category: .milestones,
-            rarity: .common,
-            isUnlocked: { appState in appState.userGoals.count >= 5 }
-        ),
-        Achievement(
-            id: "goals_10",
-            title: "Goal Builder",
-            description: "Create 10 app goals",
-            icon: "target",
-            color: .success,
-            category: .milestones,
             rarity: .uncommon,
-            isUnlocked: { appState in appState.userGoals.count >= 10 }
+            isUnlocked: { _ in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                return puzzleHistory.values.reduce(0, +) >= 25
+            }
         ),
         Achievement(
-            id: "goals_15",
-            title: "Goal Architect",
-            description: "Create 15 app goals",
-            icon: "target",
-            color: .secondary,
-            category: .milestones,
-            rarity: .rare,
-            isUnlocked: { appState in appState.userGoals.count >= 15 }
+            id: "blocked_category",
+            title: "Category Blocker",
+            description: "Block an entire app category",
+            icon: "folder.fill.badge.minus",
+            color: .orange,
+            category: .usage,
+            rarity: .uncommon,
+            isUnlocked: { _ in
+                BlockedAppsManager.shared.blockedSelection.categoryTokens.count >= 1
+            }
         ),
         Achievement(
-            id: "goals_20",
-            title: "Goal Legend",
-            description: "Create 20 app goals",
-            icon: "target",
-            color: .purple,
-            category: .milestones,
-            rarity: .epic,
-            isUnlocked: { appState in appState.userGoals.count >= 20 }
-        ),
-        Achievement(
-            id: "goals_25",
-            title: "Limit Overlord",
-            description: "Create 25 app goals",
-            icon: "target",
+            id: "zero_puzzles_month",
+            title: "Ultimate Discipline",
+            description: "Go 30 days without solving any puzzles",
+            icon: "crown.fill",
             color: .yellow,
-            category: .milestones,
+            category: .usage,
             rarity: .legendary,
-            isUnlocked: { appState in appState.userGoals.count >= 25 }
+            isUnlocked: { appState in
+                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                let calendar = Calendar.current
+                
+                // Check last 30 days
+                for dayOffset in 1...30 {
+                    guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: Date()) else { return false }
+                    let dateKey = dateFormatter.string(from: date)
+                    if (puzzleHistory[dateKey] ?? 0) > 0 {
+                        return false
+                    }
+                }
+                return appState.longestStreak >= 30
+            }
+        ),
+        Achievement(
+            id: "screen_time_reducer",
+            title: "Screen Time Reducer",
+            description: "Reduce weekly average screen time by 50%",
+            icon: "chart.line.downtrend.xyaxis",
+            color: .success,
+            category: .milestones,
+            rarity: .rare,
+            isUnlocked: { appState in
+                let recentHistory = appState.dailyHistory.suffix(7)
+                guard recentHistory.count >= 7 else { return false }
+                let avgScreenTime = recentHistory.reduce(0) { $0 + $1.screenTimeMinutes } / recentHistory.count
+                return avgScreenTime < 90 // Under 1.5 hours average
+            }
+        ),
+        Achievement(
+            id: "puzzle_variety",
+            title: "Puzzle Variety",
+            description: "Solve all 4 types of puzzles",
+            icon: "puzzlepiece.extension.fill",
+            color: .purple,
+            category: .milestones,
+            rarity: .uncommon,
+            isUnlocked: { _ in false } // Would need to track puzzle types solved
         ),
         Achievement(
             id: "streak_45",
