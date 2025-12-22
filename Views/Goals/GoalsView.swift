@@ -1,4 +1,5 @@
 import SwiftUI
+import DeviceActivity
 
 // MARK: - Coach Insight Model
 struct CoachInsight: Identifiable {
@@ -954,14 +955,22 @@ struct AppLaunchesReport: View {
         return totalMinutes
     }
     
-    // Get top 5 apps by weekly usage (hours and minutes)
+    // Get top 5 apps by usage from the report system (actual device usage, not just blocked apps)
     private var topApps: [(name: String, weeklyUsageMinutes: Int, icon: String, color: Color)] {
-        // Calculate total weekly usage per app - only include apps with actual usage
-        let sortedApps = appState.monitoredApps
-            .map { app in
-                (name: app.name, weeklyUsageMinutes: getWeeklyUsage(for: app), icon: app.icon, color: app.color)
-            }
-            .filter { $0.weeklyUsageMinutes > 0 } // Only show apps with actual usage
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return []
+        }
+        sharedDefaults.synchronize()
+        
+        // Get per-app usage from the report system (today's usage in minutes)
+        guard let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] else {
+            return []
+        }
+        
+        // Sort by usage and get top 5
+        let sortedApps = perAppUsage
+            .map { (name: $0.key, weeklyUsageMinutes: $0.value, icon: "app.fill", color: Color.primary) }
+            .filter { $0.weeklyUsageMinutes > 0 }
             .sorted { $0.weeklyUsageMinutes > $1.weeklyUsageMinutes }
             .prefix(5)
         
@@ -1104,6 +1113,12 @@ struct AppLaunchesReport: View {
         .padding(20)
         .background(Color.cardBackground)
         .cornerRadius(16)
+        .background(
+            // Hidden DeviceActivityReport to trigger data refresh
+            DeviceActivityReport(.todayOverview)
+                .frame(width: 0, height: 0)
+                .opacity(0)
+        )
     }
     
     private func dayAbbreviation(for date: Date) -> String {
