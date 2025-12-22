@@ -187,6 +187,16 @@ struct GoalsView: View {
                         Spacer()
                     }
                 }
+                .onAppear {
+                    // Force sync screen time data from shared container
+                    appState.preloadScreenTimeFromSharedContainer()
+                    appState.updatePetHealth()
+                    
+                    // Trigger report refresh
+                    Task {
+                        await ScreenTimeService.shared.updateUsageFromReport()
+                    }
+                }
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -882,6 +892,10 @@ struct AppLaunchesReport: View {
     
     private let appGroupID = "group.com.se7en.app"
     
+    // State to trigger refresh
+    @State private var refreshTrigger = false
+    @State private var isLoading = true
+    
     private var weekDays: [Date] {
         (0..<7).compactMap { dayOffset in
             Calendar.current.date(byAdding: .day, value: dayOffset, to: weekStart)
@@ -889,8 +903,6 @@ struct AppLaunchesReport: View {
     }
     
     // Get TOTAL app opens for a specific date (all apps combined)
-    // Reads from the shared container populated by DeviceActivityReport extension
-    // Note: Tracks unique apps opened rather than actual pickups (iOS limitation)
     private func getTotalLaunches(for date: Date) -> Int {
         let calendar = Calendar.current
         let isToday = calendar.isDateInToday(date)
@@ -904,33 +916,45 @@ struct AppLaunchesReport: View {
             return 0
         }
         
+        // CRITICAL: Force synchronize to get fresh data from disk
         sharedDefaults.synchronize()
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateKey = dateFormatter.string(from: date)
         
-        // For today, try both the daily_app_opens history and the live total_app_opens
+        // For today, try multiple sources
         if isToday {
-            // First try the live total from UserDefaults
+            // Source 1: Live total_app_opens from UserDefaults
             let liveAppOpens = sharedDefaults.integer(forKey: "total_app_opens")
             if liveAppOpens > 0 {
                 return liveAppOpens
             }
             
-            // Fallback: Try to read from JSON backup file
+            // Source 2: Today's entry in daily_app_opens
+            if let dailyAppOpens = sharedDefaults.dictionary(forKey: "daily_app_opens") as? [String: Int],
+               let todayOpens = dailyAppOpens[dateKey], todayOpens > 0 {
+                return todayOpens
+            }
+            
+            // Source 3: JSON backup file
             if let jsonData = readScreenTimeJSONBackup() {
                 if let appOpens = jsonData["total_app_opens"] as? Int, appOpens > 0 {
                     return appOpens
                 }
-                // Fallback: count apps in per_app_usage
-                if let perAppUsage = jsonData["per_app_usage"] as? [String: Int] {
+                // Source 4: Count unique apps from per_app_usage
+                if let perAppUsage = jsonData["per_app_usage"] as? [String: Int], !perAppUsage.isEmpty {
                     return perAppUsage.count
                 }
             }
+            
+            // Source 5: Count from per_app_usage in UserDefaults
+            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int], !perAppUsage.isEmpty {
+                return perAppUsage.count
+            }
         }
         
-        // Load from daily app opens history
+        // For past days: Load from daily app opens history
         if let dailyAppOpens = sharedDefaults.dictionary(forKey: "daily_app_opens") as? [String: Int],
            let appOpens = dailyAppOpens[dateKey] {
             return appOpens
@@ -953,57 +977,70 @@ struct AppLaunchesReport: View {
         return json
     }
     
-    
-    // Get weekly usage (in minutes) for an app
-    private func getWeeklyUsage(for app: MonitoredApp) -> Int {
-        let calendar = Calendar.current
-        var totalMinutes = 0
-        
-        for date in weekDays {
-            let isToday = calendar.isDateInToday(date)
-            let isFuture = date > Date()
-            
-            if isFuture {
-                continue
-            }
-            
-            if isToday {
-                // Today's usage - use real data
-                totalMinutes += app.usedToday
-            } else {
-                // For past days, return 0 (no historical usage data available)
-                // In the future, this could load from CoreData if historical usage is stored
-                // For now, only count today's usage
-            }
-        }
-        
-        return totalMinutes
-    }
-    
-    // Get top 5 apps by usage from the report system (actual device usage, not just blocked apps)
+    // FIX: Get TOP 5 apps by WEEKLY usage (aggregate from daily history)
     private var topApps: [(name: String, weeklyUsageMinutes: Int, icon: String, color: Color)] {
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return []
         }
         sharedDefaults.synchronize()
         
-        // Try to get per-app usage from UserDefaults first
-        var perAppUsage: [String: Int]? = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int]
+        var weeklyUsage: [String: Int] = [:]
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
         
-        // Fallback: Try to read from JSON backup file
-        if perAppUsage == nil || perAppUsage?.isEmpty == true {
-            if let jsonData = readScreenTimeJSONBackup(),
-               let jsonPerAppUsage = jsonData["per_app_usage"] as? [String: Int] {
-                perAppUsage = jsonPerAppUsage
+        // Aggregate usage across all days in the week
+        for date in weekDays {
+            let isFuture = date > Date()
+            if isFuture { continue }
+            
+            let dateKey = dateFormatter.string(from: date)
+            let isToday = Calendar.current.isDateInToday(date)
+            
+            if isToday {
+                // For today, get current per_app_usage
+                var todayUsage: [String: Int]? = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int]
+                
+                // Fallback: Try JSON backup
+                if todayUsage == nil || todayUsage?.isEmpty == true {
+                    if let jsonData = readScreenTimeJSONBackup(),
+                       let jsonPerAppUsage = jsonData["per_app_usage"] as? [String: Int] {
+                        todayUsage = jsonPerAppUsage
+                    }
+                }
+                
+                // Add today's usage to weekly totals
+                if let usage = todayUsage {
+                    for (appName, minutes) in usage {
+                        weeklyUsage[appName, default: 0] += minutes
+                    }
+                }
+            } else {
+                // For past days, read from daily_per_app_usage history
+                if let dailyPerAppUsage = sharedDefaults.dictionary(forKey: "daily_per_app_usage") as? [String: [String: Int]],
+                   let dayUsage = dailyPerAppUsage[dateKey] {
+                    for (appName, minutes) in dayUsage {
+                        weeklyUsage[appName, default: 0] += minutes
+                    }
+                }
             }
         }
         
-        guard let usage = perAppUsage, !usage.isEmpty else {
+        // If no weekly data found, fall back to today's data only
+        if weeklyUsage.isEmpty {
+            if let todayUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
+                weeklyUsage = todayUsage
+            } else if let jsonData = readScreenTimeJSONBackup(),
+                      let jsonPerAppUsage = jsonData["per_app_usage"] as? [String: Int] {
+                weeklyUsage = jsonPerAppUsage
+            }
+        }
+        
+        guard !weeklyUsage.isEmpty else {
             return []
         }
         
         // Sort by usage and get top 5
-        let sortedApps = usage
+        let sortedApps = weeklyUsage
             .map { (name: $0.key, weeklyUsageMinutes: $0.value, icon: "app.fill", color: Color.primary) }
             .filter { $0.weeklyUsageMinutes > 0 }
             .sorted { $0.weeklyUsageMinutes > $1.weeklyUsageMinutes }
@@ -1016,7 +1053,7 @@ struct AppLaunchesReport: View {
         let maxLaunch = weekDays.reduce(0) { maxTotal, date in
             max(maxTotal, getTotalLaunches(for: date))
         }
-        return max(maxLaunch, 50) // Minimum scale of 50
+        return max(maxLaunch, 50)
     }
     
     var body: some View {
@@ -1025,77 +1062,74 @@ struct AppLaunchesReport: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.textPrimary)
             
-            // Show TOTAL app opens per day (Monday-Sunday) - all apps combined
-                    VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
                 // Header showing total for week
                 HStack {
                     Text("Total App Opens This Week")
-                                    .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.textSecondary)
-                            
-                            Spacer()
-                            
+                    
+                    Spacer()
+                    
                     let weekTotal = weekDays.reduce(0) { total, date in
                         total + getTotalLaunches(for: date)
                     }
                     Text("\(weekTotal)")
                         .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.success)
-                        }
+                        .foregroundColor(.success)
+                }
                 .padding(.horizontal, 12)
-                        
-                // Daily app opens bars - showing TOTAL app opens per day
-                        ScrollView(.horizontal, showsIndicators: false) {
+                
+                // Daily app opens bars
+                ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                                ForEach(weekDays, id: \.self) { date in
+                        ForEach(weekDays, id: \.self) { date in
                             let totalLaunches = getTotalLaunches(for: date)
-                                    let dayName = dayAbbreviation(for: date)
-                                    let isToday = Calendar.current.isDateInToday(date)
-                                    let isFuture = date > Date()
-                                    
+                            let dayName = dayAbbreviation(for: date)
+                            let isToday = Calendar.current.isDateInToday(date)
+                            let isFuture = date > Date()
+                            
                             VStack(spacing: 8) {
-                                        // Day label
-                                        Text(dayName)
+                                Text(dayName)
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(isFuture ? .textSecondary.opacity(0.5) : (isToday ? .primary : .textSecondary))
-                                        
-                                // Bar showing total launches for the day
+                                
                                 if !isFuture {
-                                            VStack(spacing: 4) {
+                                    VStack(spacing: 4) {
                                         RoundedRectangle(cornerRadius: 6)
-                                                    .fill(
-                                                        LinearGradient(
-                                                            colors: isToday ? [Color.success, Color.success.opacity(0.8)] : [Color.success.opacity(0.7), Color.success.opacity(0.5)],
-                                                            startPoint: .top,
-                                                            endPoint: .bottom
-                                                        )
-                                                    )
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: isToday ? [Color.success, Color.success.opacity(0.8)] : [Color.success.opacity(0.7), Color.success.opacity(0.5)],
+                                                    startPoint: .top,
+                                                    endPoint: .bottom
+                                                )
+                                            )
                                             .frame(width: 40, height: CGFloat(min(120, max(12, totalLaunches * 2))))
-                                                
+                                        
                                         Text("\(totalLaunches)")
                                             .font(.system(size: 11, weight: .bold))
-                                                    .foregroundColor(isToday ? .success : .textSecondary)
-                                            }
-                                        } else {
-                                            VStack(spacing: 4) {
+                                            .foregroundColor(isToday ? .success : .textSecondary)
+                                    }
+                                } else {
+                                    VStack(spacing: 4) {
                                         RoundedRectangle(cornerRadius: 6)
-                                                    .fill(Color.gray.opacity(0.1))
+                                            .fill(Color.gray.opacity(0.1))
                                             .frame(width: 40, height: 12)
-                                                
-                                                Text("-")
+                                        
+                                        Text("-")
                                             .font(.system(size: 11, weight: .medium))
-                                                    .foregroundColor(.textSecondary.opacity(0.3))
-                                            }
-                                        }
+                                            .foregroundColor(.textSecondary.opacity(0.3))
                                     }
                                 }
                             }
-                    .padding(.horizontal, 12)
                         }
                     }
+                    .padding(.horizontal, 12)
+                }
+            }
             .padding(.vertical, 12)
-                    .background(Color.cardBackground.opacity(0.5))
-                    .cornerRadius(12)
+            .background(Color.cardBackground.opacity(0.5))
+            .cornerRadius(12)
             
             Divider()
                 .padding(.vertical, 8)
@@ -1106,41 +1140,48 @@ struct AppLaunchesReport: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.textPrimary)
                 
-                ForEach(Array(topApps.enumerated()), id: \.offset) { index, app in
-                    HStack(spacing: 12) {
-                        // Rank badge
-                        ZStack {
-                            Circle()
-                                .fill(Color.success.opacity(0.2))
-                                .frame(width: 28, height: 28)
+                if topApps.isEmpty {
+                    Text("No app usage data available yet")
+                        .font(.system(size: 14))
+                        .foregroundColor(.textSecondary)
+                        .padding(.vertical, 8)
+                } else {
+                    ForEach(Array(topApps.enumerated()), id: \.offset) { index, app in
+                        HStack(spacing: 12) {
+                            // Rank badge
+                            ZStack {
+                                Circle()
+                                    .fill(Color.success.opacity(0.2))
+                                    .frame(width: 28, height: 28)
+                                
+                                Text("\(index + 1)")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.success)
+                            }
                             
-                            Text("\(index + 1)")
+                            // App icon
+                            ZStack {
+                                Circle()
+                                    .fill(app.color.opacity(0.2))
+                                    .frame(width: 36, height: 36)
+                                
+                                Image(systemName: app.icon)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(app.color)
+                            }
+                            
+                            // App name
+                            Text(app.name)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.textPrimary)
+                            
+                            Spacer()
+                            
+                            // Weekly usage
+                            Text(formatWeeklyUsage(app.weeklyUsageMinutes))
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(.success)
                         }
-                        
-                        // App icon
-                        ZStack {
-                            Circle()
-                                .fill(app.color.opacity(0.2))
-                                .frame(width: 36, height: 36)
-                            
-                            Image(systemName: app.icon)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(app.color)
-                        }
-                        
-                        // App name
-                        Text(app.name)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.textPrimary)
-                        
-                        Spacer()
-                        
-                        // Weekly usage (hours and minutes)
-                        Text(formatWeeklyUsage(app.weeklyUsageMinutes))
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.success)
                     }
                 }
             }
@@ -1148,12 +1189,17 @@ struct AppLaunchesReport: View {
         .padding(20)
         .background(Color.cardBackground)
         .cornerRadius(16)
+        .onAppear {
+            // Force refresh data when view appears
+            refreshTrigger.toggle()
+        }
         .background(
             // Hidden DeviceActivityReport to trigger data refresh
             DeviceActivityReport(.todayOverview)
                 .frame(width: 0, height: 0)
                 .opacity(0)
         )
+        .id(refreshTrigger) // Force view rebuild on refresh
     }
     
     private func dayAbbreviation(for date: Date) -> String {

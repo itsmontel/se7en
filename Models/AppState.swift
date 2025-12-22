@@ -65,74 +65,69 @@ class AppState: ObservableObject {
     private var lastLoadAppGoalsTime: Date = Date.distantPast
     private let loadAppGoalsThrottleInterval: TimeInterval = 2.0 // Minimum 2 seconds between calls
     
-    /// Preload screen time from shared container
-    private func preloadScreenTimeFromSharedContainer() {
+    /// Preload screen time from shared container (called on app launch and foreground)
+    func preloadScreenTimeFromSharedContainer() {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
+        // CRITICAL: Force synchronize to read fresh data from disk
         sharedDefaults.synchronize()
-        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+        
         let previousValue = self.todayScreenTimeMinutes
+        var newValue = 0
         
-        // Prefer total_usage when present
+        // Source 1: total_usage key (primary)
+        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
         if totalUsage > 0 {
+            newValue = totalUsage
             #if DEBUG
-            print("📱 AppState: preloadScreenTimeFromSharedContainer updating todayScreenTimeMinutes from \(previousValue) to \(totalUsage)")
+            print("📱 AppState: Using total_usage: \(totalUsage) minutes")
             #endif
-            self.todayScreenTimeMinutes = totalUsage
-            // Update pet health if screen time changed
-            if totalUsage != previousValue {
-                #if DEBUG
-                print("📱 AppState: Screen time changed, triggering pet health update")
-                #endif
-                updatePetHealth()
-            }
-            return
         }
         
-        // Fallback: sum per-app usage if total_usage isn't present yet
-        if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") {
-            let sumFromPerApp = perAppUsage.values.reduce(0) { partial, value in
-                if let intValue = value as? Int { return partial + intValue }
-                if let numberValue = value as? NSNumber { return partial + numberValue.intValue }
-                if let doubleValue = value as? Double { return partial + Int(doubleValue) }
-                return partial
-            }
-            #if DEBUG
-            print("📱 AppState: per_app_usage sum = \(sumFromPerApp)")
-            #endif
-            if sumFromPerApp > 0 {
-                #if DEBUG
-                print("📱 AppState: preloadScreenTimeFromSharedContainer updating todayScreenTimeMinutes from \(previousValue) to \(sumFromPerApp) (from per_app_usage)")
-                #endif
-                self.todayScreenTimeMinutes = sumFromPerApp
-                // Update pet health if screen time changed
-                if sumFromPerApp != previousValue {
-                    #if DEBUG
-                    print("📱 AppState: Screen time changed, triggering pet health update")
-                    #endif
-                    updatePetHealth()
+        // Source 2: Sum from per_app_usage (fallback)
+        if newValue == 0 {
+            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") {
+                let sumFromPerApp = perAppUsage.values.reduce(0) { partial, value in
+                    if let intValue = value as? Int { return partial + intValue }
+                    if let numberValue = value as? NSNumber { return partial + numberValue.intValue }
+                    if let doubleValue = value as? Double { return partial + Int(doubleValue) }
+                    return partial
                 }
-                return
+                if sumFromPerApp > 0 {
+                    newValue = sumFromPerApp
+                    #if DEBUG
+                    print("📱 AppState: Using per_app_usage sum: \(sumFromPerApp) minutes")
+                    #endif
+                }
             }
         }
         
-        // File fallback: DeviceActivityReport extension writes a JSON backup file.
-        let fileUsage = readTotalUsageFromSharedFileBackup(appGroupID: appGroupID)
-        if fileUsage > 0 {
+        // Source 3: JSON backup file (second fallback)
+        if newValue == 0 {
+            let fileUsage = readTotalUsageFromSharedFileBackup(appGroupID: appGroupID)
+            if fileUsage > 0 {
+                newValue = fileUsage
+                #if DEBUG
+                print("📱 AppState: Using JSON file backup: \(fileUsage) minutes")
+                #endif
+            }
+        }
+        
+        // Update only if we have data
+        if newValue > 0 && newValue != previousValue {
             #if DEBUG
-            print("📱 AppState: preloadScreenTimeFromSharedContainer using file backup total_usage: \(fileUsage)")
+            print("📱 AppState: Updating todayScreenTimeMinutes from \(previousValue) to \(newValue)")
             #endif
-            self.todayScreenTimeMinutes = fileUsage
-            if fileUsage != previousValue {
-                updatePetHealth()
-            }
-            return
+            self.todayScreenTimeMinutes = newValue
+            
+            // CRITICAL: Update pet health when screen time changes
+            updatePetHealth()
+        } else if newValue == 0 {
+            #if DEBUG
+            print("📱 AppState: No screen time data found - pet health will show 100%")
+            #endif
         }
-        
-        #if DEBUG
-        print("📱 AppState: No screen time data found in shared container or file backup")
-        #endif
     }
     
     init() {
@@ -1212,8 +1207,31 @@ class AppState: ObservableObject {
     
     /// Calculate pet health based on daily screen time
     func calculatePetHealthPercentage() -> Int {
-        // IMPORTANT: Keep this calculation lightweight (no heavy I/O). We rely on
-        // `todayScreenTimeMinutes` being refreshed from the shared container / file backup.
+        // ALWAYS sync from shared container first to get latest data
+        let appGroupID = "group.com.se7en.app"
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            sharedDefaults.synchronize()
+            
+            // Read fresh data
+            var freshTotalMinutes = sharedDefaults.integer(forKey: "total_usage")
+            
+            // Fallback to per_app_usage sum
+            if freshTotalMinutes == 0 {
+                if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") {
+                    freshTotalMinutes = perAppUsage.values.reduce(0) { partial, value in
+                        if let intValue = value as? Int { return partial + intValue }
+                        if let numberValue = value as? NSNumber { return partial + numberValue.intValue }
+                        return partial
+                    }
+                }
+            }
+            
+            // Update todayScreenTimeMinutes if we have fresh data
+            if freshTotalMinutes > 0 && freshTotalMinutes != todayScreenTimeMinutes {
+                todayScreenTimeMinutes = freshTotalMinutes
+            }
+        }
+        
         let totalMinutes = todayScreenTimeMinutes
         let totalHours = Double(totalMinutes) / 60.0
         
@@ -1228,6 +1246,10 @@ class AppState: ObservableObject {
         case 8..<10: healthPercentage = Int(20.0 - (10.0 * (totalHours - 8.0)))
         default: healthPercentage = 0
         }
+        
+        #if DEBUG
+        print("📱 AppState: calculatePetHealthPercentage - totalMinutes=\(totalMinutes), hours=\(totalHours), health=\(healthPercentage)%")
+        #endif
         
         return max(0, min(100, healthPercentage))
     }

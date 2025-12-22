@@ -152,6 +152,9 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         // Save daily app opens history (for stats page)
         saveDailyAppOpens(totalPickups, to: sharedDefaults)
         
+        // Save daily per-app usage history (for weekly aggregation)
+        saveDailyPerAppUsage(perAppUsage, to: sharedDefaults)
+        
         // Match tokens to limits and write usage by token hash
         matchTokensToLimits(
             tokenToDuration: tokenToDuration,
@@ -314,6 +317,34 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         sharedDefaults.set(dailyAppOpens, forKey: "daily_app_opens")
         #if DEBUG
         print("📱 REPORT: Saved \(appOpens) app opens for \(todayKey)")
+        #endif
+    }
+    
+    /// Save per-app usage for the day (enables weekly aggregation)
+    private func saveDailyPerAppUsage(_ perAppUsage: [String: Int], to sharedDefaults: UserDefaults) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayKey = dateFormatter.string(from: Date())
+        
+        // Load existing history
+        var dailyPerAppUsage = sharedDefaults.dictionary(forKey: "daily_per_app_usage") as? [String: [String: Int]] ?? [:]
+        
+        // Update today's per-app usage
+        dailyPerAppUsage[todayKey] = perAppUsage
+        
+        // Keep only last 14 days
+        let calendar = Calendar.current
+        let twoWeeksAgo = calendar.date(byAdding: .day, value: -14, to: Date()) ?? Date()
+        let cutoffKey = dateFormatter.string(from: twoWeeksAgo)
+        
+        dailyPerAppUsage = dailyPerAppUsage.filter { key, _ in
+            key >= cutoffKey
+        }
+        
+        sharedDefaults.set(dailyPerAppUsage, forKey: "daily_per_app_usage")
+        
+        #if DEBUG
+        print("📱 REPORT: Saved per-app usage for \(todayKey): \(perAppUsage.count) apps")
         #endif
     }
     
