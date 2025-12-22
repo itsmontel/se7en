@@ -156,8 +156,8 @@ struct GoalsView: View {
                         
                         // Daily Discipline Overview (moved to top)
                         GoalProgressOverview(
-                            totalLimit: totalLimit,
-                            totalUsed: totalUsed,
+                            todayScreenTime: todayScreenTime,
+                            puzzlesSolvedThisWeek: puzzlesSolvedThisWeek,
                             disciplineScore: disciplineScore,
                             streak: appState.currentStreak,
                             longestStreak: appState.longestStreak
@@ -192,6 +192,42 @@ struct GoalsView: View {
         }
     }
     
+    private let appGroupID = "group.com.se7en.app"
+    
+    private var todayScreenTime: Int {
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return appState.todayScreenTimeMinutes
+        }
+        sharedDefaults.synchronize()
+        let total = sharedDefaults.integer(forKey: "total_usage")
+        return total > 0 ? total : appState.todayScreenTimeMinutes
+    }
+    
+    private var puzzlesSolvedThisWeek: Int {
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return 0
+        }
+        sharedDefaults.synchronize()
+        
+        // Get puzzles solved history
+        guard let puzzleHistory = sharedDefaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else {
+            return 0
+        }
+        
+        // Sum up puzzles from this week
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        var total = 0
+        for dayOffset in 0..<7 {
+            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: Date()) else { continue }
+            let dateKey = dateFormatter.string(from: date)
+            total += puzzleHistory[dateKey] ?? 0
+        }
+        return total
+    }
+    
     private var totalLimit: Int {
         appState.monitoredApps.reduce(0) { $0 + $1.dailyLimit }
     }
@@ -218,18 +254,36 @@ struct GoalsView: View {
     }
     
     private var recommendations: [CoachInsight] {
-        guard !appState.monitoredApps.isEmpty else {
+        var insights: [CoachInsight] = []
+        
+        // Always analyze screen time and device usage (from reports)
+        insights.append(contentsOf: analyzeScreenTimeData())
+        
+        // Analyze top distractions
+        insights.append(contentsOf: analyzeTopDistractions())
+        
+        // Analyze blocked apps / Focus Mode
+        insights.append(contentsOf: analyzeBlockedApps())
+
+        // Check discipline and streaks
+        insights.append(contentsOf: analyzeDisciplineAndStreaks())
+
+        // Time-based insights
+        insights.append(contentsOf: analyzeTimePatterns())
+        
+        // If no insights generated, show welcome messages
+        if insights.isEmpty {
             return [
                 CoachInsight(
                     title: "Welcome to SE7EN!",
-                    message: "Add apps from the Home page to start your digital wellness journey.",
+                    message: "Block distracting apps and track your screen time to build healthier digital habits.",
                     icon: "hand.wave.fill",
                     type: .welcome,
                     priority: .high
                 ),
                 CoachInsight(
-                    title: "Set Your Goals",
-                    message: "Monitor your screen time to build healthier digital habits and maintain balance.",
+                    title: "Get Started",
+                    message: "Go to the Limits page to select apps you want to block. Solve puzzles when you need a break!",
                     icon: "target",
                     type: .setup,
                     priority: .high
@@ -237,25 +291,156 @@ struct GoalsView: View {
             ]
         }
 
-        var insights: [CoachInsight] = []
-
-        // Analyze usage patterns
-        insights.append(contentsOf: analyzeUsagePatterns())
-
-        // Check discipline and streaks
-        insights.append(contentsOf: analyzeDisciplineAndStreaks())
-
-        // Goal achievement insights
-        insights.append(contentsOf: analyzeGoalAchievement())
-
-        // Behavioral coaching
-        insights.append(contentsOf: analyzeBehavioralPatterns())
-
-        // Time-based insights
-        insights.append(contentsOf: analyzeTimePatterns())
-
         // Sort by priority and limit to most relevant insights
         return insights.sorted { $0.priority.rawValue > $1.priority.rawValue }.prefix(6).map { $0 }
+    }
+    
+    // MARK: - Screen Time Analysis
+    
+    private func analyzeScreenTimeData() -> [CoachInsight] {
+        var insights: [CoachInsight] = []
+        
+        let screenTime = todayScreenTime
+        let screenTimeHours = Double(screenTime) / 60.0
+        
+        if screenTime == 0 {
+            // No data yet
+            return []
+        }
+        
+        // Screen time thresholds
+        if screenTimeHours >= 8 {
+            insights.append(CoachInsight(
+                title: "High Screen Time Alert",
+                message: "You've spent \(Int(screenTimeHours))+ hours on your phone today. Your pet is feeling unwell. Consider taking a break!",
+                icon: "exclamationmark.triangle.fill",
+                type: .warning,
+                priority: .high
+            ))
+        } else if screenTimeHours >= 6 {
+            insights.append(CoachInsight(
+                title: "Screen Time Check",
+                message: "You're at \(String(format: "%.1f", screenTimeHours)) hours today. Try to wind down and give your eyes a rest.",
+                icon: "eye.fill",
+                type: .warning,
+                priority: .high
+            ))
+        } else if screenTimeHours >= 4 {
+            insights.append(CoachInsight(
+                title: "Moderate Usage",
+                message: "You've used \(String(format: "%.1f", screenTimeHours)) hours today. Stay mindful to keep your pet healthy!",
+                icon: "chart.bar.fill",
+                type: .info,
+                priority: .medium
+            ))
+        } else if screenTimeHours <= 2 && screenTimeHours > 0 {
+            insights.append(CoachInsight(
+                title: "Great Progress!",
+                message: "Only \(String(format: "%.1f", screenTimeHours)) hours today. Your pet is thriving! Keep up the good work.",
+                icon: "star.fill",
+                type: .achievement,
+                priority: .medium
+            ))
+        }
+        
+        return insights
+    }
+    
+    private func analyzeTopDistractions() -> [CoachInsight] {
+        var insights: [CoachInsight] = []
+        
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return []
+        }
+        sharedDefaults.synchronize()
+        
+        // Get top apps from per_app_usage
+        guard let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] else {
+            return []
+        }
+        
+        // Sort by usage and get top app
+        let sortedApps = perAppUsage.sorted { $0.value > $1.value }
+        
+        if let topApp = sortedApps.first, topApp.value >= 60 { // At least 1 hour
+            let hours = topApp.value / 60
+            let mins = topApp.value % 60
+            let timeStr = hours > 0 ? "\(hours)h \(mins)m" : "\(mins)m"
+            
+            insights.append(CoachInsight(
+                title: "Top Distraction: \(topApp.key)",
+                message: "You've spent \(timeStr) on \(topApp.key) today. Consider blocking it if it's affecting your focus.",
+                icon: "hourglass",
+                type: .info,
+                priority: .medium
+            ))
+        }
+        
+        // Check if multiple apps have high usage
+        let highUsageApps = sortedApps.filter { $0.value >= 30 } // 30+ minutes
+        if highUsageApps.count >= 3 {
+            insights.append(CoachInsight(
+                title: "Multiple Time-Sinks",
+                message: "\(highUsageApps.count) apps are taking 30+ minutes of your day. Use Focus Mode to block the most distracting ones.",
+                icon: "apps.iphone",
+                type: .strategy,
+                priority: .medium
+            ))
+        }
+        
+        return insights
+    }
+    
+    private func analyzeBlockedApps() -> [CoachInsight] {
+        var insights: [CoachInsight] = []
+        
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return []
+        }
+        sharedDefaults.synchronize()
+        
+        // Check if user has blocked apps
+        if let selectionData = sharedDefaults.data(forKey: "blocked_apps_selection") {
+            // User has blocked apps set up
+            let puzzlesThisWeek = puzzlesSolvedThisWeek
+            
+            if puzzlesThisWeek == 0 {
+                insights.append(CoachInsight(
+                    title: "Focus Mode Active",
+                    message: "Great job! You haven't needed to solve any puzzles this week. Your discipline is strong!",
+                    icon: "lock.shield.fill",
+                    type: .achievement,
+                    priority: .medium
+                ))
+            } else if puzzlesThisWeek >= 10 {
+                insights.append(CoachInsight(
+                    title: "Frequent Unblocking",
+                    message: "You've solved \(puzzlesThisWeek) puzzles this week. Consider if those apps truly need access.",
+                    icon: "puzzlepiece.fill",
+                    type: .warning,
+                    priority: .high
+                ))
+            } else if puzzlesThisWeek >= 5 {
+                insights.append(CoachInsight(
+                    title: "Puzzle Progress",
+                    message: "You've solved \(puzzlesThisWeek) puzzles this week. The friction is working - each puzzle is a mindful moment.",
+                    icon: "brain.head.profile",
+                    type: .info,
+                    priority: .low
+                ))
+            }
+        } else {
+            // No blocked apps
+            insights.append(CoachInsight(
+                title: "Enable Focus Mode",
+                message: "Block distracting apps on the Limits page. Solve a puzzle when you need a break - it adds healthy friction!",
+                icon: "hand.raised.fill",
+                type: .setup,
+                priority: .high
+            ))
+        }
+        
+        return insights
     }
 
     // MARK: - Insight Analysis Methods
@@ -478,20 +663,52 @@ struct WeeklyHealthReport: View {
     
     private let appGroupID = "group.com.se7en.app"
     
+    private var appInstallDate: Date? {
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return nil
+        }
+        sharedDefaults.synchronize()
+        
+        // Check if we have an install date stored
+        let timestamp = sharedDefaults.double(forKey: "app_install_date")
+        if timestamp > 0 {
+            return Date(timeIntervalSince1970: timestamp)
+        }
+        
+        // If not stored, store it now (first time)
+        let now = Date()
+        sharedDefaults.set(now.timeIntervalSince1970, forKey: "app_install_date")
+        sharedDefaults.synchronize()
+        return now
+    }
+    
     private var weekDays: [Date] {
         (0..<7).compactMap { dayOffset in
             Calendar.current.date(byAdding: .day, value: dayOffset, to: weekStart)
         }
     }
     
-    private func getHealthData(for date: Date) -> (score: Int, mood: PetHealthState) {
+    private func isBeforeInstall(date: Date) -> Bool {
+        guard let installDate = appInstallDate else { return false }
+        let calendar = Calendar.current
+        let installDay = calendar.startOfDay(for: installDate)
+        let checkDay = calendar.startOfDay(for: date)
+        return checkDay < installDay
+    }
+    
+    private func getHealthData(for date: Date) -> (score: Int, mood: PetHealthState, beforeInstall: Bool) {
         let calendar = Calendar.current
         let isToday = calendar.isDateInToday(date)
         let isFuture = date > Date()
         
+        // For dates before app install, return special state
+        if isBeforeInstall(date: date) {
+            return (0, .content, true)
+        }
+        
         // For future days, return empty state
         if isFuture {
-            return (0, .content)
+            return (0, .content, false)
         }
         
         // For today, use the same screen time-based calculation as the main health system
@@ -514,12 +731,12 @@ struct WeeklyHealthReport: View {
                 mood = .sick
             }
             
-            return (healthPercentage, mood)
+            return (healthPercentage, mood, false)
         }
         
         // For past days, read from stored daily health history
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            return (0, .sick)
+            return (0, .sick, false)
         }
         
         sharedDefaults.synchronize()
@@ -534,11 +751,15 @@ struct WeeklyHealthReport: View {
             let score = dayData["score"] as? Int ?? 0
             let moodString = dayData["mood"] as? String ?? PetHealthState.sick.rawValue
             let mood = PetHealthState(rawValue: moodString) ?? .sick
-            return (score, mood)
+            return (score, mood, false)
         }
         
-        // No historical data available
-        return (0, .sick)
+        // No historical data available - check if it's before install
+        if isBeforeInstall(date: date) {
+            return (0, .content, true)
+        }
+        
+        return (0, .sick, false)
     }
     
     var body: some View {
@@ -564,6 +785,7 @@ struct WeeklyHealthReport: View {
                             petMood: healthData.mood,
                             isToday: isToday,
                             isFuture: isFuture,
+                            isBeforeInstall: healthData.beforeInstall,
                             petType: appState.userPet?.type ?? .dog
                         )
                     }
@@ -590,7 +812,12 @@ struct WeeklyHealthCard: View {
     let petMood: PetHealthState
     let isToday: Bool
     let isFuture: Bool
+    var isBeforeInstall: Bool = false
     let petType: PetType
+    
+    private var isInactive: Bool {
+        isFuture || isBeforeInstall
+    }
     
     var body: some View {
         VStack(spacing: 8) {
@@ -598,22 +825,22 @@ struct WeeklyHealthCard: View {
             VStack(spacing: 2) {
                 Text(dayName)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(isFuture ? .textSecondary.opacity(0.5) : .textPrimary)
+                    .foregroundColor(isInactive ? .textSecondary.opacity(0.5) : .textPrimary)
                 
                 Text("\(dayNumber)")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(isFuture ? .textSecondary.opacity(0.5) : .textPrimary)
+                    .foregroundColor(isInactive ? .textSecondary.opacity(0.5) : .textPrimary)
             }
             
             // Pet image
-            if isFuture {
-                // Gray placeholder for future days
+            if isInactive {
+                // Gray placeholder for future days or before install
                 Image("\(petType.folderName.lowercased())content")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 60, height: 60)
                     .grayscale(1.0)
-                    .opacity(0.5)
+                    .opacity(0.4)
             } else {
                 // Actual pet image based on health state
                 let imageName = "\(petType.folderName.lowercased())\(petMood.rawValue)"
@@ -624,20 +851,24 @@ struct WeeklyHealthCard: View {
             }
             
             // Health score
-            if !isFuture {
-                Text("\(healthScore)")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(petMood.color)
-            } else {
+            if isBeforeInstall {
+                Text("N/A")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.textSecondary.opacity(0.4))
+            } else if isFuture {
                 Text("-")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.textSecondary.opacity(0.3))
+            } else {
+                Text("\(healthScore)")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(petMood.color)
             }
         }
         .frame(width: 80)
         .padding(.vertical, 12)
         .padding(.horizontal, 8)
-        .background(isToday ? Color.green.opacity(0.15) : (isFuture ? Color.gray.opacity(0.1) : Color.clear))
+        .background(isToday ? Color.green.opacity(0.15) : (isInactive ? Color.gray.opacity(0.08) : Color.clear))
         .cornerRadius(12)
     }
 }
@@ -1306,15 +1537,13 @@ struct GoalCard: View {
 }
 
 struct GoalProgressOverview: View {
-    let totalLimit: Int
-    let totalUsed: Int
+    let todayScreenTime: Int // in minutes
+    let puzzlesSolvedThisWeek: Int
     let disciplineScore: Int
     let streak: Int
     let longestStreak: Int
     
-    private var remaining: Int {
-        max(0, totalLimit - totalUsed)
-    }
+    private let appGroupID = "group.com.se7en.app"
     
     var body: some View {
         VStack(spacing: 16) {
@@ -1324,7 +1553,7 @@ struct GoalProgressOverview: View {
                         .font(.h4)
                         .foregroundColor(.textPrimary)
                     
-                    Text("Stay below your limits to keep credits.")
+                    Text("Track your screen time and focus habits.")
                         .font(.bodyMedium)
                         .foregroundColor(.textPrimary.opacity(0.6))
                 }
@@ -1335,8 +1564,8 @@ struct GoalProgressOverview: View {
             }
             
             HStack(spacing: 16) {
-                MetricPill(title: "Used", value: formatMinutes(totalUsed), color: .error.opacity(0.2), icon: "flame.fill")
-                MetricPill(title: "Remaining", value: formatMinutes(remaining), color: .success.opacity(0.2), icon: "leaf.fill")
+                MetricPill(title: "Screen Time", value: formatMinutes(todayScreenTime), color: .blue.opacity(0.15), icon: "iphone")
+                MetricPill(title: "Puzzles", value: "\(puzzlesSolvedThisWeek)", color: .purple.opacity(0.15), icon: "puzzlepiece.fill", subtitle: "This week")
                 MetricPill(title: "Streak", value: "\(streak)d", color: .primary.opacity(0.2), icon: "bolt.fill", subtitle: "Best \(longestStreak)d")
             }
         }

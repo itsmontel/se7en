@@ -77,6 +77,7 @@
 		7104 /* MemoryGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7004 /* MemoryGameView.swift */; };
 		7105 /* PatternGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7005 /* PatternGameView.swift */; };
 		7106 /* LimitReachedPuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7006 /* LimitReachedPuzzleView.swift */; };
+		7107 /* JigsawPuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7007 /* JigsawPuzzleView.swift */; };
 		8F667A202EF3524E0028D462 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */; };
 		8F667A222EF3524E0028D462 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F667A212EF3524E0028D462 /* ManagedSettingsUI.framework */; };
 		8F667A2A2EF3524E0028D462 /* SE7ENShieldConfigurationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8F667A1E2EF3524D0028D462 /* SE7ENShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -220,6 +221,7 @@
 		7004 /* MemoryGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryGameView.swift; sourceTree = "<group>"; };
 		7005 /* PatternGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternGameView.swift; sourceTree = "<group>"; };
 		7006 /* LimitReachedPuzzleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimitReachedPuzzleView.swift; sourceTree = "<group>"; };
+		7007 /* JigsawPuzzleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JigsawPuzzleView.swift; sourceTree = "<group>"; };
 		8F667A1E2EF3524D0028D462 /* SE7ENShieldConfigurationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SE7ENShieldConfigurationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
 		8F667A212EF3524E0028D462 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
@@ -405,6 +407,7 @@
 				7004 /* MemoryGameView.swift */,
 				7005 /* PatternGameView.swift */,
 				7006 /* LimitReachedPuzzleView.swift */,
+				7007 /* JigsawPuzzleView.swift */,
 			);
 			name = Puzzles;
 			path = Views/Puzzles;
@@ -853,6 +856,7 @@
 				7104 /* MemoryGameView.swift in Sources */,
 				7105 /* PatternGameView.swift in Sources */,
 				7106 /* LimitReachedPuzzleView.swift in Sources */,
+				7107 /* JigsawPuzzleView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -7,6 +7,7 @@ enum PuzzleType: String, CaseIterable {
     case sudoku = "Sudoku"
     case memory = "Memory"
     case pattern = "Pattern"
+    case jigsaw = "Jigsaw"
     
     var displayName: String {
         return rawValue
@@ -205,7 +206,139 @@ struct PatternSequence {
     }
 }
 
+// MARK: - Jigsaw Puzzle Models
 
+// MARK: - Jigsaw Edge Type
+enum JigsawEdge {
+    case flat    // Border edge - straight line
+    case tab     // Bump outward (male)
+    case blank   // Indent inward (female)
+}
 
+// MARK: - Jigsaw Piece
+struct JigsawPiece: Identifiable, Equatable {
+    let id = UUID()
+    let correctPosition: Int // 0-8 for 3x3 grid (where this piece SHOULD be)
+    let topEdge: JigsawEdge
+    let rightEdge: JigsawEdge
+    let bottomEdge: JigsawEdge
+    let leftEdge: JigsawEdge
+    
+    static func == (lhs: JigsawPiece, rhs: JigsawPiece) -> Bool {
+        lhs.id == rhs.id && lhs.correctPosition == rhs.correctPosition
+    }
+}
 
+// MARK: - Jigsaw Puzzle
+struct JigsawPuzzle {
+    let imageName: String
+    let shuffledPieces: [JigsawPiece]
+    static let gridSize = 3 // 3x3 grid
+    
+    // All 25 pet mood images (5 pets × 5 moods)
+    static let allPetImages: [String] = {
+        let petTypes = ["dog", "cat", "bunny", "hamster", "horse"]
+        let healthStates = ["fullhealth", "happy", "content", "sad", "sick"]
+        
+        var images: [String] = []
+        for pet in petTypes {
+            for state in healthStates {
+                images.append("\(pet)\(state)")
+            }
+        }
+        return images
+    }()
+    
+    static func generate() -> JigsawPuzzle {
+        // Pick a random pet mood image from the 25 available
+        let randomImage = allPetImages.randomElement() ?? "dogfullhealth"
+        return generate(withImage: randomImage)
+    }
+    
+    // Generate with a specific image
+    static func generate(withImage imageName: String) -> JigsawPuzzle {
+        // Create 9 pieces (3x3 grid) with proper interlocking edges
+        var pieces: [JigsawPiece] = []
+        
+        // Define edge patterns - adjacent pieces must have matching tab/blank
+        // We'll use a deterministic pattern for edge matching
+        let edgePattern: [[JigsawEdge]] = generateEdgePattern()
+        
+        for position in 0..<9 {
+            let row = position / gridSize
+            let col = position % gridSize
+            
+            // Top edge: flat if row 0, otherwise opposite of piece above's bottom
+            let topEdge: JigsawEdge = row == 0 ? .flat : edgePattern[row - 1][col]
+            
+            // Left edge: flat if col 0, otherwise opposite of piece left's right
+            let leftEdge: JigsawEdge = col == 0 ? .flat : (edgePattern[row][col - 1] == .tab ? .blank : .tab)
+            
+            // Bottom edge: flat if last row, otherwise random tab/blank
+            let bottomEdge: JigsawEdge = row == gridSize - 1 ? .flat : edgePattern[row][col]
+            
+            // Right edge: flat if last col, otherwise random tab/blank
+            let rightEdge: JigsawEdge = col == gridSize - 1 ? .flat : (Bool.random() ? .tab : .blank)
+            
+            pieces.append(JigsawPiece(
+                correctPosition: position,
+                topEdge: topEdge,
+                rightEdge: rightEdge,
+                bottomEdge: bottomEdge,
+                leftEdge: leftEdge
+            ))
+        }
+        
+        // Shuffle pieces ensuring none start in correct position
+        var shuffled = pieces.shuffled()
+        while countCorrectPositions(shuffled) > 2 {
+            shuffled.shuffle()
+        }
+        
+        return JigsawPuzzle(imageName: imageName, shuffledPieces: shuffled)
+    }
+    
+    // Generate random edge pattern for bottom edges (determines interlocking)
+    private static func generateEdgePattern() -> [[JigsawEdge]] {
+        var pattern: [[JigsawEdge]] = []
+        for _ in 0..<gridSize {
+            var row: [JigsawEdge] = []
+            for _ in 0..<gridSize {
+                row.append(Bool.random() ? .tab : .blank)
+            }
+            pattern.append(row)
+        }
+        return pattern
+    }
+    
+    // Check if puzzle is solved
+    func isSolved(_ currentPieces: [JigsawPiece]) -> Bool {
+        for (index, piece) in currentPieces.enumerated() {
+            if piece.correctPosition != index {
+                return false
+            }
+        }
+        return true
+    }
+    
+    // Reshuffle the current pieces
+    func reshufflePieces(_ currentPieces: [JigsawPiece]) -> [JigsawPiece] {
+        var shuffled = currentPieces.shuffled()
+        while JigsawPuzzle.countCorrectPositions(shuffled) > 2 {
+            shuffled.shuffle()
+        }
+        return shuffled
+    }
+    
+    // Count how many pieces are in correct position
+    private static func countCorrectPositions(_ pieces: [JigsawPiece]) -> Int {
+        var count = 0
+        for (index, piece) in pieces.enumerated() {
+            if piece.correctPosition == index {
+                count += 1
+            }
+        }
+        return count
+    }
+}
 

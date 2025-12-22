@@ -96,7 +96,8 @@ struct MonitoredApp: Identifiable, Equatable {
 struct DailyRecord: Identifiable {
     let id = UUID()
     var date: Date
-    var creditChange: Int // -1 if lost, 0 if kept
+    var screenTimeMinutes: Int // Total screen time for the day
+    var puzzlesSolved: Int // Number of puzzles solved that day
     
     var dayName: String {
         let formatter = DateFormatter()
@@ -111,7 +112,8 @@ struct DailyRecord: Identifiable {
     }
     
     var isSuccess: Bool {
-        creditChange == 0
+        // Success if screen time under 2 hours
+        screenTimeMinutes < 120
     }
 }
 
@@ -135,7 +137,7 @@ enum OnboardingStep: Int, CaseIterable {
         case .setGoals:
             return "Set your first goal"
         case .paywall:
-            return "Start with 7 credits today"
+            return "Start your focus journey"
         }
     }
 }
@@ -1522,10 +1524,12 @@ struct UserGoal: Identifiable {
 struct DailyHistory: Identifiable {
     let id: UUID = UUID()
     let date: Date
-    let creditChange: Int
+    let screenTimeMinutes: Int
+    let puzzlesSolved: Int
     
     var isSuccess: Bool {
-        creditChange >= 0
+        // Success if screen time under 2 hours
+        screenTimeMinutes < 120
     }
 }
 

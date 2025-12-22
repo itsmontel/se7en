@@ -44,26 +44,25 @@ struct TermsOfServiceView: View {
                     title: "How SE7EN Works",
                     icon: "app.badge",
                     content: [
-                        "Set daily time limits for apps you want to monitor",
-                        "When you exceed a limit, that app is blocked with a shield",
-                        "To unlock: Solve a puzzle in SE7EN (choose Extra Time or One Session mode)",
-                        "Extra Time: Get +15 minutes added to your daily limit",
-                        "One Session: App unlocks until you close it, then re-locks until tomorrow",
-                        "Or wait until midnight when limits reset automatically",
-                        "Staying within limits is completely free"
+                        "Select apps to block using the multi-select picker",
+                        "Selected apps are immediately blocked with a shield",
+                        "To unblock: Solve a puzzle in SE7EN",
+                        "Apps stay unblocked for your chosen duration (5-60 min)",
+                        "After the unblock period, apps automatically re-block",
+                        "Remove apps from the blocked list anytime to unblock permanently"
                     ]
                 )
                 
                 TermsSectionView(
-                    title: "App Monitoring & Blocking",
+                    title: "App Blocking & Puzzles",
                     icon: "eye.circle",
                     content: [
                         "SE7EN requires Screen Time permissions to function",
-                        "Only apps you explicitly select via Family Activity Picker are monitored",
-                        "When limits are exceeded, apps are blocked using iOS Screen Time shields",
-                        "Shield UI guides you to open SE7EN to solve a puzzle for unlock",
-                        "Monitoring data is used solely for limit enforcement",
-                        "You can modify or remove app limits at any time"
+                        "Only apps you explicitly select are blocked",
+                        "Blocked apps display iOS Screen Time shields",
+                        "Solving puzzles grants temporary unblock access",
+                        "Unblock duration is configurable (5, 10, 15, 30, or 60 minutes)",
+                        "You can modify or remove blocked apps at any time"
                     ]
                 )
                 
@@ -82,11 +81,11 @@ struct TermsOfServiceView: View {
                     title: "Prohibited Uses",
                     icon: "exclamationmark.triangle",
                     content: [
-                        "Attempting to circumvent app limits, shields, or monitoring",
+                        "Attempting to circumvent app blocking or shields",
                         "Sharing your account with other users",
                         "Using automated scripts or bots with the service",
                         "Reverse engineering or modifying the app",
-                        "Attempting to bypass puzzle requirements or unlock mechanisms"
+                        "Attempting to bypass puzzle requirements"
                     ]
                 )
                 
@@ -97,7 +96,7 @@ struct TermsOfServiceView: View {
                         "SE7EN requires internet connection for full functionality",
                         "We strive for 99.9% uptime but don't guarantee continuous service",
                         "Scheduled maintenance will be announced in advance",
-                        "Service interruptions may temporarily affect limit tracking"
+                        "Service interruptions may temporarily affect blocking"
                     ]
                 )
                 
@@ -107,7 +106,7 @@ struct TermsOfServiceView: View {
                     content: [
                         "SE7EN is provided 'as is' without warranties",
                         "We're not liable for indirect or consequential damages",
-                        "We're not responsible for data loss or app usage tracking errors",
+                        "We're not responsible for data loss or blocking errors",
                         "Some jurisdictions don't allow these limitations"
                     ]
                 )
@@ -211,4 +210,3 @@ struct TermsSectionView: View {
         TermsOfServiceView()
     }
 }
-

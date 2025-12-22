@@ -37,7 +37,7 @@ struct PrivacyPolicyView: View {
                         "Account information (email, subscription status)",
                         "Device information (iOS version, device model)",
                         "Payment information (processed securely by Apple)",
-                        "Puzzle completion data (to track unlock extensions)"
+                        "Puzzle completion data (to track unblock requests)"
                     ]
                 )
                 
@@ -45,10 +45,10 @@ struct PrivacyPolicyView: View {
                     title: "How We Use Your Information",
                     icon: "gearshape.2",
                     content: [
-                        "Monitor your chosen apps to enforce daily time limits",
-                        "Display shield UI when apps are blocked",
-                        "Track puzzle completions to grant unlock extensions",
-                        "Calculate credit usage and billing",
+                        "Block your selected apps using iOS Screen Time shields",
+                        "Track puzzle completions to grant temporary unblocks",
+                        "Display your screen time and app usage statistics",
+                        "Calculate your pet's health based on screen time",
                         "Provide customer support and app improvements",
                         "Send important account and billing notifications"
                     ]
@@ -71,7 +71,7 @@ struct PrivacyPolicyView: View {
                     content: [
                         "All data is encrypted in transit and at rest",
                         "Screen time data stays on your device using Apple's Screen Time API",
-                        "App selections and limits stored securely in App Groups",
+                        "App selections and blocking state stored securely in App Groups",
                         "Regular security audits and updates",
                         "Secure payment processing through Apple"
                     ]
@@ -84,7 +84,7 @@ struct PrivacyPolicyView: View {
                         "Request a copy of your data",
                         "Delete your account and associated data",
                         "Opt out of non-essential communications",
-                        "Control which apps are monitored"
+                        "Control which apps are blocked"
                     ]
                 )
                 
@@ -187,4 +187,3 @@ struct PrivacySectionView: View {
         PrivacyPolicyView()
     }
 }
-

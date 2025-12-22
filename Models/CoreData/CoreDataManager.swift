@@ -629,23 +629,56 @@ class CoreDataManager: ObservableObject {
     // MARK: - Daily History Methods
     
     func getDailyHistory(for weeklyPlan: WeeklyPlan) -> [DailyHistory] {
-        guard let transactions = weeklyPlan.transactions as? Set<CreditTransaction> else {
+        // Read from shared container for daily screen time and puzzles solved
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return []
         }
         
-        // Group transactions by day and calculate credit changes
-        let calendar = Calendar.current
-        var dailyCreditChanges: [Date: Int] = [:]
+        sharedDefaults.synchronize()
         
-        for transaction in transactions {
-            let day = calendar.startOfDay(for: transaction.date ?? Date())
-            dailyCreditChanges[day, default: 0] += Int(transaction.amount)
+        let calendar = Calendar.current
+        var history: [DailyHistory] = []
+        
+        // Get puzzles solved history
+        let puzzleHistory = sharedDefaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] ?? [:]
+        
+        // Get screen time history from daily_health
+        let healthHistory = sharedDefaults.dictionary(forKey: "daily_health") as? [String: [String: Any]] ?? [:]
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        // Create history for the past 7 days
+        for dayOffset in 0..<7 {
+            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: Date()) else { continue }
+            let dateKey = dateFormatter.string(from: date)
+            
+            // Get screen time for this day (default to 0)
+            var screenTimeMinutes = 0
+            if let healthData = healthHistory[dateKey],
+               let score = healthData["score"] as? Int {
+                // Convert health score back to approximate screen time
+                // 100 health = 0-2 hours, 0 health = 10+ hours
+                screenTimeMinutes = max(0, (100 - score) * 6) // Rough approximation
+            }
+            
+            // For today, use live data
+            if calendar.isDateInToday(date) {
+                screenTimeMinutes = sharedDefaults.integer(forKey: "total_usage")
+            }
+            
+            // Get puzzles solved for this day
+            let puzzlesSolved = puzzleHistory[dateKey] ?? 0
+            
+            history.append(DailyHistory(
+                date: calendar.startOfDay(for: date),
+                screenTimeMinutes: screenTimeMinutes,
+                puzzlesSolved: puzzlesSolved
+            ))
         }
         
-        // Convert to DailyHistory array
-        return dailyCreditChanges.map { date, creditChange in
-            DailyHistory(date: date, creditChange: creditChange)
-        }.sorted { $0.date > $1.date }
+        return history.sorted { $0.date > $1.date }
     }
     
     func getAllWeeklyPlans() -> [WeeklyPlan] {

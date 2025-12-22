@@ -19,6 +19,7 @@ struct PuzzleModeView: View {
     @State private var currentSudokuPuzzle: SudokuPuzzle?
     @State private var currentMemoryGame: MemoryGame?
     @State private var currentPatternSequence: PatternSequence?
+    @State private var currentJigsawPuzzle: JigsawPuzzle?
     
     var body: some View {
         ZStack {
@@ -126,6 +127,18 @@ struct PuzzleModeView: View {
                             }
                         )
                     }
+                case .jigsaw:
+                    if let puzzle = currentJigsawPuzzle {
+                        JigsawPuzzleView(
+                            puzzle: puzzle,
+                            onComplete: {
+                                handlePuzzleComplete(puzzleType: puzzleType)
+                            },
+                            onDismiss: {
+                                showPuzzle = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -144,6 +157,8 @@ struct PuzzleModeView: View {
                 currentMemoryGame = MemoryGame.generate()
             case .pattern:
                 currentPatternSequence = PatternSequence.generate(length: 6)
+            case .jigsaw:
+                currentJigsawPuzzle = JigsawPuzzle.generate()
             }
         }
         

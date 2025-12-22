@@ -2,21 +2,21 @@ import SwiftUI
 
 struct FAQView: View {
     let faqs = [
-        FAQ(question: "What is SE7EN?", answer: "SE7EN is your personal screen time companion that helps you break free from 'brain rot'. By caring for your digital pet, you build healthier habits. When you scroll less, your pet thrives! Set daily limits for apps, and when you hit a limit, solve a puzzle to unlock more time."),
+        FAQ(question: "What is SE7EN?", answer: "SE7EN is your personal screen time companion that helps you break free from 'brain rot'. By caring for your digital pet, you build healthier habits. When you scroll less, your pet thrives! Block distracting apps, and when you need a break, solve a puzzle to temporarily unblock them."),
         
-        FAQ(question: "How does the Puzzle Unlock work?", answer: "When you exceed an app's daily limit, that app gets blocked with a shield. Tap 'Open SE7EN to Solve' on the shield, then solve a puzzle in the SE7EN app to unlock the blocked app. You can choose between two unlock modes: Extra Time (+15 minutes) or One Session (unlocks until you leave the app)."),
+        FAQ(question: "How does App Blocking work?", answer: "Select the apps you want to block using the multi-select picker on the Limits page. Once selected, these apps are immediately blocked with a shield. To unblock them temporarily, solve a puzzle in SE7EN. The apps stay unblocked for your chosen duration (5-60 minutes), then automatically re-block."),
         
-        FAQ(question: "What's the difference between Extra Time and One Session?", answer: "Extra Time Mode: After solving a puzzle, you get +15 minutes added to your daily limit. Your usage continues from where you left off. Example: If you used 60 of 60 minutes, after solving you'll have 60 of 75 minutes.\n\nOne Session Mode: After solving a puzzle, the app unlocks until you close it or switch away. Once you leave the app, it re-locks until tomorrow. Perfect for finishing a task without time pressure."),
+        FAQ(question: "How do I unblock apps?", answer: "When you need access to blocked apps, tap 'Solve Puzzle to Unblock' on the Limits page or from the shield screen. Complete a quick puzzle (Sudoku, Memory, or Pattern), and your blocked apps will be unblocked for your chosen duration. Once time's up, they automatically re-block."),
         
-        FAQ(question: "Which apps get blocked?", answer: "Only the specific app that exceeded its daily limit gets blocked. Other apps continue working normally. This way, you can still use apps you haven't exceeded limits on."),
+        FAQ(question: "What are the unblock duration options?", answer: "You can choose how long apps stay unblocked after solving a puzzle:\n\n• 5 minutes - Quick break\n• 10 minutes - Short task\n• 15 minutes (default) - Standard break\n• 30 minutes - Longer session\n• 60 minutes - Extended access\n\nChange this anytime in the Limits page settings."),
         
-        FAQ(question: "Why does my Pet's health change?", answer: "Your pet's health reflects your screen time habits. When you stay within your limits, your pet stays happy and healthy. When you exceed limits frequently, your pet may become sick. Keep them healthy by managing your screen time!"),
+        FAQ(question: "Why does my Pet's health change?", answer: "Your pet's health reflects your screen time habits. Lower screen time = healthier pet! The health is calculated based on your total daily screen time:\n\n• Under 2 hours: Full health (100%)\n• 2-4 hours: Good health (70-100%)\n• 4-6 hours: Fair health (40-70%)\n• 6+ hours: Poor health (<40%)\n\nKeep screen time low to keep your pet happy!"),
         
-        FAQ(question: "Can I change my App Limits?", answer: "Yes! Go to the Limits page and tap on any app in your list to adjust its daily limit. You can also set custom schedules for different days of the week. Changes take effect immediately."),
+        FAQ(question: "Can I add or remove blocked apps anytime?", answer: "Yes! Go to the Limits page and tap 'Edit' to modify your blocked apps list. You can add apps, categories, or remove them anytime. Changes take effect immediately."),
         
-        FAQ(question: "How does app blocking work?", answer: "When you exceed an app's daily limit, that specific app is blocked with a shield. Tap 'Open SE7EN to Solve' on the shield, then solve a puzzle in SE7EN to unlock it. You can choose Extra Time (+15 minutes) or One Session (unlocks until you leave the app). Alternatively, wait until midnight when limits reset automatically. Other apps that haven't exceeded their limits continue working normally."),
+        FAQ(question: "What types of puzzles are there?", answer: "SE7EN includes three puzzle types:\n\n• Sudoku - Fill in the grid with numbers 1-9\n• Memory Game - Match pairs of cards\n• Pattern Sequence - Remember and repeat the pattern\n\nA random puzzle is selected each time you request to unblock apps."),
         
-        FAQ(question: "I'm going on vacation. Can I pause?", answer: "We believe in consistency, but we understand life happens. You can toggle 'Monitoring' off in Settings, but try to stick to your habits!"),
+        FAQ(question: "I'm going on vacation. Can I pause?", answer: "You can simply remove all blocked apps from your list temporarily. When you're back, add them again. We believe in consistency, but we understand life happens!"),
         
         FAQ(question: "Is my data private?", answer: "Absolutely. SE7EN uses Apple's Screen Time API, which means all your usage data stays on your device. We never see your browsing history or personal app data. Your privacy is our priority.")
     ]
