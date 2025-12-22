@@ -30,21 +30,42 @@ struct TotalActivityReport: DeviceActivityReportScene {
         let totalMinutes = Int(totalSeconds / 60)
         
         // Save to shared container for main app
-        saveToSharedContainer(totalMinutes: totalMinutes)
+        // IMPORTANT: Perform App Group I/O on MainActor to avoid CFPrefsPlistSource issues.
+        await saveToSharedContainer(totalMinutes: totalMinutes)
         
         return totalMinutes
     }
     
-    private func saveToSharedContainer(totalMinutes: Int) {
-        guard let sharedDefaults = UserDefaults(suiteName: "group.com.se7en.app") else {
+    @MainActor
+    private func saveToSharedContainer(totalMinutes: Int) async {
+        let appGroupID = "group.com.se7en.app"
+        
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            #if DEBUG
             print("❌ TOTAL: Failed to access App Group")
+            #endif
             return
         }
         
         sharedDefaults.set(totalMinutes, forKey: "total_usage")
         sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
+        
+        // Also write JSON backup for the main app.
+        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+            let payload: [String: Any] = [
+                "total_usage": totalMinutes,
+                "last_updated": Date().timeIntervalSince1970
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: payload, options: []) {
+                try? data.write(to: fileURL, options: [.atomic])
+            }
+        }
+        
         sharedDefaults.synchronize()
         
+        #if DEBUG
         print("📊 TOTAL: Saved \(totalMinutes) minutes")
+        #endif
     }
 }

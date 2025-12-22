@@ -72,10 +72,67 @@ class AppState: ObservableObject {
         
         sharedDefaults.synchronize()
         let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+        let previousValue = self.todayScreenTimeMinutes
         
+        // Prefer total_usage when present
         if totalUsage > 0 {
+            #if DEBUG
+            print("📱 AppState: preloadScreenTimeFromSharedContainer updating todayScreenTimeMinutes from \(previousValue) to \(totalUsage)")
+            #endif
             self.todayScreenTimeMinutes = totalUsage
+            // Update pet health if screen time changed
+            if totalUsage != previousValue {
+                #if DEBUG
+                print("📱 AppState: Screen time changed, triggering pet health update")
+                #endif
+                updatePetHealth()
+            }
+            return
         }
+        
+        // Fallback: sum per-app usage if total_usage isn't present yet
+        if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") {
+            let sumFromPerApp = perAppUsage.values.reduce(0) { partial, value in
+                if let intValue = value as? Int { return partial + intValue }
+                if let numberValue = value as? NSNumber { return partial + numberValue.intValue }
+                if let doubleValue = value as? Double { return partial + Int(doubleValue) }
+                return partial
+            }
+            #if DEBUG
+            print("📱 AppState: per_app_usage sum = \(sumFromPerApp)")
+            #endif
+            if sumFromPerApp > 0 {
+                #if DEBUG
+                print("📱 AppState: preloadScreenTimeFromSharedContainer updating todayScreenTimeMinutes from \(previousValue) to \(sumFromPerApp) (from per_app_usage)")
+                #endif
+                self.todayScreenTimeMinutes = sumFromPerApp
+                // Update pet health if screen time changed
+                if sumFromPerApp != previousValue {
+                    #if DEBUG
+                    print("📱 AppState: Screen time changed, triggering pet health update")
+                    #endif
+                    updatePetHealth()
+                }
+                return
+            }
+        }
+        
+        // File fallback: DeviceActivityReport extension writes a JSON backup file.
+        let fileUsage = readTotalUsageFromSharedFileBackup(appGroupID: appGroupID)
+        if fileUsage > 0 {
+            #if DEBUG
+            print("📱 AppState: preloadScreenTimeFromSharedContainer using file backup total_usage: \(fileUsage)")
+            #endif
+            self.todayScreenTimeMinutes = fileUsage
+            if fileUsage != previousValue {
+                updatePetHealth()
+            }
+            return
+        }
+        
+        #if DEBUG
+        print("📱 AppState: No screen time data found in shared container or file backup")
+        #endif
     }
     
     init() {
@@ -928,11 +985,12 @@ class AppState: ObservableObject {
     
     // 🚀 OPTIMIZED: Update only critical UI elements
     private func updateCriticalUIElements() {
-        // Update only pet health and streak (lightweight)
-        updatePetHealthIfNeeded()
-        
-        // Update today's screen time from shared container
+        // First sync today's screen time from the shared container so pet health reflects
+        // the same "Today" value shown on the dashboard.
         preloadScreenTimeFromSharedContainer()
+        
+        // Then update pet health (lightweight)
+        updatePetHealthIfNeeded()
     }
     
     // 🚀 OPTIMIZED: Only update pet health if data actually changed
@@ -1082,6 +1140,8 @@ class AppState: ObservableObject {
         
         // Calculate pet health based on app usage percentages
         let healthPercentage = calculatePetHealthPercentage()
+        // Track last known health percentage for throttling decisions
+        previousHealthPercentage = healthPercentage
         
         // Convert health percentage to PetHealthState
         let newHealthState: PetHealthState
@@ -1119,7 +1179,7 @@ class AppState: ObservableObject {
     
     /// Save daily pet health snapshot for weekly stats
     private func saveDailyHealthSnapshot(healthPercentage: Int, mood: PetHealthState) {
-        let appGroupID = "group.com.se7en.app"
+            let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         // Get today's date key
@@ -1152,19 +1212,9 @@ class AppState: ObservableObject {
     
     /// Calculate pet health based on daily screen time
     func calculatePetHealthPercentage() -> Int {
-        var totalMinutes = todayScreenTimeMinutes
-        
-        if totalMinutes == 0 {
-            let appGroupID = "group.com.se7en.app"
-            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-                sharedDefaults.synchronize()
-                totalMinutes = sharedDefaults.integer(forKey: "total_usage")
-                if totalMinutes > 0 {
-                    self.todayScreenTimeMinutes = totalMinutes
-                }
-            }
-        }
-        
+        // IMPORTANT: Keep this calculation lightweight (no heavy I/O). We rely on
+        // `todayScreenTimeMinutes` being refreshed from the shared container / file backup.
+        let totalMinutes = todayScreenTimeMinutes
         let totalHours = Double(totalMinutes) / 60.0
         
         let healthPercentage: Int
@@ -1180,6 +1230,23 @@ class AppState: ObservableObject {
         }
         
         return max(0, min(100, healthPercentage))
+    }
+    
+    private func readTotalUsageFromSharedFileBackup(appGroupID: String) -> Int {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
+            return 0
+        }
+        
+        let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+        guard let data = try? Data(contentsOf: fileURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return 0
+        }
+        
+        if let usage = json["total_usage"] as? Int { return usage }
+        if let usage = json["total_usage"] as? NSNumber { return usage.intValue }
+        if let usage = json["total_usage"] as? Double { return Int(usage) }
+        return 0
     }
     
     /// Helper function for linear interpolation between ranges

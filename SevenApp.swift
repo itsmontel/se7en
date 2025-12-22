@@ -60,6 +60,9 @@ struct SE7ENApp: App {
         
         // Mark app as opened for streak tracking
         CoreDataManager.shared.markAppOpened()
+        
+        // Initialize BlockedAppsManager and apply blocking state
+        _ = BlockedAppsManager.shared
     }
     
     var body: some Scene {
@@ -76,20 +79,16 @@ struct SE7ENApp: App {
                     // Check for puzzle mode FIRST
                     appState.checkForPendingPuzzles()
                     
-                    // Force check all limits and apply shields
-                    ScreenTimeService.shared.forceCheckAndApplyShields()
-                    
-                    // Check one-session mode
-                    ScreenTimeService.shared.setupOneSessionMonitoring()
+                    // Check and apply blocking state (new simplified model)
+                    BlockedAppsManager.shared.loadState()
+                    BlockedAppsManager.shared.checkAndReblock()
                     
                     // Sync data
                     appState.syncDataFromBackground()
-                    ScreenTimeService.shared.refreshAllMonitoring()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-                    // Re-block one-session apps
-                    ScreenTimeService.shared.checkAndReBlockOneSessionApps()
-                    ScreenTimeService.shared.checkAndReBlockOneSessionAppsImproved()
+                    // Check if unblock period expired
+                    BlockedAppsManager.shared.checkAndReblock()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     handleAppDidBecomeActive()
@@ -196,13 +195,13 @@ struct SE7ENApp: App {
     // MARK: - One-Session Mode Helpers
     
     private func markBackgroundTimestamp() {
-        let appGroupID = "group.com.se7en.app"
+                                let appGroupID = "group.com.se7en.app"
         guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
         
         defaults.set(Date().timeIntervalSince1970, forKey: "app_background_timestamp")
-        defaults.synchronize()
-    }
-    
+                                    defaults.synchronize()
+                                }
+                                
     private func checkAndHandleOneSessionAfterBackground() {
         let appGroupID = "group.com.se7en.app"
         guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
@@ -258,8 +257,8 @@ struct SE7ENApp: App {
             NotificationCenter.default.post(
                 name: UIApplication.didBecomeActiveNotification,
                 object: nil
-            )
-        }
+                                )
+                            }
         
         // Handle unlock confirmation
         if url.host == "unlocked" {

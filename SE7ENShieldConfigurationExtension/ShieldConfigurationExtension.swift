@@ -47,8 +47,8 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         // Get pet type for sick image
         let petType = getUserPetType()
         
-        // Get unlock mode
-        let unlockMode = getUnlockMode()
+        // Get unblock duration
+        let unblockDuration = getUnblockDuration()
         
         // Custom colors - light mode
         let backgroundColor = UIColor.systemBackground
@@ -57,16 +57,11 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         // Get the sick pet image from extension's asset catalog
         let sickPetImage = getSickPetImage(for: petType)
         
-        // Build personalized title: "Bad News, [Name]" at top
-        let titleText = firstName.isEmpty ? "Bad News" : "Bad News, \(firstName)"
+        // Build personalized title
+        let titleText = firstName.isEmpty ? "App Blocked" : "Hey \(firstName)!"
         
-        // Subtitle based on unlock mode
-        let subtitleText: String
-        if unlockMode == "One Session" {
-            subtitleText = "Daily Limit Reached ❤️\n\nYou hit your \(appName) limit.\nSolve a puzzle in SE7EN for one more session!"
-        } else {
-            subtitleText = "Daily Limit Reached ❤️\n\nYou hit your \(appName) limit.\nSolve a puzzle in SE7EN for 15 more minutes!"
-        }
+        // New simplified subtitle
+        let subtitleText = "\(appName) is blocked ❤️\n\nSolve a puzzle in SE7EN to unblock for \(unblockDuration) minutes!"
         
         return ShieldConfiguration(
             backgroundBlurStyle: .systemMaterial,
@@ -81,24 +76,25 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor.secondaryLabel
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: "🧩 Open SE7EN to Solve",
+                text: "🧩 Solve Puzzle to Unblock",
                 color: .white
             ),
             primaryButtonBackgroundColor: primaryColor,
             secondaryButtonLabel: ShieldConfiguration.Label(
-                text: "I'll wait till tomorrow",
+                text: "Stay Focused",
                 color: UIColor.secondaryLabel
             )
         )
     }
     
-    // MARK: - Get Unlock Mode
+    // MARK: - Get Unblock Duration
     
-    private func getUnlockMode() -> String {
+    private func getUnblockDuration() -> Int {
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
-            return "Extra Time"
+            return 15
         }
-        return defaults.string(forKey: "globalUnlockMode") ?? "Extra Time"
+        let duration = defaults.integer(forKey: "unblock_duration_minutes")
+        return duration > 0 ? duration : 15
     }
     
     // MARK: - Get User First Name

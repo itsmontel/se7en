@@ -100,11 +100,8 @@ struct ContentView: View {
     private func handlePuzzleComplete() {
         let appGroupID = "group.com.se7en.app"
         
-        // ✅ CRITICAL: Grant extension with proper usage reset
-        grantPuzzleExtension(for: puzzleTokenHash, appName: puzzleAppName, minutes: 15)
-        
-        // ✅ CRITICAL: Reload app goals to update UI immediately
-        appState.loadAppGoals()
+        // ✅ NEW: Use BlockedAppsManager to grant unblock
+        BlockedAppsManager.shared.grantUnblock()
         
         // Hide puzzle mode
         showPuzzleMode = false
@@ -112,51 +109,23 @@ struct ContentView: View {
         // ✅ Notify the system that data has changed
         NotificationCenter.default.post(name: .screenTimeDataUpdated, object: nil)
         
-        // Open the blocked app after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            openBlockedApp()
-        }
+        // Clear puzzle flags
+        clearPuzzleFlags()
+        
+        print("✅ Puzzle completed - apps unblocked for \(BlockedAppsManager.shared.unblockDurationMinutes) minutes")
     }
     
-    /// ✅ NEW: Comprehensive extension granting that properly resets usage
-    private func grantPuzzleExtension(for tokenHash: String, appName: String, minutes: Int) {
+    /// Clear puzzle mode flags from shared container
+    private func clearPuzzleFlags() {
         let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
+        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        // 1. Calculate extension end time
-        let extensionEndTime = Date().addingTimeInterval(TimeInterval(minutes * 60))
-        
-        // 2. Store extension in shared container (so extensions can see it)
-        sharedDefaults.set(extensionEndTime.timeIntervalSince1970, forKey: "extension_end_\(tokenHash)")
-        sharedDefaults.set(true, forKey: "hasActiveExtension_\(tokenHash)")
-        
-        // ✅ 3. CRITICAL: Reset usage to 0 in shared container
-        sharedDefaults.set(0, forKey: "usage_\(tokenHash)")
-        
-        // ✅ 4. CRITICAL: Update per_app_usage to show 0 for this app
-        if var perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
-            perAppUsage[appName] = 0
-            sharedDefaults.set(perAppUsage, forKey: "per_app_usage")
-        }
-        
-        // ✅ 5. CRITICAL: Store the extension limit (15 minutes) as the NEW effective limit
-        sharedDefaults.set(minutes, forKey: "extensionLimit_\(tokenHash)")
-        
-        // ✅ 6. Clear limit reached flag so it doesn't re-block
-        sharedDefaults.set(false, forKey: "limitReached_\(tokenHash)")
-        sharedDefaults.removeObject(forKey: "needsPuzzle_\(tokenHash)")
-        
-        // ✅ 7. Store extension grant time for reference
-        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "extensionGrantTime_\(tokenHash)")
-        
-        sharedDefaults.synchronize()
-        
-        print("✅ Extension granted: \(minutes) minutes for \(tokenHash)")
-        print("   - Usage reset to 0")
-        print("   - Extension ends at \(extensionEndTime)")
-        
-        // 8. Also call ScreenTimeService to unblock and update CoreData
-        ScreenTimeService.shared.grantTemporaryExtensionFixed(for: tokenHash, minutes: minutes)
+        defaults.set(false, forKey: "puzzleMode")
+        defaults.set(false, forKey: "shouldOpenPuzzle")
+        defaults.removeObject(forKey: "puzzleTokenHash")
+        defaults.removeObject(forKey: "needsPuzzle_\(puzzleTokenHash)")
+        defaults.removeObject(forKey: "puzzleRequested_\(puzzleTokenHash)")
+        defaults.synchronize()
     }
     
     private func openBlockedApp() {

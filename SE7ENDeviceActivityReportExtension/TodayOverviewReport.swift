@@ -24,7 +24,9 @@ struct TodayOverviewReport: DeviceActivityReportScene {
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> UsageSummary {
+        #if DEBUG
         print("🚀 TodayOverviewReport: Processing device activity data...")
+        #endif
         
         var totalDuration: TimeInterval = 0
         var perAppDuration: [String: TimeInterval] = [:]
@@ -75,7 +77,9 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         }
         
         let totalMinutes = Int(totalDuration / 60)
+        #if DEBUG
         print("📊 TodayOverviewReport: \(totalMinutes) min total, \(uniqueApps.count) apps, \(totalAppOpens) app opens")
+        #endif
         
         // Sort apps by duration and get top 10
         let sortedApps = perAppDuration.sorted { $0.value > $1.value }
@@ -88,8 +92,9 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             totalPickups: totalAppOpens
         )
         
-        // Save to shared container for main app
-        saveToSharedContainer(
+        // Save to shared container for main app.
+        // IMPORTANT: Perform App Group I/O on MainActor to avoid CFPrefsPlistSource issues.
+        await saveToSharedContainer(
             summary: summary,
             perAppDuration: perAppDuration,
             tokenToDuration: tokenToDuration,
@@ -102,17 +107,20 @@ struct TodayOverviewReport: DeviceActivityReportScene {
     
     // MARK: - Save to Shared Container
     
+    @MainActor
     private func saveToSharedContainer(
         summary: UsageSummary,
         perAppDuration: [String: TimeInterval],
         tokenToDuration: [Application: TimeInterval],
         tokenToName: [Application: String],
         totalPickups: Int
-    ) {
+    ) async {
         let appGroupID = "group.com.se7en.app"
         
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            #if DEBUG
             print("❌ REPORT: Failed to access App Group")
+            #endif
             return
         }
         
@@ -151,9 +159,49 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             sharedDefaults: sharedDefaults
         )
         
+        // Also write a JSON backup file. The main app can read this even when shared defaults
+        // are empty due to cross-process UserDefaults flakiness.
+        writeScreenTimeJSONBackup(
+            appGroupID: appGroupID,
+            payload: [
+                "total_usage": totalMinutes,
+                "apps_count": appsCount,
+                "last_updated": Date().timeIntervalSince1970,
+                "top_apps": topAppsPayload,
+                "per_app_usage": perAppUsage,
+                "total_app_opens": totalPickups
+            ]
+        )
+        
         sharedDefaults.synchronize()
         
+        #if DEBUG
         print("💾 REPORT: Saved \(totalMinutes) min, \(appsCount) apps")
+        #endif
+    }
+    
+    @MainActor
+    private func writeScreenTimeJSONBackup(appGroupID: String, payload: [String: Any]) {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
+            #if DEBUG
+            print("❌ REPORT: Failed to access App Group container URL for JSON backup")
+            #endif
+            return
+        }
+        
+        let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+        
+        do {
+            let data = try JSONSerialization.data(withJSONObject: payload, options: [])
+            try data.write(to: fileURL, options: [.atomic])
+            #if DEBUG
+            print("💾 REPORT: Wrote JSON backup to \(fileURL.lastPathComponent)")
+            #endif
+        } catch {
+            #if DEBUG
+            print("❌ REPORT: Failed to write JSON backup: \(error)")
+            #endif
+        }
     }
     
     // MARK: - Token to Limit Matching
@@ -166,11 +214,15 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         // Load stored limits
         guard let limitsData = sharedDefaults.data(forKey: "stored_app_limits_v2"),
               let limits = try? JSONDecoder().decode([StoredLimit].self, from: limitsData) else {
+            #if DEBUG
             print("📭 REPORT: No stored limits found")
+            #endif
             return
         }
         
+        #if DEBUG
         print("🔗 REPORT: Matching \(tokenToDuration.count) apps to \(limits.count) limits...")
+        #endif
         
         var usageByLimitUUID: [String: Int] = [:]
         var nameByLimitUUID: [String: String] = [:]
@@ -197,7 +249,9 @@ struct TodayOverviewReport: DeviceActivityReportScene {
                     usageByLimitUUID[uuidString] = minutes
                     nameByLimitUUID[uuidString] = appName
                     hashToLimitUUID[tokenHash] = uuidString
+                    #if DEBUG
                     print("✅ REPORT: Matched '\(appName)' -> limit \(uuidString.prefix(8))..., \(minutes) min")
+                    #endif
                     break
                 }
             }
@@ -227,7 +281,9 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         }
         sharedDefaults.set(updatedHashMap, forKey: "token_hash_to_limit_uuid")
         
+        #if DEBUG
         print("✅ REPORT: Matched \(usageByLimitUUID.count) limits")
+        #endif
     }
     
     // MARK: - Daily App Opens History
@@ -256,7 +312,9 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         
         // Save back
         sharedDefaults.set(dailyAppOpens, forKey: "daily_app_opens")
+        #if DEBUG
         print("📱 REPORT: Saved \(appOpens) app opens for \(todayKey)")
+        #endif
     }
     
     // MARK: - Helpers

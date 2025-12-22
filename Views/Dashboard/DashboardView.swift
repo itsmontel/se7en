@@ -150,6 +150,7 @@ struct DashboardView: View {
             
             // ⚠️ CRITICAL FIX: ALWAYS prioritize shared container data when available
             // The report extension is the authoritative source for usage data
+            print("🏠 Dashboard check: sharedUsage=\(sharedUsage), totalMinutes from service=\(totalMinutes)")
             if sharedUsage > 0 {
                 let previousTotal = totalMinutes
                 totalMinutes = sharedUsage
@@ -203,6 +204,9 @@ struct DashboardView: View {
                 // CRITICAL FIX: Update AppState's todayScreenTimeMinutes so pet health can use it
                 appState.todayScreenTimeMinutes = totalMinutes
                 
+                // CRITICAL: Also update pet health immediately when screen time changes
+                appState.updatePetHealth()
+                
                 // Only show informational message if we have connected apps but no usage yet
                 // Usage records are initialized immediately, so 0 means no usage yet (which is normal)
                 if totalMinutes == 0 && appsUsed == 0 && !connectedGoals.isEmpty {
@@ -228,6 +232,7 @@ struct DashboardView: View {
         // Try UserDefaults
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
             totalUsage = sharedDefaults.integer(forKey: "total_usage")
+            print("🏠 Dashboard: Read total_usage from shared container: \(totalUsage)")
         }
         
         // Try file backup
@@ -238,8 +243,13 @@ struct DashboardView: View {
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let usage = json["total_usage"] as? Int {
                     totalUsage = usage
+                    print("🏠 Dashboard: Read total_usage from file backup: \(totalUsage)")
                 }
             }
+        }
+        
+        if totalUsage == 0 {
+            print("🏠 Dashboard: No usage data found in shared container or file backup")
         }
         
         return totalUsage
@@ -948,6 +958,8 @@ struct DashboardView: View {
             totalScreenTimeMinutes = sharedUsage
             appsUsedToday = sharedApps
             appState.todayScreenTimeMinutes = sharedUsage
+            // Update pet health when screen time changes
+            appState.updatePetHealth()
             
             // Quick refresh of top distractions
             if Date().timeIntervalSince(topDistractionsLastRefresh) >= topDistractionsCacheTimeout {
@@ -1025,6 +1037,8 @@ struct DashboardView: View {
                         appsUsedToday = sharedApps
                         // CRITICAL FIX: Update AppState so pet health can use the latest data
                         appState.todayScreenTimeMinutes = sharedUsage
+                        // Update pet health when screen time changes
+                        appState.updatePetHealth()
                     }
                 }
             }

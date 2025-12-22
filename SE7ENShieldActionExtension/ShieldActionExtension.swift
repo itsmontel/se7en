@@ -43,7 +43,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             defaults.set(appName, forKey: "pendingPuzzleAppName")
             
             // Synchronize BEFORE responding
-            defaults.synchronize()
+                defaults.synchronize()
             
             print("📝 ShieldAction: Stored puzzle data for token \(tokenHash.prefix(8))...")
             print("   App Name: \(appName)")
@@ -152,14 +152,14 @@ class ShieldActionExtension: ShieldActionDelegate {
         // Try stored limits
         if let data = defaults.data(forKey: "stored_app_limits_v2"),
            let limits = try? JSONDecoder().decode([StoredLimit].self, from: data) {
-            for limit in limits {
+        for limit in limits {
                 // Try to match by comparing first token hash
                 if let selectionData = limit.selectionData,
                    let _ = try? PropertyListDecoder().decode(FamilyActivitySelectionProxy.self, from: selectionData) {
                     // We can't directly compare tokens here, so just return the first active limit's name
                     if limit.isActive {
-                        return limit.appName
-                    }
+                return limit.appName
+            }
                 }
             }
         }

@@ -116,6 +116,12 @@ struct TodayOverviewView: View {
     }
     
     private func format(duration: TimeInterval) -> String {
+        // Show sub-minute usage as "<1m" when there is non-zero activity.
+        // This fixes cases where an app is used for 1–59 seconds but previously displayed "0m".
+        if duration > 0 && duration < 60 {
+            return "<1m"
+        }
+        
         let minutes = Int(duration / 60)
         let hours = minutes / 60
         let remainingMinutes = minutes % 60
