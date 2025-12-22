@@ -11,6 +11,7 @@ struct JigsawPuzzleView: View {
     @State private var showSuccess = false
     @State private var moves: Int = 0
     @State private var showReference = true
+    @State private var wrongPlacements: Set<Int> = [] // Track slots with wrong pieces for feedback
     
     private let gridSize = 3
     private let totalPieces = 9
@@ -31,6 +32,24 @@ struct JigsawPuzzleView: View {
     // Check if a piece is selected
     var hasSelection: Bool {
         selectedPieceID != nil
+    }
+    
+    // Check if a piece at a given slot is correctly placed (locked)
+    func isPieceLockedAt(_ slotIndex: Int) -> Bool {
+        guard let pieceID = placedPieces[slotIndex],
+              let piece = puzzle.shuffledPieces.first(where: { $0.id == pieceID }) else {
+            return false
+        }
+        return piece.correctPosition == slotIndex
+    }
+    
+    // Check if a piece ID is locked (in correct position)
+    func isPieceLocked(_ pieceID: UUID) -> Bool {
+        guard let slotIndex = placedPieces.first(where: { $0.value == pieceID })?.key,
+              let piece = puzzle.shuffledPieces.first(where: { $0.id == pieceID }) else {
+            return false
+        }
+        return piece.correctPosition == slotIndex
     }
     
     var body: some View {
@@ -131,8 +150,9 @@ struct JigsawPuzzleView: View {
             if showReference {
                 Image(puzzle.imageName)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .aspectRatio(1, contentMode: .fill) // Force square
                     .frame(width: 90, height: 90)
+                    .clipped()
                     .cornerRadius(10)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
@@ -155,19 +175,23 @@ struct JigsawPuzzleView: View {
                     ForEach(0..<gridSize, id: \.self) { col in
                         let slotIndex = row * gridSize + col
                         
-                        BoardSlotView(
-                            slotIndex: slotIndex,
-                            placedPieceID: placedPieces[slotIndex],
-                            allPieces: puzzle.shuffledPieces,
-                            imageName: puzzle.imageName,
-                            pieceSize: pieceSize,
-                            gridSize: gridSize,
-                            isHighlighted: hasSelection,
-                            isSelected: isSlotSelected(slotIndex)
-                        )
-                        .onTapGesture {
+                        Button(action: {
                             handleSlotTap(slotIndex)
+                        }) {
+                            BoardSlotView(
+                                slotIndex: slotIndex,
+                                placedPieceID: placedPieces[slotIndex],
+                                allPieces: puzzle.shuffledPieces,
+                                imageName: puzzle.imageName,
+                                pieceSize: pieceSize,
+                                gridSize: gridSize,
+                                isHighlighted: hasSelection && !isPieceLockedAt(slotIndex),
+                                isSelected: isSlotSelected(slotIndex),
+                                showWrongFeedback: wrongPlacements.contains(slotIndex),
+                                isLocked: isPieceLockedAt(slotIndex)
+                            )
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
             }
@@ -219,20 +243,23 @@ struct JigsawPuzzleView: View {
             } else {
                 // Use a grid layout for the tray pieces
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5),
+                    columns: Array(repeating: GridItem(.fixed(pieceSize + 8), spacing: 8), count: 5),
                     spacing: 8
                 ) {
-                    ForEach(trayPieces) { piece in
-                        TrayPieceView(
-                            piece: piece,
-                            imageName: puzzle.imageName,
-                            pieceSize: pieceSize,
-                            gridSize: gridSize,
-                            isSelected: selectedPieceID == piece.id
-                        )
-                        .onTapGesture {
+                    ForEach(trayPieces, id: \.id) { piece in
+                        Button(action: {
                             handleTrayPieceTap(piece)
+                        }) {
+                            TrayPieceView(
+                                piece: piece,
+                                imageName: puzzle.imageName,
+                                pieceSize: pieceSize,
+                                gridSize: gridSize,
+                                isSelected: selectedPieceID == piece.id
+                            )
                         }
+                        .buttonStyle(PlainButtonStyle())
+                        .id(piece.id) // Explicit ID for stable identity
                     }
                 }
                 .padding(.horizontal, 16)
@@ -284,14 +311,12 @@ struct JigsawPuzzleView: View {
     private func handleTrayPieceTap(_ piece: JigsawPiece) {
         HapticFeedback.light.trigger()
         
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            if selectedPieceID == piece.id {
-                // Deselect if tapping same piece
-                selectedPieceID = nil
-            } else {
-                // Select this piece
-                selectedPieceID = piece.id
-            }
+        if selectedPieceID == piece.id {
+            // Deselect if tapping same piece
+            selectedPieceID = nil
+        } else {
+            // Select this piece
+            selectedPieceID = piece.id
         }
     }
     
@@ -300,10 +325,13 @@ struct JigsawPuzzleView: View {
         // If no piece selected, check if there's a piece in this slot to select
         if selectedPieceID == nil {
             if let pieceID = placedPieces[slotIndex] {
-                // Select this placed piece
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedPieceID = pieceID
+                // Don't allow selecting pieces that are already correct (locked)
+                if isPieceLockedAt(slotIndex) {
+                    HapticFeedback.warning.trigger()
+                    return
                 }
+                // Select this placed piece
+                selectedPieceID = pieceID
                 HapticFeedback.light.trigger()
             }
             return
@@ -311,42 +339,76 @@ struct JigsawPuzzleView: View {
         
         guard let selectedID = selectedPieceID else { return }
         
+        // Don't allow placing into a slot that has a correctly placed piece (locked)
+        if isPieceLockedAt(slotIndex) {
+            HapticFeedback.warning.trigger()
+            selectedPieceID = nil
+            return
+        }
+        
         // Find the selected piece
-        guard let piece = puzzle.shuffledPieces.first(where: { $0.id == selectedID }) else { return }
+        guard let piece = puzzle.shuffledPieces.first(where: { $0.id == selectedID }) else {
+            selectedPieceID = nil
+            return
+        }
         
         // Check if this piece is already on the board somewhere
         let currentSlot = placedPieces.first(where: { $0.value == selectedID })?.key
         
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            // If there's already a piece in target slot, swap or send to tray
-            if let existingPieceID = placedPieces[slotIndex] {
-                if let currentSlot = currentSlot {
-                    // Swap the pieces
-                    placedPieces[currentSlot] = existingPieceID
-                }
-                // Otherwise existing piece goes back to tray (removed from placedPieces)
-                else {
-                    placedPieces.removeValue(forKey: slotIndex)
-                }
-            } else {
-                // Remove from current slot if it was placed somewhere
-                if let currentSlot = currentSlot {
-                    placedPieces.removeValue(forKey: currentSlot)
-                }
-            }
-            
-            // Place the selected piece in the target slot
-            placedPieces[slotIndex] = selectedID
+        // If tapping the same slot the piece is already in, just deselect
+        if currentSlot == slotIndex {
             selectedPieceID = nil
+            return
         }
         
+        // Clear any previous wrong feedback for this slot
+        wrongPlacements.remove(slotIndex)
+        
+        // Check if there's already a piece in target slot
+        if let existingPieceID = placedPieces[slotIndex] {
+            // There's a piece in the target slot - we need to swap or send it to tray
+            if let currentSlot = currentSlot {
+                // Selected piece is on the board - swap the two pieces
+                placedPieces[currentSlot] = existingPieceID
+                placedPieces[slotIndex] = selectedID
+                
+                // Update wrong feedback for the swapped piece
+                if let existingPiece = puzzle.shuffledPieces.first(where: { $0.id == existingPieceID }) {
+                    if existingPiece.correctPosition != currentSlot {
+                        wrongPlacements.insert(currentSlot)
+                    } else {
+                        wrongPlacements.remove(currentSlot)
+                    }
+                }
+            } else {
+                // Selected piece is from tray - send existing piece to tray
+                placedPieces[slotIndex] = selectedID
+                // existingPieceID is automatically removed since we overwrote slotIndex
+            }
+        } else {
+            // Target slot is empty
+            if let currentSlot = currentSlot {
+                // Remove from current slot first
+                placedPieces.removeValue(forKey: currentSlot)
+                wrongPlacements.remove(currentSlot)
+            }
+            // Place in new slot
+            placedPieces[slotIndex] = selectedID
+        }
+        
+        // Clear selection
+        selectedPieceID = nil
         moves += 1
         
-        // Haptic feedback
-        if piece.correctPosition == slotIndex {
+        // Haptic feedback and visual feedback based on correctness
+        let isCorrect = piece.correctPosition == slotIndex
+        
+        if isCorrect {
             HapticFeedback.success.trigger()
+            wrongPlacements.remove(slotIndex)
         } else {
-            HapticFeedback.medium.trigger()
+            HapticFeedback.error.trigger()
+            wrongPlacements.insert(slotIndex)
         }
         
         // Check completion
@@ -358,6 +420,7 @@ struct JigsawPuzzleView: View {
         withAnimation(.spring(response: 0.4)) {
             placedPieces.removeAll()
             selectedPieceID = nil
+            wrongPlacements.removeAll()
             moves = 0
         }
         HapticFeedback.medium.trigger()
@@ -375,6 +438,7 @@ struct JigsawPuzzleView: View {
             HapticFeedback.success.trigger()
             withAnimation(.spring(response: 0.5)) {
                 showSuccess = true
+                wrongPlacements.removeAll()
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -394,32 +458,22 @@ struct BoardSlotView: View {
     let gridSize: Int
     let isHighlighted: Bool
     let isSelected: Bool
+    let showWrongFeedback: Bool
+    let isLocked: Bool
     
     var placedPiece: JigsawPiece? {
         guard let pieceID = placedPieceID else { return nil }
         return allPieces.first { $0.id == pieceID }
     }
     
-    var isCorrect: Bool {
-        guard let piece = placedPiece else { return false }
-        return piece.correctPosition == slotIndex
-    }
-    
     var body: some View {
         ZStack {
             // Slot background
             RoundedRectangle(cornerRadius: 8)
-                .fill(isHighlighted ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+                .fill(slotBackgroundColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(
-                            isSelected ? Color.blue :
-                            (isHighlighted ? Color.blue.opacity(0.4) : Color.gray.opacity(0.2)),
-                            style: StrokeStyle(
-                                lineWidth: isSelected ? 3 : (placedPieceID == nil ? 2 : 1),
-                                dash: placedPieceID == nil ? [5, 3] : []
-                            )
-                        )
+                        .stroke(slotBorderColor, style: slotBorderStyle)
                 )
             
             // Placed piece
@@ -432,16 +486,18 @@ struct BoardSlotView: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isCorrect ? Color.green : Color.clear, lineWidth: 2)
+                        .stroke(pieceBorderColor, lineWidth: isLocked ? 3 : 2)
                 )
                 .overlay(
+                    // Feedback icon (checkmark or X)
+                    feedbackIcon
+                )
+                // Locked pieces have a slight opacity overlay to show they're fixed
+                .overlay(
                     Group {
-                        if isCorrect {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.green)
-                                .background(Circle().fill(Color.white).frame(width: 14, height: 14))
-                                .offset(x: pieceSize / 2 - 12, y: -pieceSize / 2 + 12)
+                        if isLocked {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.green.opacity(0.1))
                         }
                     }
                 )
@@ -457,6 +513,70 @@ struct BoardSlotView: View {
             }
         }
         .frame(width: pieceSize, height: pieceSize)
+        .contentShape(Rectangle()) // Ensure entire area is tappable
+    }
+    
+    private var slotBackgroundColor: Color {
+        if isLocked {
+            return Color.green.opacity(0.1)
+        } else if showWrongFeedback {
+            return Color.red.opacity(0.1)
+        } else if isHighlighted {
+            return Color.blue.opacity(0.1)
+        } else {
+            return Color.gray.opacity(0.1)
+        }
+    }
+    
+    private var slotBorderColor: Color {
+        if isLocked {
+            return Color.green
+        } else if isSelected {
+            return Color.blue
+        } else if showWrongFeedback {
+            return Color.red.opacity(0.6)
+        } else if isHighlighted {
+            return Color.blue.opacity(0.4)
+        } else {
+            return Color.gray.opacity(0.2)
+        }
+    }
+    
+    private var slotBorderStyle: StrokeStyle {
+        StrokeStyle(
+            lineWidth: isLocked ? 2 : (isSelected ? 3 : (placedPieceID == nil ? 2 : 1)),
+            dash: placedPieceID == nil ? [5, 3] : []
+        )
+    }
+    
+    private var pieceBorderColor: Color {
+        if isLocked {
+            return Color.green
+        } else if showWrongFeedback {
+            return Color.red
+        } else {
+            return Color.clear
+        }
+    }
+    
+    @ViewBuilder
+    private var feedbackIcon: some View {
+        if isLocked {
+            // Show lock icon for locked pieces
+            ZStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.green)
+                    .background(Circle().fill(Color.white).frame(width: 14, height: 14))
+            }
+            .offset(x: pieceSize / 2 - 12, y: -pieceSize / 2 + 12)
+        } else if showWrongFeedback {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.red)
+                .background(Circle().fill(Color.white).frame(width: 14, height: 14))
+                .offset(x: pieceSize / 2 - 12, y: -pieceSize / 2 + 12)
+        }
     }
 }
 
@@ -479,14 +599,30 @@ struct TrayPieceView: View {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(isSelected ? Color.blue : Color.gray.opacity(0.3), lineWidth: isSelected ? 3 : 1)
         )
-        .scaleEffect(isSelected ? 1.1 : 1.0)
         .shadow(color: isSelected ? Color.blue.opacity(0.3) : Color.black.opacity(0.1),
                 radius: isSelected ? 8 : 4, x: 0, y: isSelected ? 4 : 2)
+        // Add explicit content shape BEFORE scale effect for proper hit testing
+        .contentShape(Rectangle())
+        .scaleEffect(isSelected ? 1.1 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
     }
 }
 
-// MARK: - Piece Image View
+// MARK: - Piece Image View (FIXED - Proper Image Slicing)
+/// This view displays a single piece of the jigsaw puzzle by showing the correct
+/// portion of the full image based on the piece's correctPosition.
+///
+/// How it works:
+/// 1. The full image is scaled to exactly (pieceSize * gridSize) in both dimensions (forced square)
+/// 2. The image is placed in a container of size pieceSize x pieceSize
+/// 3. The image is offset so that only the portion corresponding to correctPosition is visible
+/// 4. The container clips the image to show only the piece
+///
+/// For a 3x3 grid with pieceSize = 55:
+/// - Full image size = 165 x 165
+/// - Position 0 (top-left): row=0, col=0 → shows top-left 55x55 portion
+/// - Position 4 (center): row=1, col=1 → shows center 55x55 portion
+/// - Position 8 (bottom-right): row=2, col=2 → shows bottom-right 55x55 portion
 struct PieceImageView: View {
     let piece: JigsawPiece
     let imageName: String
@@ -494,19 +630,32 @@ struct PieceImageView: View {
     let gridSize: Int
     
     var body: some View {
+        // Calculate which row and column this piece represents
         let row = piece.correctPosition / gridSize
         let col = piece.correctPosition % gridSize
+        
+        // The full image will be scaled to this size (3 * pieceSize for 3x3 grid)
         let fullImageSize = pieceSize * CGFloat(gridSize)
         
-        Image(imageName)
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(width: fullImageSize, height: fullImageSize)
-            .offset(
-                x: -CGFloat(col) * pieceSize,
-                y: -CGFloat(row) * pieceSize
-            )
+        // Calculate offset to show the correct portion
+        // We need to move the image so the correct piece portion is visible in the center
+        // For row=0, col=0: we want to see top-left, so shift image right (+) and down (+)
+        // For row=1, col=1: we want to see center, so no shift needed (0, 0)
+        // For row=2, col=2: we want to see bottom-right, so shift image left (-) and up (-)
+        let centerOffset = CGFloat(gridSize - 1) / 2.0  // For 3x3, this is 1.0
+        let offsetX = (centerOffset - CGFloat(col)) * pieceSize
+        let offsetY = (centerOffset - CGFloat(row)) * pieceSize
+        
+        // Container that defines the piece size and clips the content
+        Color.clear
             .frame(width: pieceSize, height: pieceSize)
+            .background(
+                Image(imageName)
+                    .resizable()
+                    .aspectRatio(1, contentMode: .fill) // Force the image to be square
+                    .frame(width: fullImageSize, height: fullImageSize)
+                    .offset(x: offsetX, y: offsetY)
+            )
             .clipped()
             .cornerRadius(6)
     }
