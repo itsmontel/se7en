@@ -912,10 +912,21 @@ struct AppLaunchesReport: View {
         
         // For today, try both the daily_app_opens history and the live total_app_opens
         if isToday {
-            // First try the live total
+            // First try the live total from UserDefaults
             let liveAppOpens = sharedDefaults.integer(forKey: "total_app_opens")
             if liveAppOpens > 0 {
                 return liveAppOpens
+            }
+            
+            // Fallback: Try to read from JSON backup file
+            if let jsonData = readScreenTimeJSONBackup() {
+                if let appOpens = jsonData["total_app_opens"] as? Int, appOpens > 0 {
+                    return appOpens
+                }
+                // Fallback: count apps in per_app_usage
+                if let perAppUsage = jsonData["per_app_usage"] as? [String: Int] {
+                    return perAppUsage.count
+                }
             }
         }
         
@@ -926,6 +937,20 @@ struct AppLaunchesReport: View {
         }
         
         return 0
+    }
+    
+    // Read from JSON backup file in App Group container
+    private func readScreenTimeJSONBackup() -> [String: Any]? {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
+            return nil
+        }
+        let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+        guard FileManager.default.fileExists(atPath: fileURL.path),
+              let data = try? Data(contentsOf: fileURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        return json
     }
     
     
@@ -962,13 +987,23 @@ struct AppLaunchesReport: View {
         }
         sharedDefaults.synchronize()
         
-        // Get per-app usage from the report system (today's usage in minutes)
-        guard let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] else {
+        // Try to get per-app usage from UserDefaults first
+        var perAppUsage: [String: Int]? = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int]
+        
+        // Fallback: Try to read from JSON backup file
+        if perAppUsage == nil || perAppUsage?.isEmpty == true {
+            if let jsonData = readScreenTimeJSONBackup(),
+               let jsonPerAppUsage = jsonData["per_app_usage"] as? [String: Int] {
+                perAppUsage = jsonPerAppUsage
+            }
+        }
+        
+        guard let usage = perAppUsage, !usage.isEmpty else {
             return []
         }
         
         // Sort by usage and get top 5
-        let sortedApps = perAppUsage
+        let sortedApps = usage
             .map { (name: $0.key, weeklyUsageMinutes: $0.value, icon: "app.fill", color: Color.primary) }
             .filter { $0.weeklyUsageMinutes > 0 }
             .sorted { $0.weeklyUsageMinutes > $1.weeklyUsageMinutes }
@@ -1578,21 +1613,16 @@ struct GoalProgressOverview: View {
                 DisciplineBadge(score: disciplineScore)
             }
             
-            TabView {
-                // Puzzles (first/default)
-                MetricPill(title: "Puzzles", value: "\(puzzlesSolvedThisWeek)", color: .purple.opacity(0.15), icon: "puzzlepiece.fill", subtitle: "This week")
-                    .tag(0)
+            HStack(spacing: 8) {
+                // Puzzles
+                CompactMetricPill(title: "Puzzles", value: "\(puzzlesSolvedThisWeek)", color: .purple.opacity(0.15), icon: "puzzlepiece.fill")
                 
                 // Screen Time
-                MetricPill(title: "Screen Time", value: formatMinutes(todayScreenTime), color: .blue.opacity(0.15), icon: "iphone")
-                    .tag(1)
+                CompactMetricPill(title: "Screen", value: formatMinutes(todayScreenTime), color: .blue.opacity(0.15), icon: "iphone")
                 
                 // Streak
-                MetricPill(title: "Streak", value: "\(streak)d", color: .primary.opacity(0.2), icon: "bolt.fill", subtitle: "Best \(longestStreak)d")
-                    .tag(2)
+                CompactMetricPill(title: "Streak", value: "\(streak)d", color: .primary.opacity(0.2), icon: "bolt.fill")
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 100)
         }
         .padding(20)
         .cardStyle()
@@ -1676,6 +1706,38 @@ struct MetricPill: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(color)
         .cornerRadius(16)
+    }
+}
+
+// Compact version for fitting 3 metrics in a row
+struct CompactMetricPill: View {
+    let title: String
+    let value: String
+    let color: Color
+    let icon: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(.textPrimary.opacity(0.7))
+            
+            Text(value)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.textPrimary.opacity(0.6))
+                .lineLimit(1)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity)
+        .background(color)
+        .cornerRadius(12)
     }
 }
 

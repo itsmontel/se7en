@@ -178,7 +178,7 @@ struct Achievement: Identifiable {
             color: .primary,
             category: .gettingStarted,
             rarity: .common,
-            isUnlocked: { appState in appState.dailyHistory.count >= 7 }
+            isUnlocked: { appState in appState.longestStreak >= 7 }
         ),
         
         Achievement(
@@ -379,47 +379,59 @@ struct Achievement: Identifiable {
         Achievement(
             id: "no_puzzle_day",
             title: "Self Control",
-            description: "Go a full day without solving a puzzle",
+            description: "Go a full day without solving a puzzle (after using app 3+ days)",
             icon: "hand.raised.slash.fill",
             color: .success,
             category: .habits,
             rarity: .uncommon,
-            isUnlocked: { _ in
+            isUnlocked: { appState in
+                // Must have used the app for at least 3 days
+                guard appState.longestStreak >= 3 else { return false }
                 guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                
+                // Must have solved at least 1 puzzle before (to prove they use the feature)
+                let totalPuzzles = puzzleHistory.values.reduce(0, +)
+                guard totalPuzzles >= 1 else { return false }
                 
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
                 let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
                 let yesterdayKey = dateFormatter.string(from: yesterday)
                 
-                return (puzzleHistory[yesterdayKey] ?? 0) == 0
+                // Yesterday must exist in history AND be 0
+                return puzzleHistory.keys.contains(yesterdayKey) && puzzleHistory[yesterdayKey] == 0
             }
         ),
         
         Achievement(
             id: "no_puzzle_week",
             title: "Discipline Champion",
-            description: "Go 7 days without solving any puzzles",
+            description: "Go 7 days without solving any puzzles (after using app 14+ days)",
             icon: "hand.raised.slash.fill",
             color: .success,
             category: .habits,
             rarity: .rare,
-            isUnlocked: { _ in
+            isUnlocked: { appState in
+                // Must have used the app for at least 14 days (to ensure 7 days of history)
+                guard appState.longestStreak >= 14 else { return false }
                 guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
+                
+                // Must have solved at least 1 puzzle before
+                let totalPuzzles = puzzleHistory.values.reduce(0, +)
+                guard totalPuzzles >= 1 else { return false }
                 
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
                 let calendar = Calendar.current
                 
-                // Check last 7 days
+                // Check last 7 days - all must exist in history AND be 0
                 for dayOffset in 1...7 {
                     guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: Date()) else { return false }
                     let dateKey = dateFormatter.string(from: date)
-                    if (puzzleHistory[dateKey] ?? 0) > 0 {
-                        return false
-                    }
+                    // Must exist in history and be 0
+                    guard puzzleHistory.keys.contains(dateKey) && puzzleHistory[dateKey] == 0 else { return false }
                 }
                 return true
             }
@@ -456,14 +468,14 @@ struct Achievement: Identifiable {
         Achievement(
             id: "weekend_warrior_v2",
             title: "Weekend Warrior",
-            description: "Keep apps blocked during weekends for 4 weeks",
+            description: "Keep apps blocked for 4 weeks straight",
             icon: "gamecontroller.fill",
             color: .secondary,
             category: .habits,
             rarity: .rare,
-            isUnlocked: { _ in
-                // Check if user has blocked apps and maintained streak for 4 weeks
-                BlockedAppsManager.shared.blockedCount > 0
+            isUnlocked: { appState in
+                // Require 28+ day streak with blocked apps
+                BlockedAppsManager.shared.blockedCount > 0 && appState.longestStreak >= 28
             }
         ),
         
@@ -635,9 +647,12 @@ struct Achievement: Identifiable {
             category: .improvement,
             rarity: .rare,
             isUnlocked: { appState in
-                // Check if average screen time over last 7 days is under 120 minutes
+                // Must have 7+ day streak AND 7 days of history with actual data (not 0)
+                guard appState.longestStreak >= 7 else { return false }
                 let recentHistory = appState.dailyHistory.suffix(7)
                 guard recentHistory.count >= 7 else { return false }
+                // All entries must have actual screen time data (> 0 proves data exists)
+                guard recentHistory.allSatisfy({ $0.screenTimeMinutes > 0 }) else { return false }
                 let avgScreenTime = recentHistory.reduce(0) { $0 + $1.screenTimeMinutes } / recentHistory.count
                 return avgScreenTime < 120
             }
@@ -652,9 +667,12 @@ struct Achievement: Identifiable {
             category: .improvement,
             rarity: .uncommon,
             isUnlocked: { appState in
+                // Must have 3+ day streak
+                guard appState.longestStreak >= 3 else { return false }
                 let recentHistory = appState.dailyHistory.suffix(3)
                 guard recentHistory.count >= 3 else { return false }
-                return recentHistory.allSatisfy { $0.screenTimeMinutes < 60 }
+                // Screen time must be between 1-59 minutes (proves data exists but is low)
+                return recentHistory.allSatisfy { $0.screenTimeMinutes > 0 && $0.screenTimeMinutes < 60 }
             }
         ),
         
@@ -927,9 +945,12 @@ struct Achievement: Identifiable {
             category: .mastery,
             rarity: .legendary,
             isUnlocked: { appState in
+                // Must have 7+ day streak
+                guard appState.longestStreak >= 7 else { return false }
                 let recentHistory = appState.dailyHistory.suffix(7)
                 guard recentHistory.count >= 7 else { return false }
-                return recentHistory.allSatisfy { $0.screenTimeMinutes < 30 }
+                // Must have actual data (> 0) AND be under 30 minutes
+                return recentHistory.allSatisfy { $0.screenTimeMinutes > 0 && $0.screenTimeMinutes < 30 }
             }
         ),
         
@@ -969,7 +990,8 @@ struct Achievement: Identifiable {
             rarity: .uncommon,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                return appState.currentStreak >= 3 && pet.healthState == .fullHealth
+                // Must have 3+ day streak AND pet at full health AND low screen time today
+                return appState.longestStreak >= 3 && pet.healthState == .fullHealth && appState.todayScreenTimeMinutes < 120
             }
         ),
         
@@ -983,7 +1005,8 @@ struct Achievement: Identifiable {
             rarity: .uncommon,
             isUnlocked: { appState in 
                 guard let pet = appState.userPet else { return false }
-                return appState.currentStreak >= 7 && 
+                // Must have 7+ day streak
+                return appState.longestStreak >= 7 && 
                        (pet.healthState == .fullHealth || pet.healthState == .happy)
             }
         ),
@@ -1077,9 +1100,12 @@ struct Achievement: Identifiable {
             category: .usage,
             rarity: .uncommon,
             isUnlocked: { appState in
+                // Must have 7+ day streak
+                guard appState.longestStreak >= 7 else { return false }
                 let recentHistory = appState.dailyHistory.suffix(7)
                 guard recentHistory.count >= 7 else { return false }
-                return recentHistory.allSatisfy { $0.screenTimeMinutes < 180 }
+                // Must have actual data and be under 3 hours
+                return recentHistory.allSatisfy { $0.screenTimeMinutes > 0 && $0.screenTimeMinutes < 180 }
             }
         ),
         Achievement(
@@ -1138,16 +1164,20 @@ struct Achievement: Identifiable {
         Achievement(
             id: "screen_time_reducer",
             title: "Screen Time Reducer",
-            description: "Reduce weekly average screen time by 50%",
+            description: "Keep average screen time under 1.5 hours for a week",
             icon: "chart.line.downtrend.xyaxis",
             color: .success,
             category: .milestones,
             rarity: .rare,
             isUnlocked: { appState in
+                // Must have 7+ day streak
+                guard appState.longestStreak >= 7 else { return false }
                 let recentHistory = appState.dailyHistory.suffix(7)
                 guard recentHistory.count >= 7 else { return false }
+                // Must have actual data
+                guard recentHistory.allSatisfy({ $0.screenTimeMinutes > 0 }) else { return false }
                 let avgScreenTime = recentHistory.reduce(0) { $0 + $1.screenTimeMinutes } / recentHistory.count
-                return avgScreenTime < 90 // Under 1.5 hours average
+                return avgScreenTime < 90
             }
         ),
         Achievement(
@@ -1412,13 +1442,13 @@ struct Achievement: Identifiable {
         ),
         Achievement(
             id: "apps_used_1",
-            title: "One and Done",
-            description: "Track at least 1 app with real usage > 0",
-            icon: "app.fill",
+            title: "First Block",
+            description: "Block at least 1 app",
+            icon: "hand.raised.fill",
             color: .primary,
             category: .usage,
             rarity: .common,
-            isUnlocked: { appState in appState.monitoredApps.contains { $0.usedToday > 0 } }
+            isUnlocked: { _ in BlockedAppsManager.shared.blockedCount >= 1 }
         ),
         Achievement(
             id: "apps_used_5",
