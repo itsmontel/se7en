@@ -35,12 +35,11 @@ struct PetSelectionView: View {
                         }
                         
                         VStack(spacing: 32) {
-                            // Selected pet display - bigger
+                            // Selected pet display - bigger (no shadow)
                             Image("\(selectedPetType.folderName.lowercased())fullhealth")
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 220, height: 220)
-                                .shadow(color: .black.opacity(0.1), radius: 15, x: 0, y: 8)
                                 .padding(.top, 20)
                             
                             VStack(spacing: 16) {

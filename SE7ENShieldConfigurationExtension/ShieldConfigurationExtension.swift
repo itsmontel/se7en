@@ -2,6 +2,8 @@ import ManagedSettings
 import ManagedSettingsUI
 import UIKit
 import FamilyControls
+import AVFoundation
+import AVKit
 
 class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     
@@ -44,29 +46,31 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         // Get user's first name from shared UserDefaults
         let firstName = getUserFirstName()
         
-        // Get pet type for sick image
+        // Get pet type for sick animation/image
         let petType = getUserPetType()
         
         // Get unblock duration
         let unblockDuration = getUnblockDuration()
         
-        // Custom colors - light mode
-        let backgroundColor = UIColor.systemBackground
+        // Use yellow background color from app design
+        // Light mode: #FFFAE6 (RGB: 255, 250, 230)
+        let backgroundColor = UIColor(red: 1.0, green: 0.98, blue: 0.9, alpha: 1.0)
         let primaryColor = UIColor(red: 0.4, green: 0.6, blue: 1.0, alpha: 1.0)
         
-        // Get the sick pet image from extension's asset catalog
-        let sickPetImage = getSickPetImage(for: petType)
+        // Get sick pet image (static for now - extensions have limitations with video)
+        let sickPetIcon = getSickPetImage(for: petType)
         
         // Build personalized title
         let titleText = firstName.isEmpty ? "App Blocked" : "Hey \(firstName)!"
         
-        // New simplified subtitle
-        let subtitleText = "\(appName) is blocked ❤️\n\nSolve a puzzle in SE7EN to unblock for \(unblockDuration) minutes!"
+        // Build subtitle with actual unblock duration
+        let durationText = unblockDuration == 60 ? "1 hour" : "\(unblockDuration) minutes"
+        let subtitleText = "\(appName) is blocked ❤️\n\nSolve a puzzle in SE7EN to unblock for \(durationText)!"
         
         return ShieldConfiguration(
-            backgroundBlurStyle: .systemMaterial,
+            backgroundBlurStyle: .systemUltraThinMaterial, // Use subtle blur over yellow
             backgroundColor: backgroundColor,
-            icon: sickPetImage,
+            icon: sickPetIcon,
             title: ShieldConfiguration.Label(
                 text: titleText,
                 color: UIColor.label
@@ -91,9 +95,19 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     
     private func getUnblockDuration() -> Int {
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            #if DEBUG
+            print("⚠️ Shield: Could not access shared UserDefaults")
+            #endif
             return 15
         }
+        
+        defaults.synchronize()
         let duration = defaults.integer(forKey: "unblock_duration_minutes")
+        
+        #if DEBUG
+        print("🛡️ Shield: Unblock duration from settings: \(duration) minutes")
+        #endif
+        
         return duration > 0 ? duration : 15
     }
     
@@ -128,7 +142,82 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         return defaults.string(forKey: "user_pet_type")?.lowercased() ?? "dog"
     }
     
-    // MARK: - Get Sick Pet Image
+    // MARK: - Get Sick Pet Animation Thumbnail
+    
+    private func getSickPetAnimationThumbnail(for petType: String) -> UIImage? {
+        // Detect dark mode
+        let isDarkMode = UITraitCollection.current.userInterfaceStyle == .dark
+        
+        // Animation file names: DogSickAnimation.mp4 (light) or DarkDogSickAnimation.mp4 (dark)
+        let baseName: String
+        
+        switch petType.lowercased() {
+        case "dog":
+            baseName = "DogSickAnimation"
+        case "cat":
+            baseName = "CatSickAnimation"
+        case "bunny":
+            baseName = "BunnySickAnimation"
+        case "hamster":
+            baseName = "HamsterSickAnimation"
+        case "horse":
+            baseName = "HorseSickAnimation"
+        default:
+            baseName = "DogSickAnimation"
+        }
+        
+        // Add "Dark" prefix for dark mode
+        let animationName = isDarkMode ? "Dark\(baseName)" : baseName
+        
+        #if DEBUG
+        print("🛡️ Shield: Looking for animation: \(animationName).mp4 (isDarkMode: \(isDarkMode))")
+        #endif
+        
+        // Try to load animation from Animation folder
+        if let videoURL = Bundle.main.url(forResource: animationName, withExtension: "mp4", subdirectory: "Animation") {
+            #if DEBUG
+            print("✅ Shield: Found animation at: \(videoURL.path)")
+            #endif
+            return generateThumbnail(from: videoURL)
+        }
+        
+        // Fallback: try without subdirectory
+        if let videoURL = Bundle.main.url(forResource: animationName, withExtension: "mp4") {
+            #if DEBUG
+            print("✅ Shield: Found animation (no subdirectory) at: \(videoURL.path)")
+            #endif
+            return generateThumbnail(from: videoURL)
+        }
+        
+        #if DEBUG
+        print("⚠️ Shield: Animation not found, falling back to static image")
+        #endif
+        
+        return nil
+    }
+    
+    // MARK: - Generate Video Thumbnail
+    
+    private func generateThumbnail(from videoURL: URL) -> UIImage? {
+        let asset = AVAsset(url: videoURL)
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.appliesPreferredTrackTransform = true
+        
+        // Get frame from 0.5 seconds into the video
+        let time = CMTime(seconds: 0.5, preferredTimescale: 600)
+        
+        do {
+            let cgImage = try imageGenerator.copyCGImage(at: time, actualTime: nil)
+            return UIImage(cgImage: cgImage)
+        } catch {
+            #if DEBUG
+            print("⚠️ Failed to generate thumbnail from video: \(error)")
+            #endif
+            return nil
+        }
+    }
+    
+    // MARK: - Get Sick Pet Image (Fallback)
     
     private func getSickPetImage(for petType: String) -> UIImage? {
         // Image names match your asset catalog: dogsick, catsick, bunnysick, etc.
@@ -149,8 +238,22 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             imageName = "dogsick"
         }
         
+        #if DEBUG
+        print("🛡️ Shield: Loading static image: \(imageName)")
+        #endif
+        
         // Load from extension's asset catalog
-        return UIImage(named: imageName)
+        let image = UIImage(named: imageName)
+        
+        #if DEBUG
+        if image != nil {
+            print("✅ Shield: Static image loaded successfully")
+        } else {
+            print("⚠️ Shield: Failed to load static image")
+        }
+        #endif
+        
+        return image
     }
     
     // MARK: - Get App Name Helper

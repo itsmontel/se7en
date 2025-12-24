@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreData
 import UserNotifications
+import UIKit
 
 // MARK: - App Delegate for Notification Handling
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
@@ -8,6 +9,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Set notification delegate
         UNUserNotificationCenter.current().delegate = self
+        
         return true
     }
     
@@ -52,26 +54,71 @@ struct SE7ENApp: App {
     let persistentContainer = CoreDataManager.shared.persistentContainer
     
     init() {
+        // ✅ CRITICAL: Configure UIKit appearance FIRST, before any views are created
+        // This must happen in init() to ensure it runs before SwiftUI renders
+        Self.configureGlobalAppearance()
+        
         // Setup notification categories
         NotificationService.shared.setupNotificationCategories()
         
         // Perform Core Data migration if needed
         CoreDataManager.shared.performMigrationIfNeeded()
         
-        // Mark app as opened for streak tracking
-        CoreDataManager.shared.markAppOpened()
-        
         // Initialize BlockedAppsManager and apply blocking state
         _ = BlockedAppsManager.shared
+    }
+    
+    /// Configure global UIKit appearance settings
+    /// Called in init() to ensure it runs before any SwiftUI views are created
+    private static func configureGlobalAppearance() {
+        // Tab Bar appearance - this is the main culprit for uppercase text
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithDefaultBackground()
+        
+        // Configure tab bar item appearance to NOT transform text
+        let itemAppearance = UITabBarItemAppearance()
+        
+        // Normal state
+        itemAppearance.normal.titleTextAttributes = [
+            .font: UIFont.systemFont(ofSize: 10, weight: .medium)
+        ]
+        
+        // Selected state
+        itemAppearance.selected.titleTextAttributes = [
+            .font: UIFont.systemFont(ofSize: 10, weight: .medium)
+        ]
+        
+        tabBarAppearance.stackedLayoutAppearance = itemAppearance
+        tabBarAppearance.inlineLayoutAppearance = itemAppearance
+        tabBarAppearance.compactInlineLayoutAppearance = itemAppearance
+        
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        }
+        
+        // Navigation Bar appearance
+        let navBarAppearance = UINavigationBarAppearance()
+        navBarAppearance.configureWithDefaultBackground()
+        navBarAppearance.titleTextAttributes = [
+            .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
+        ]
+        navBarAppearance.largeTitleTextAttributes = [
+            .font: UIFont.systemFont(ofSize: 34, weight: .bold)
+        ]
+        
+        UINavigationBar.appearance().standardAppearance = navBarAppearance
+        UINavigationBar.appearance().compactAppearance = navBarAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
     }
     
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .withProperTextCase() // ✅ Apply text case modifier at root level
                 .environmentObject(appState)
                 .environment(\.managedObjectContext, persistentContainer.viewContext)
                 .preferredColorScheme(isDarkMode ? .dark : .light)
-                .environment(\.textCase, .none)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                     // Check for pending puzzle notification from shield
                     checkAndSendPendingPuzzleNotification()
@@ -92,8 +139,6 @@ struct SE7ENApp: App {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     handleAppDidBecomeActive()
-                    // Mark that app was opened today for streak tracking
-                    CoreDataManager.shared.markAppOpened()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
                     handleAppWillResignActive()

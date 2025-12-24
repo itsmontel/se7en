@@ -17,8 +17,8 @@ struct PetPreviewView: View {
         appState.userPet?.name ?? "Your Pet"
     }
     
-    private var petType: String {
-        appState.userPet?.type.folderName.lowercased() ?? "dog"
+    private var petType: PetType {
+        appState.userPet?.type ?? .dog
     }
     
     var body: some View {
@@ -48,14 +48,15 @@ struct PetPreviewView: View {
                 
                 Spacer()
                 
-                // Pet Display with Health State
+                // Pet Display with Health State - using animations for all states
                 VStack(spacing: 24) {
-                    Image("\(petType)\(currentHealthState.rawValue)")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 200, height: 200)
-                        .id(currentHealthState)
-                        .transition(.scale.combined(with: .opacity))
+                    PetAnimationView(
+                        petType: petType,
+                        healthState: currentHealthState,
+                        height: 200
+                    )
+                    .id(currentHealthState)
+                    .transition(.scale.combined(with: .opacity))
                     
                     // Health State Info
                     VStack(spacing: 12) {
@@ -67,6 +68,7 @@ struct PetPreviewView: View {
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, 32)
                     }
                 }

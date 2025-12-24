@@ -30,12 +30,12 @@ struct DidYouKnowView: View {
                 
                 Spacer()
                 
-                // Clean fact cards matching BrainRot's style
+                // Clean fact cards
                 VStack(spacing: 24) {
                     FactCard(
                         icon: "hourglass.circle.fill",
                         iconColor: Color.red,
-                        text: "People spend 7+ years of their lifetime staring at phone screens",
+                        text: "On average, people spend 7+ years of their lifetime staring at phone screens",
                         delay: 0.2
                     )
 
@@ -56,7 +56,7 @@ struct DidYouKnowView: View {
                     FactCard(
                         icon: "target",
                         iconColor: Color.orange,
-                        text: "Only 3% of people successfully limit screen time without accountability",
+                        text: "Around 3% of people successfully limit screen time without accountability",
                         delay: 0.8
                     )
                 }
@@ -65,12 +65,14 @@ struct DidYouKnowView: View {
                 
                 Spacer()
                 
-                // Bottom text and button like BrainRot
+                // Bottom text and button
                 VStack(spacing: 24) {
-                    Text("We're here to help you be more mindful of these habits")
+                    Text("We're here to help you build better habits")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
+                        .textCase(.none)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 32)
                         .opacity(animateButton ? 1.0 : 0.0)
                     
