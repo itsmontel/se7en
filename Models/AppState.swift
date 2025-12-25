@@ -47,7 +47,16 @@ class AppState: ObservableObject {
     @Published var newStreakValue = 0
     @Published var shouldShowAchievementCelebration = false
     @Published var newAchievement: Achievement?
-    @Published var todayScreenTimeMinutes: Int = 0
+    @Published var todayScreenTimeMinutes: Int = 0 {
+        didSet {
+            // Update health value whenever screen time changes
+            // Use async dispatch to avoid "Publishing changes from within view updates" warning
+            DispatchQueue.main.async { [weak self] in
+                self?.recalculatePetHealthValue()
+            }
+        }
+    }
+    @Published var petHealthValue: Int = 100
     
     private var previousStreak = 0
     private var isRefreshingPetHealth = false
@@ -1108,6 +1117,78 @@ class AppState: ObservableObject {
     
     // MARK: - Pet Health Management
     
+    /// Recalculate and update the pet health value based on screen time
+    /// IMPORTANT: Only the DeviceActivityReport extension writes to total_usage
+    /// The main app should ONLY READ, never write
+    func recalculatePetHealthValue() {
+        print("🔍 [HEALTH] Recalculating health value...")
+        let appGroupID = "group.com.se7en.app"
+        var totalMinutes = 0
+        
+        // Read from shared container (written by DeviceActivityReport extension)
+        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+            sharedDefaults.synchronize()
+            
+            // Source 1: total_usage (primary - set by report extension)
+            let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+            print("🔍 [HEALTH] Shared container total_usage: \(totalUsage)")
+            
+            // Source 2: per_app_usage (backup - also set by report extension)
+            // This captures both individual apps AND categories
+            var perAppSum = 0
+            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
+                perAppSum = perAppUsage.values.reduce(0, +)
+                print("🔍 [HEALTH] Shared container per_app_usage sum: \(perAppSum) from \(perAppUsage.count) entries")
+            }
+            
+            // Use whichever is higher (report might write to one before the other)
+            totalMinutes = max(totalUsage, perAppSum)
+            
+            if totalMinutes > 0 {
+                print("🔍 [HEALTH] Using shared container: \(totalMinutes) min")
+            }
+        }
+        
+        // Fallback: todayScreenTimeMinutes (set by Dashboard when report loads)
+        if totalMinutes == 0 && todayScreenTimeMinutes > 0 {
+            totalMinutes = todayScreenTimeMinutes
+            print("🔍 [HEALTH] Using todayScreenTimeMinutes fallback: \(totalMinutes)")
+        }
+        
+        let totalHours = Double(totalMinutes) / 60.0
+        print("🔍 [HEALTH] Screen time: \(totalMinutes) min (\(String(format: "%.1f", totalHours)) hrs)")
+        
+        // Calculate health value (0-100) where 100 is best health
+        // Inverse relationship: more screen time = lower health
+        let newHealthValue: Int
+        switch totalHours {
+        case 0..<2:
+            // Full health: 90-100
+            newHealthValue = max(90, 100 - Int(totalHours * 5))
+        case 2..<4:
+            // Happy: 70-89
+            newHealthValue = max(70, 89 - Int((totalHours - 2) * 9.5))
+        case 4..<6:
+            // Content: 50-69
+            newHealthValue = max(50, 69 - Int((totalHours - 4) * 9.5))
+        case 6..<8:
+            // Sad: 20-49
+            newHealthValue = max(20, 49 - Int((totalHours - 6) * 14.5))
+        default:
+            // Sick: 0-19
+            let excessHours = totalHours - 8
+            newHealthValue = max(0, 19 - Int(excessHours * 2))
+        }
+        
+        // Update if changed
+        if petHealthValue != newHealthValue {
+            print("✅ [HEALTH] Health changed: \(petHealthValue) -> \(newHealthValue)")
+            petHealthValue = newHealthValue
+        } else {
+            print("ℹ️ [HEALTH] Health unchanged: \(petHealthValue)")
+        }
+    }
+    
     func updatePetHealth() {
         guard var pet = userPet else { return }
         
@@ -1212,6 +1293,7 @@ class AppState: ObservableObject {
     
     /// Calculate pet health based on daily screen time
     func calculatePetHealthPercentage() -> Int {
+        print("🔍 [HEALTH_CALC] calculatePetHealthPercentage() called")
         // ALWAYS sync from shared container first to get latest data
         let appGroupID = "group.com.se7en.app"
         var freshTotalMinutes = 0
@@ -1220,13 +1302,26 @@ class AppState: ObservableObject {
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
             sharedDefaults.synchronize()
             freshTotalMinutes = sharedDefaults.integer(forKey: "total_usage")
-            
-            #if DEBUG
-            print("📱 Health: UserDefaults total_usage = \(freshTotalMinutes)")
-            #endif
+            print("🔍 [HEALTH_CALC] UserDefaults total_usage = \(freshTotalMinutes)")
         }
         
-        // Source 2: Sum per_app_usage
+        // Source 2: Core Data - "All Categories Tracking" goal (read-only, don't write)
+        // NOTE: We don't write from Core Data because it only tracks from install time
+        // The DeviceActivityReport is authoritative and tracks from 12 AM
+        if freshTotalMinutes == 0 {
+            let coreDataManager = CoreDataManager.shared
+            let categoryBundleID = "com.se7en.allcategories"
+            if let record = coreDataManager.getTodaysUsageRecord(for: categoryBundleID) {
+                let coreDataMinutes = Int(record.actualUsageMinutes)
+                print("🔍 [HEALTH_CALC] Core Data (All Categories) = \(coreDataMinutes) (read-only, not writing)")
+                // Only use if report hasn't written yet (shouldn't happen, but fallback)
+                if coreDataMinutes > 0 {
+                    freshTotalMinutes = coreDataMinutes
+                }
+            }
+        }
+        
+        // Source 3: Sum per_app_usage
         if freshTotalMinutes == 0 {
             if let sharedDefaults = UserDefaults(suiteName: appGroupID),
                let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") {
@@ -1236,23 +1331,21 @@ class AppState: ObservableObject {
                     if let doubleValue = value as? Double { return partial + Int(doubleValue) }
                     return partial
                 }
-                #if DEBUG
-                print("📱 Health: per_app_usage sum = \(freshTotalMinutes)")
-                #endif
+                print("🔍 [HEALTH_CALC] per_app_usage sum = \(freshTotalMinutes)")
             }
         }
         
-        // Source 3: JSON file backup
+        // Source 4: JSON file backup
         if freshTotalMinutes == 0 {
             freshTotalMinutes = readTotalUsageFromSharedFileBackup(appGroupID: appGroupID)
-            #if DEBUG
-            print("📱 Health: File backup total_usage = \(freshTotalMinutes)")
-            #endif
+            print("🔍 [HEALTH_CALC] File backup total_usage = \(freshTotalMinutes)")
         }
         
-        // ALWAYS update todayScreenTimeMinutes with fresh data
-        if freshTotalMinutes > 0 {
-            todayScreenTimeMinutes = freshTotalMinutes
+        // Schedule update to todayScreenTimeMinutes asynchronously to avoid view update issues
+        if freshTotalMinutes > 0 && freshTotalMinutes != todayScreenTimeMinutes {
+            DispatchQueue.main.async { [weak self] in
+                self?.todayScreenTimeMinutes = freshTotalMinutes
+            }
         }
         
         let totalMinutes = freshTotalMinutes > 0 ? freshTotalMinutes : todayScreenTimeMinutes
@@ -1270,9 +1363,7 @@ class AppState: ObservableObject {
         default: healthPercentage = 0
         }
         
-        #if DEBUG
-        print("📱 AppState: calculatePetHealthPercentage - totalMinutes=\(totalMinutes), hours=\(String(format: "%.1f", totalHours)), health=\(healthPercentage)%")
-        #endif
+        print("🔍 [HEALTH_CALC] RESULT: totalMinutes=\(totalMinutes), hours=\(String(format: "%.1f", totalHours)), health=\(healthPercentage)%")
         
         return max(0, min(100, healthPercentage))
     }
@@ -1337,10 +1428,8 @@ class AppState: ObservableObject {
         if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
             let sumFromPerApp = perAppUsage.values.reduce(0, +)
             if sumFromPerApp > 0 {
-                print("📊 Pet health using per_app_usage sum: \(sumFromPerApp) minutes (total_usage was 0)")
-                // Also update total_usage for future reads
-                sharedDefaults.set(sumFromPerApp, forKey: "total_usage")
-                sharedDefaults.synchronize()
+                print("📊 Pet health using per_app_usage sum: \(sumFromPerApp) minutes")
+                // NOTE: Don't write to total_usage here - only the report extension should write it
                 return sumFromPerApp
             }
         }

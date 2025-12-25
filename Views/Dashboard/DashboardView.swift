@@ -27,8 +27,8 @@ struct DashboardView: View {
     @State private var topAppToken: AnyHashable? = nil // Store token for top app
     
     private var healthScore: Int {
-        // Align health score with pet health calculation so the bar matches pet state
-        return appState.calculatePetHealthPercentage()
+        // Use the published petHealthValue which is updated reactively
+        return appState.petHealthValue
     }
     
     @State private var totalScreenTimeMinutes: Int = 0
@@ -225,34 +225,49 @@ struct DashboardView: View {
     
     // MARK: - Shared Container Reading
     
+    /// Read usage from shared container (written ONLY by DeviceActivityReport extension)
     private func readUsageFromSharedContainer() -> Int {
         let appGroupID = "group.com.se7en.app"
-        var totalUsage = 0
         
-        // Try UserDefaults
-        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-            totalUsage = sharedDefaults.integer(forKey: "total_usage")
-            print("🏠 Dashboard: Read total_usage from shared container: \(totalUsage)")
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ [SHARED_READ] Failed to access shared container")
+            return 0
         }
         
-        // Try file backup
-        if totalUsage == 0 {
-            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
-                let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
-                if let data = try? Data(contentsOf: fileURL),
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let usage = json["total_usage"] as? Int {
-                    totalUsage = usage
-                    print("🏠 Dashboard: Read total_usage from file backup: \(totalUsage)")
-                }
-            }
+        sharedDefaults.synchronize() // Force sync for cross-process access
+        
+        // Source 1: total_usage (primary)
+        let totalUsage = sharedDefaults.integer(forKey: "total_usage")
+        let appsCount = sharedDefaults.integer(forKey: "apps_count")
+        let lastUpdated = sharedDefaults.double(forKey: "last_updated")
+        
+        print("📊 [SHARED_READ] total_usage: \(totalUsage)")
+        print("📊 [SHARED_READ] apps_count: \(appsCount)")
+        
+        // Source 2: per_app_usage (backup - captures both apps AND categories)
+        var perAppSum = 0
+        if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
+            perAppSum = perAppUsage.values.reduce(0, +)
+            print("📊 [SHARED_READ] per_app_usage sum: \(perAppSum) from \(perAppUsage.count) entries")
         }
         
-        if totalUsage == 0 {
-            print("🏠 Dashboard: No usage data found in shared container or file backup")
+        if lastUpdated > 0 {
+            let lastUpdatedDate = Date(timeIntervalSince1970: lastUpdated)
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm:ss"
+            print("📊 [SHARED_READ] last_updated: \(formatter.string(from: lastUpdatedDate))")
         }
         
-        return totalUsage
+        // Use whichever is higher
+        let result = max(totalUsage, perAppSum)
+        
+        if result == 0 {
+            print("⚠️ [SHARED_READ] No usage data - report extension may not have written yet")
+        } else if perAppSum > totalUsage {
+            print("📊 [SHARED_READ] Using per_app_usage sum (\(perAppSum)) instead of total_usage (\(totalUsage))")
+        }
+        
+        return result
     }
     
     private func readAppsCountFromSharedContainer() -> Int {
@@ -1012,17 +1027,42 @@ struct DashboardView: View {
             .cornerRadius(12)
             .padding(.horizontal, 4) // Minimal padding to maximize width
             .onAppear {
-                // Single refresh check after report loads
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    let sharedUsage = readUsageFromSharedContainer()
-                    let sharedApps = readAppsCountFromSharedContainer()
-                    if sharedUsage > 0 || sharedApps > 0 {
-                        totalScreenTimeMinutes = sharedUsage
-                        appsUsedToday = sharedApps
-                        // CRITICAL FIX: Update AppState so pet health can use the latest data
-                        appState.todayScreenTimeMinutes = sharedUsage
-                        // Update pet health when screen time changes
-                        appState.updatePetHealth()
+                print("📊 [DASHBOARD] DeviceActivityReport(.todayOverview) appeared!")
+                print("📊 [DASHBOARD] Filter: \(startOfDay) to \(endOfDay)")
+                
+                // Check shared container multiple times as report extension writes data
+                // The TodayOverviewView now writes to shared container when it appears
+                // Also check periodically to catch updates
+                for delay in [0.5, 1.0, 2.0, 3.0, 5.0, 10.0] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        let sharedUsage = readUsageFromSharedContainer()
+                        let sharedApps = readAppsCountFromSharedContainer()
+                        print("📊 [DASHBOARD] Check at \(delay)s - usage: \(sharedUsage), apps: \(sharedApps)")
+                        
+                        // Always update if we have a value, even if it's the same
+                        // This ensures health recalculation happens
+                        if sharedUsage > 0 {
+                            // Update local state
+                            if sharedUsage != totalScreenTimeMinutes {
+                                totalScreenTimeMinutes = sharedUsage
+                                print("📊 [DASHBOARD] Updated totalScreenTimeMinutes to: \(sharedUsage)")
+                            }
+                            if sharedApps != appsUsedToday {
+                                appsUsedToday = sharedApps
+                            }
+                            
+                            // CRITICAL: Always update AppState and recalculate health
+                            // This ensures health uses the report's authoritative value
+                            if sharedUsage != appState.todayScreenTimeMinutes {
+                                print("📊 [DASHBOARD] Updating appState.todayScreenTimeMinutes: \(appState.todayScreenTimeMinutes) -> \(sharedUsage)")
+                                appState.todayScreenTimeMinutes = sharedUsage
+                            } else {
+                                // Even if value is same, force health recalculation
+                                // This catches cases where report wrote but health wasn't updated
+                                print("📊 [DASHBOARD] Value unchanged (\(sharedUsage)), forcing health recalculation")
+                                appState.recalculatePetHealthValue()
+                            }
+                        }
                     }
                 }
             }

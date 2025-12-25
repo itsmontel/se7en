@@ -24,25 +24,60 @@ struct TodayOverviewReport: DeviceActivityReportScene {
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> UsageSummary {
-        #if DEBUG
-        print("🚀 TodayOverviewReport: Processing device activity data...")
-        #endif
+        print("🚀 [REPORT_EXT] TodayOverviewReport.makeConfiguration() CALLED")
+        print("🚀 [REPORT_EXT] Starting to process DeviceActivityResults...")
         
-        var totalDuration: TimeInterval = 0
+        var totalDurationFromApps: TimeInterval = 0
+        var totalDurationFromSegments: TimeInterval = 0
+        var totalDurationFromCategories: TimeInterval = 0
         var perAppDuration: [String: TimeInterval] = [:]
+        var perCategoryDuration: [String: TimeInterval] = [:] // Track category-level usage too
         var tokenToDuration: [Application: TimeInterval] = [:]
         var tokenToName: [Application: String] = [:]
         var uniqueApps: Set<String> = []
+        var uniqueCategories: Set<String> = []
         var totalAppOpens: Int = 0
+        var segmentCount = 0
+        var categoryCount = 0
+        var appCount = 0
+        var hasDataAtSegmentLevel = false
+        var hasDataAtCategoryLevel = false
+        var hasDataAtAppLevel = false
         
         // Process all device activity data
         for await deviceActivityData in data {
+            print("📊 [REPORT_EXT] Processing deviceActivityData...")
+            
             for await segment in deviceActivityData.activitySegments {
-                // Note: numberOfPickups is not available on ActivitySegment in current iOS versions
-                // We'll track app launches by counting unique app opens instead
+                segmentCount += 1
+                let segmentDuration = segment.totalActivityDuration
+                print("📊 [REPORT_EXT] Segment \(segmentCount): duration=\(Int(segmentDuration/60)) min")
+                
+                if segmentDuration > 0 {
+                    hasDataAtSegmentLevel = true
+                    totalDurationFromSegments += segmentDuration
+                }
                 
                 for await category in segment.categories {
+                    categoryCount += 1
+                    let categoryDuration = category.totalActivityDuration
+                    let categoryActivity = category.category
+                    let categoryName = categoryActivity.localizedDisplayName ?? "Category \(categoryCount)"
+                    
+                    print("📊 [REPORT_EXT] Category '\(categoryName)': duration=\(Int(categoryDuration/60)) min")
+                    
+                    if categoryDuration > 0 {
+                        hasDataAtCategoryLevel = true
+                        if !uniqueCategories.contains(categoryName) {
+                            uniqueCategories.insert(categoryName)
+                            totalDurationFromCategories += categoryDuration
+                        }
+                        // Track per-category duration (for when apps aren't available)
+                        perCategoryDuration[categoryName, default: 0] += categoryDuration
+                    }
+                    
                     for await app in category.applications {
+                        appCount += 1
                         let application = app.application
                         let rawName = application.localizedDisplayName ?? "Unknown"
                         
@@ -55,6 +90,9 @@ struct TodayOverviewReport: DeviceActivityReportScene {
                         
                         // Only count apps with actual usage (duration > 0)
                         if appDuration > 0 {
+                            hasDataAtAppLevel = true
+                            print("✅ [REPORT_EXT] App: \(name) - \(Int(appDuration/60)) min")
+                            
                             // Count unique apps that were opened/used
                             if !uniqueApps.contains(name) {
                                 uniqueApps.insert(name)
@@ -63,7 +101,7 @@ struct TodayOverviewReport: DeviceActivityReportScene {
                             
                             // Aggregate by app name (for display)
                             perAppDuration[name, default: 0] += appDuration
-                            totalDuration += appDuration
+                            totalDurationFromApps += appDuration
                             
                             // Aggregate by application (for reliable limit matching)
                             tokenToDuration[application, default: 0] += appDuration
@@ -76,10 +114,44 @@ struct TodayOverviewReport: DeviceActivityReportScene {
             }
         }
         
+        // Determine total duration using the most granular data available
+        var totalDuration: TimeInterval
+        var appCountForSummary: Int
+        
+        if hasDataAtAppLevel && totalDurationFromApps > 0 {
+            // Best case: we have individual app data
+            totalDuration = totalDurationFromApps
+            appCountForSummary = uniqueApps.count
+            print("📊 [REPORT_EXT] Using app-level data: \(Int(totalDuration/60)) min from \(appCountForSummary) apps")
+        } else if hasDataAtCategoryLevel && totalDurationFromCategories > 0 {
+            // Category-level data (when user selects "All Categories")
+            totalDuration = totalDurationFromCategories
+            appCountForSummary = uniqueCategories.count // Report categories as "apps"
+            print("📊 [REPORT_EXT] Using category-level data: \(Int(totalDuration/60)) min from \(appCountForSummary) categories")
+            print("⚠️ [REPORT_EXT] Note: User selected categories, individual app breakdown not available")
+        } else if hasDataAtSegmentLevel && totalDurationFromSegments > 0 {
+            // Fallback to segment-level total
+            totalDuration = totalDurationFromSegments
+            appCountForSummary = 0
+            print("📊 [REPORT_EXT] Using segment-level data: \(Int(totalDuration/60)) min (no app breakdown)")
+        } else {
+            totalDuration = 0
+            appCountForSummary = 0
+        }
+        
         let totalMinutes = Int(totalDuration / 60)
-        #if DEBUG
-        print("📊 TodayOverviewReport: \(totalMinutes) min total, \(uniqueApps.count) apps, \(totalAppOpens) app opens")
-        #endif
+        print("📊 [REPORT_EXT] FINAL: \(totalMinutes) min total")
+        print("📊 [REPORT_EXT] Data sources: segments=\(hasDataAtSegmentLevel), categories=\(hasDataAtCategoryLevel), apps=\(hasDataAtAppLevel)")
+        print("📊 [REPORT_EXT] Processed: \(segmentCount) segments, \(categoryCount) categories, \(appCount) app entries")
+        
+        if totalMinutes == 0 {
+            print("⚠️ [REPORT_EXT] WARNING: No screen time data!")
+            print("   - Is Screen Time enabled in Settings?")
+            print("   - Has the device been used today?")
+            print("   - totalDurationFromSegments: \(Int(totalDurationFromSegments/60)) min")
+            print("   - totalDurationFromCategories: \(Int(totalDurationFromCategories/60)) min")
+            print("   - totalDurationFromApps: \(Int(totalDurationFromApps/60)) min")
+        }
         
         // Sort apps by duration and get top 10
         let sortedApps = perAppDuration.sorted { $0.value > $1.value }
@@ -87,16 +159,19 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         
         let summary = UsageSummary(
             totalDuration: totalDuration,
-            appCount: uniqueApps.count,
+            appCount: appCountForSummary,
             topApps: topApps,
             totalPickups: totalAppOpens
         )
+        
+        print("📊 [REPORT_EXT] Created summary: \(Int(totalDuration/60)) min, \(appCountForSummary) apps/categories")
         
         // Save to shared container for main app.
         // IMPORTANT: Perform App Group I/O on MainActor to avoid CFPrefsPlistSource issues.
         await saveToSharedContainer(
             summary: summary,
             perAppDuration: perAppDuration,
+            perCategoryDuration: perCategoryDuration,
             tokenToDuration: tokenToDuration,
             tokenToName: tokenToName,
             totalPickups: totalAppOpens
@@ -111,29 +186,47 @@ struct TodayOverviewReport: DeviceActivityReportScene {
     private func saveToSharedContainer(
         summary: UsageSummary,
         perAppDuration: [String: TimeInterval],
+        perCategoryDuration: [String: TimeInterval],
         tokenToDuration: [Application: TimeInterval],
         tokenToName: [Application: String],
         totalPickups: Int
     ) async {
+        print("💾 [REPORT_EXT] saveToSharedContainer() called")
         let appGroupID = "group.com.se7en.app"
         
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            #if DEBUG
-            print("❌ REPORT: Failed to access App Group")
-            #endif
+            print("❌ [REPORT_EXT] Failed to access App Group!")
             return
         }
         
         let totalMinutes = summary.totalMinutes
         let appsCount = summary.appCount
         
+        print("💾 [REPORT_EXT] Preparing to write: totalMinutes=\(totalMinutes), appsCount=\(appsCount)")
+        
         // Build per-app usage dictionary (minutes)
+        // If we have app-level data, use that; otherwise use category-level data
         var perAppUsage: [String: Int] = [:]
-        for (appName, duration) in perAppDuration {
-            let minutes = Int(duration / 60)
-            if minutes > 0 {
-                perAppUsage[appName] = minutes
+        
+        if !perAppDuration.isEmpty {
+            // We have individual app data
+            for (appName, duration) in perAppDuration {
+                let minutes = Int(duration / 60)
+                if minutes > 0 {
+                    perAppUsage[appName] = minutes
+                }
             }
+            print("💾 [REPORT_EXT] Using app-level data: \(perAppUsage.count) apps")
+        } else if !perCategoryDuration.isEmpty {
+            // Fallback to category data when apps aren't available
+            // This happens when user selects "All Categories" instead of individual apps
+            for (categoryName, duration) in perCategoryDuration {
+                let minutes = Int(duration / 60)
+                if minutes > 0 {
+                    perAppUsage["[Category] \(categoryName)"] = minutes
+                }
+            }
+            print("💾 [REPORT_EXT] Using category-level data: \(perAppUsage.count) categories")
         }
         
         // Build top apps payload
@@ -142,12 +235,14 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         }
         
         // Write core values
+        print("💾 [REPORT_EXT] Writing to UserDefaults...")
         sharedDefaults.set(totalMinutes, forKey: "total_usage")
         sharedDefaults.set(appsCount, forKey: "apps_count")
         sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
         sharedDefaults.set(topAppsPayload, forKey: "top_apps")
         sharedDefaults.set(perAppUsage, forKey: "per_app_usage")
         sharedDefaults.set(totalPickups, forKey: "total_app_opens")
+        print("✅ [REPORT_EXT] Wrote total_usage=\(totalMinutes), apps_count=\(appsCount)")
         
         // Save daily app opens history (for stats page)
         saveDailyAppOpens(totalPickups, to: sharedDefaults)

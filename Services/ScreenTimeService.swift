@@ -1372,9 +1372,8 @@ final class ScreenTimeService: ObservableObject {
         return await MainActor.run {
             guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
                 print("❌ Failed to access shared container for category usage")
-                // Fallback to estimate
-                let estimatedApps = selection.categoryTokens.count * 15
-                return (0, estimatedApps)
+                // Fallback to Core Data
+                return getCategoryUsageFromCoreData()
             }
             
             // CRITICAL FIX: Force synchronize for cross-process access
@@ -1387,12 +1386,20 @@ final class ScreenTimeService: ObservableObject {
             let appsCount = sharedDefaults.integer(forKey: "apps_count")
             
             if totalUsage > 0 || appsCount > 0 {
-                print("📊 Found category usage from extension: \(totalUsage) minutes, \(appsCount) apps (with usage)")
+                print("📊 Found category usage from shared container: \(totalUsage) minutes, \(appsCount) apps")
                 return (totalUsage, appsCount)
             }
             
+            // Fallback: Try Core Data (All Categories Tracking goal)
+            let coreDataUsage = getCategoryUsageFromCoreData()
+            if coreDataUsage.totalMinutes > 0 {
+                print("📊 Found category usage from Core Data: \(coreDataUsage.totalMinutes) minutes")
+                // Note: Don't write to shared container here - let the report extension be authoritative
+                return coreDataUsage
+            }
+            
             // No usage data yet - return 0 for both
-            print("📊 No category usage data yet from extension")
+            print("📊 No category usage data yet")
             return (0, 0)
         }
         
@@ -1520,6 +1527,27 @@ final class ScreenTimeService: ObservableObject {
         }
         
         coreDataManager.save()
+        
+        // NOTE: We DON'T write to shared container here for "All Categories Tracking"
+        // The DeviceActivityReport extension is the authoritative source for total_usage
+        // It reads from 12 AM, while monitor only tracks from when monitoring started
+        // Writing here would overwrite the report's correct value with a lower monitor value
+    }
+    
+    // NOTE: writeUsageToSharedContainer has been REMOVED
+    // The DeviceActivityReport extension is the ONLY authoritative source for total_usage
+    // It reads from 12 AM and provides accurate daily totals
+    // The monitor only tracks from when monitoring started, which is incorrect on install day
+    
+    /// Get category usage from Core Data (All Categories Tracking goal)
+    private func getCategoryUsageFromCoreData() -> (totalMinutes: Int, appsUsed: Int) {
+        let categoryBundleID = "com.se7en.allcategories"
+        if let record = coreDataManager.getTodaysUsageRecord(for: categoryBundleID) {
+            let minutes = Int(record.actualUsageMinutes)
+            print("📊 [CORE_DATA] Found All Categories Tracking: \(minutes) minutes")
+            return (minutes, 0) // We don't have per-app breakdown with categories
+        }
+        return (0, 0)
     }
     
     // MARK: - Persistence
