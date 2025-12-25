@@ -9,7 +9,6 @@ struct LifetimeCalculationView: View {
     @State private var showCalculation = false
     @State private var showPet = false
     @State private var showButton = false
-    @State private var backgroundIntensity: Double = 0.0
     @State private var animatedYears: Double = 0.0
     @State private var animationTasks: [Task<Void, Never>] = []
     
@@ -24,23 +23,14 @@ struct LifetimeCalculationView: View {
         return screenTimeHours / (365 * 24) // Convert to years
     }
     
-    private var percentageOfLife: Double {
-        let wakingHoursPerDay = 16.0
-        return (Double(hoursPerDay) / wakingHoursPerDay) * 100
-    }
-    
-    private var petType: String {
-        appState.userPet?.type.folderName.lowercased() ?? "dog"
+    private var petType: PetType {
+        appState.userPet?.type ?? .dog
     }
     
     var body: some View {
         ZStack {
-            // Dramatic background that gets darker
-            Color.appBackground
-                .overlay(
-                    Color.black.opacity(backgroundIntensity * 0.1)
-                )
-                .ignoresSafeArea()
+            // Background matching app theme yellow tint
+            OnboardingBackground()
             
             VStack(spacing: 0) {
                 // Header with back button and progress bar
@@ -68,7 +58,6 @@ struct LifetimeCalculationView: View {
                                 .foregroundColor(.red)
                                 .scaleEffect(showCalculation ? 1.0 : 0.3)
                                 .opacity(showCalculation ? 1.0 : 0.0)
-                                .shadow(color: .red.opacity(0.3), radius: 20, x: 0, y: 0)
                             
                             Text("of your life on screens")
                                 .font(.system(size: 20, weight: .medium))
@@ -79,16 +68,17 @@ struct LifetimeCalculationView: View {
                         }
                     }
                     
-                    // Sick pet with dramatic entrance
+                    // Sick pet animation with dramatic entrance
                     if showPet {
                         VStack(spacing: 24) {
-                            Image("\(petType)sick")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 200, height: 200)
-                                .scaleEffect(showPet ? 1.0 : 0.3)
-                                .opacity(showPet ? 1.0 : 0.0)
-                                .rotationEffect(.degrees(showPet ? 0 : -180))
+                            PetAnimationView(
+                                petType: petType,
+                                healthState: .sick,
+                                height: 200
+                            )
+                            .scaleEffect(showPet ? 1.0 : 0.3)
+                            .opacity(showPet ? 1.0 : 0.0)
+                            .rotationEffect(.degrees(showPet ? 0 : -180))
                             
                             VStack(spacing: 8) {
                                 Text("Projection based on 16 waking hours per day")
@@ -143,13 +133,11 @@ struct LifetimeCalculationView: View {
         // Dramatic sequence of animations
         withAnimation(.easeOut(duration: 0.8).delay(0.3)) {
             showTitle = true
-            backgroundIntensity = 0.3
         }
         
         // Show calculation container
         withAnimation(.spring(response: 0.8, dampingFraction: 0.6).delay(1.2)) {
             showCalculation = true
-            backgroundIntensity = 0.6
             HapticFeedback.heavy.trigger()
         }
         
@@ -194,7 +182,6 @@ struct LifetimeCalculationView: View {
             
             withAnimation(.spring(response: 1.0, dampingFraction: 0.4)) {
                 showPet = true
-                backgroundIntensity = 0.9
                 HapticFeedback.heavy.trigger()
             }
         }

@@ -155,6 +155,9 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         // Save daily per-app usage history (for weekly aggregation)
         saveDailyPerAppUsage(perAppUsage, to: sharedDefaults)
         
+        // Save daily screen time history (for stats page and weekly highlights)
+        saveDailyScreenTime(totalMinutes, to: sharedDefaults)
+        
         // Match tokens to limits and write usage by token hash
         matchTokensToLimits(
             tokenToDuration: tokenToDuration,
@@ -345,6 +348,34 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         
         #if DEBUG
         print("📱 REPORT: Saved per-app usage for \(todayKey): \(perAppUsage.count) apps")
+        #endif
+    }
+    
+    /// Save daily screen time for historical tracking
+    private func saveDailyScreenTime(_ totalMinutes: Int, to sharedDefaults: UserDefaults) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayKey = dateFormatter.string(from: Date())
+        
+        // Load existing history
+        var dailyScreenTime = sharedDefaults.dictionary(forKey: "daily_screen_time") as? [String: Int] ?? [:]
+        
+        // Update today's screen time
+        dailyScreenTime[todayKey] = totalMinutes
+        
+        // Keep only last 14 days
+        let calendar = Calendar.current
+        let twoWeeksAgo = calendar.date(byAdding: .day, value: -14, to: Date()) ?? Date()
+        let cutoffKey = dateFormatter.string(from: twoWeeksAgo)
+        
+        dailyScreenTime = dailyScreenTime.filter { key, _ in
+            key >= cutoffKey
+        }
+        
+        sharedDefaults.set(dailyScreenTime, forKey: "daily_screen_time")
+        
+        #if DEBUG
+        print("📱 REPORT: Saved screen time \(totalMinutes) min for \(todayKey)")
         #endif
     }
     

@@ -678,28 +678,12 @@ struct DashboardView: View {
                 let glowColor = healthState.color
                 
                 ZStack {
-                    // Subtle glow behind the pet (health-based colors)
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    glowColor.opacity(0.1),
-                                    glowColor.opacity(0.05),
-                                    Color.clear
-                                ],
-                                center: .center,
-                                startRadius: 50,
-                                endRadius: 120
-                            )
-                        )
-                        .frame(width: 240, height: 240)
-                        .blur(radius: 12)
-                    
-                    Image(petImageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(height: 200)
-                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                    // Use animation for all pets (with fallback to static image if animation not available)
+                    PetAnimationView(
+                        petType: pet.type,
+                        healthState: healthState,
+                        height: 220
+                    )
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)

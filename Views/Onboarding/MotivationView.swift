@@ -10,11 +10,8 @@ struct MotivationView: View {
     @State private var animateOptions = false
     @State private var animateButton = false
     
-    private var petImageName: String {
-        if let pet = appState.userPet {
-            return "\(pet.type.folderName.lowercased())fullhealth"
-        }
-        return "dogfullhealth"
+    private var petType: PetType {
+        appState.userPet?.type ?? .dog
     }
     
     var body: some View {
@@ -27,21 +24,23 @@ struct MotivationView: View {
                 
                 Spacer()
                 
-                // Header matching BrainRot style
+                // Header with pet animation
                 VStack(spacing: 24) {
-                    Image(petImageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 120, height: 120)
-                        .opacity(animateTitle ? 1.0 : 0.0)
-                        .scaleEffect(animateTitle ? 1.0 : 0.8)
+                    PetAnimationView(
+                        petType: petType,
+                        healthState: .content,
+                        height: 120
+                    )
+                    .opacity(animateTitle ? 1.0 : 0.0)
+                    .scaleEffect(animateTitle ? 1.0 : 0.8)
                     
                     VStack(spacing: 16) {
                         Text("You're here for a reason")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
                             .textCase(.none)
+                            .fixedSize(horizontal: false, vertical: true)
                             .opacity(animateTitle ? 1.0 : 0.0)
                         
                         Text("What is that reason?")
@@ -55,7 +54,7 @@ struct MotivationView: View {
                 
                 Spacer()
                 
-                // Motivation options in clean list style like BrainRot
+                // Motivation options in clean list style
                 VStack(spacing: 16) {
                     ForEach(Array(DownloadMotivation.allCases.enumerated()), id: \.element) { index, motivation in
                         MotivationRow(
@@ -139,6 +138,7 @@ struct MotivationRow: View {
                     .font(.system(size: 17, weight: .medium))
                     .foregroundColor(.textPrimary)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                 
                 Spacer()
                 

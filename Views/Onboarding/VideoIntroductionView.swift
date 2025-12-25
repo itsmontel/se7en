@@ -38,14 +38,13 @@ struct VideoIntroductionView: View {
 
                 Spacer()
 
-                // Video Player
+                // Video Player (no shadow)
                 VStack(spacing: 24) {
                     if let player = player {
                         VideoPlayerView(player: player)
                             .frame(maxWidth: .infinity)
                             .frame(height: 300)
                             .cornerRadius(24)
-                            .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
                             .padding(.horizontal, 24)
                     } else if let error = videoState.videoError {
                         // Error state - show pet image instead

@@ -31,7 +31,7 @@ struct ContentView: View {
                 .transition(.opacity)
             }
         }
-        .environment(\.textCase, .none)
+        .withProperTextCase()
         .onAppear {
             checkPuzzleMode()
         }
@@ -416,56 +416,35 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             DashboardView()
                 .tabItem {
-                    VStack {
-                        Image(systemName: "house.fill")
-                        Text("Home")
-                            .textCase(.none)
-                    }
+                    Label("Home", systemImage: "house.fill")
                 }
                 .tag(0)
             
             BlockingView()
                 .tabItem {
-                    VStack {
-                        Image(systemName: "hand.raised.fill")
-                        Text("Limits")
-                            .textCase(.none)
-                    }
+                    Label("Limits", systemImage: "hand.raised.fill")
                 }
                 .tag(1)
             
             GoalsView()
                 .tabItem {
-                    VStack {
-                        Image(systemName: "chart.bar.fill")
-                        Text("Stats")
-                            .textCase(.none)
-                    }
+                    Label("Stats", systemImage: "chart.bar.fill")
                 }
                 .tag(2)
             
             AchievementsView()
                 .tabItem {
-                    VStack {
-                        Image(systemName: "trophy.fill")
-                        Text("Achievements")
-                            .textCase(.none)
-                    }
+                    Label("Achievements", systemImage: "trophy.fill")
                 }
                 .tag(3)
             
             SettingsView()
                 .tabItem {
-                    VStack {
-                        Image(systemName: "gearshape.fill")
-                        Text("Settings")
-                            .textCase(.none)
-                    }
+                    Label("Settings", systemImage: "gearshape.fill")
                 }
                 .tag(4)
         }
         .tint(.primary)
-        .environment(\.textCase, .none)
     }
 }
 

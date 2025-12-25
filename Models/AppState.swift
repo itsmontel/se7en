@@ -692,6 +692,11 @@ class AppState: ObservableObject {
         }
     }
     
+    // Public method to refresh daily history (for stats page)
+    func refreshDailyHistory() {
+        loadDailyHistory()
+    }
+    
     func loadAchievements() {
         // Load real achievements - all achievements are defined, unlock status is checked dynamically
         achievements = Achievement.allAchievements
@@ -1209,30 +1214,48 @@ class AppState: ObservableObject {
     func calculatePetHealthPercentage() -> Int {
         // ALWAYS sync from shared container first to get latest data
         let appGroupID = "group.com.se7en.app"
+        var freshTotalMinutes = 0
+        
+        // Source 1: UserDefaults total_usage
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
             sharedDefaults.synchronize()
+            freshTotalMinutes = sharedDefaults.integer(forKey: "total_usage")
             
-            // Read fresh data
-            var freshTotalMinutes = sharedDefaults.integer(forKey: "total_usage")
-            
-            // Fallback to per_app_usage sum
-            if freshTotalMinutes == 0 {
-                if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") {
-                    freshTotalMinutes = perAppUsage.values.reduce(0) { partial, value in
-                        if let intValue = value as? Int { return partial + intValue }
-                        if let numberValue = value as? NSNumber { return partial + numberValue.intValue }
-                        return partial
-                    }
+            #if DEBUG
+            print("📱 Health: UserDefaults total_usage = \(freshTotalMinutes)")
+            #endif
+        }
+        
+        // Source 2: Sum per_app_usage
+        if freshTotalMinutes == 0 {
+            if let sharedDefaults = UserDefaults(suiteName: appGroupID),
+               let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") {
+                freshTotalMinutes = perAppUsage.values.reduce(0) { partial, value in
+                    if let intValue = value as? Int { return partial + intValue }
+                    if let numberValue = value as? NSNumber { return partial + numberValue.intValue }
+                    if let doubleValue = value as? Double { return partial + Int(doubleValue) }
+                    return partial
                 }
-            }
-            
-            // Update todayScreenTimeMinutes if we have fresh data
-            if freshTotalMinutes > 0 && freshTotalMinutes != todayScreenTimeMinutes {
-                todayScreenTimeMinutes = freshTotalMinutes
+                #if DEBUG
+                print("📱 Health: per_app_usage sum = \(freshTotalMinutes)")
+                #endif
             }
         }
         
-        let totalMinutes = todayScreenTimeMinutes
+        // Source 3: JSON file backup
+        if freshTotalMinutes == 0 {
+            freshTotalMinutes = readTotalUsageFromSharedFileBackup(appGroupID: appGroupID)
+            #if DEBUG
+            print("📱 Health: File backup total_usage = \(freshTotalMinutes)")
+            #endif
+        }
+        
+        // ALWAYS update todayScreenTimeMinutes with fresh data
+        if freshTotalMinutes > 0 {
+            todayScreenTimeMinutes = freshTotalMinutes
+        }
+        
+        let totalMinutes = freshTotalMinutes > 0 ? freshTotalMinutes : todayScreenTimeMinutes
         let totalHours = Double(totalMinutes) / 60.0
         
         let healthPercentage: Int
@@ -1248,7 +1271,7 @@ class AppState: ObservableObject {
         }
         
         #if DEBUG
-        print("📱 AppState: calculatePetHealthPercentage - totalMinutes=\(totalMinutes), hours=\(totalHours), health=\(healthPercentage)%")
+        print("📱 AppState: calculatePetHealthPercentage - totalMinutes=\(totalMinutes), hours=\(String(format: "%.1f", totalHours)), health=\(healthPercentage)%")
         #endif
         
         return max(0, min(100, healthPercentage))

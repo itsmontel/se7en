@@ -5,6 +5,7 @@ import ManagedSettings
 // MARK: - Blocked Apps Manager
 
 /// Manages the list of blocked apps and unblock state
+@MainActor
 class BlockedAppsManager: ObservableObject {
     static let shared = BlockedAppsManager()
     
@@ -106,6 +107,10 @@ class BlockedAppsManager: ObservableObject {
         blockedSelection = selection
         saveState()
         applyBlockingState()
+        
+        // Track blocked apps status for streak calculation
+        let hasBlockedApps = blockedCount > 0
+        CoreDataManager.shared.markBlockedAppsStatus(hasBlockedApps: hasBlockedApps)
     }
     
     /// Apply shields based on current state
@@ -216,6 +221,7 @@ struct BlockingView: View {
     @State private var showingSettings = false
     @State private var refreshTimer: Timer?
     @State private var pulseAnimation = false
+    @State private var showingRemoveAllConfirmation = false
     
     let unblockDurationOptions = [5, 10, 15, 30, 60]
     
@@ -310,7 +316,29 @@ struct BlockingView: View {
                 blockedAppsManager.loadState()
                 blockedAppsManager.checkAndReblock()
             }
+            .alert("Remove All Blocked Apps?", isPresented: $showingRemoveAllConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Remove All", role: .destructive) {
+                    removeAllBlocks()
+                }
+            } message: {
+                if appState.currentStreak > 0 {
+                    Text("If you have no blocked apps by the end of the day, your \(appState.currentStreak)-day streak will be lost.")
+                } else {
+                    Text("This will unblock all selected apps.")
+                }
+            }
         }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func removeAllBlocks() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            blockedAppsManager.updateBlockedApps(FamilyActivitySelection())
+            tempSelection = FamilyActivitySelection()
+        }
+        HapticFeedback.medium.trigger()
     }
     
     // MARK: - Background
@@ -687,11 +715,12 @@ struct BlockingView: View {
                 
                 // Clear all button
                 Button(action: {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                        blockedAppsManager.updateBlockedApps(FamilyActivitySelection())
-                        tempSelection = FamilyActivitySelection()
+                    // Show confirmation if user has a streak
+                    if appState.currentStreak > 0 {
+                        showingRemoveAllConfirmation = true
+                    } else {
+                        removeAllBlocks()
                     }
-                    HapticFeedback.medium.trigger()
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "xmark.circle")
