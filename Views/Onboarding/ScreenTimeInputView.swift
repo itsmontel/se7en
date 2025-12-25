@@ -9,25 +9,11 @@ struct ScreenTimeInputView: View {
     @State private var animateIllustration = false
     @State private var animateContent = false
     
-    private var petType: PetType {
-        appState.userPet?.type ?? .dog
-    }
-    
-    // Determine pet health state based on hours
-    private var petHealthState: PetHealthState {
-        let hours = Int(selectedHours)
-        switch hours {
-        case 0...2:
-            return .fullHealth
-        case 3...4:
-            return .happy
-        case 5...6:
-            return .content
-        case 7...8:
-            return .sad
-        default: // 9+
-            return .sick
+    private var petImageName: String {
+        if let pet = appState.userPet {
+            return "\(pet.type.folderName.lowercased())fullhealth"
         }
+        return "dogfullhealth"
     }
     
     var body: some View {
@@ -38,36 +24,32 @@ struct ScreenTimeInputView: View {
                 // Header with back button and progress bar
                 OnboardingHeader(currentStep: 7, totalSteps: 11, showBackButton: true, onBack: onBack)
                 
-                // Pet animation based on hours (moved higher, no shadow)
-                VStack(spacing: 24) {
-                    PetAnimationView(
-                        petType: petType,
-                        healthState: petHealthState,
-                        height: 120
-                    )
-                    .scaleEffect(animateIllustration ? 1.0 : 0.8)
-                    .opacity(animateIllustration ? 1.0 : 0.0)
-                    .id(petHealthState) // Force reload when health state changes
+                        // Pet illustration with animation
+                        VStack(spacing: 32) {
+                            Image(petImageName)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 120, height: 120)
+                                .scaleEffect(animateIllustration ? 1.0 : 0.8)
+                                .opacity(animateIllustration ? 1.0 : 0.0)
+                                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
                     
                     VStack(spacing: 16) {
                         Text("How much time do you spend on screens daily?")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
                             .textCase(.none)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .lineLimit(2)
                             .opacity(animateContent ? 1.0 : 0.0)
                         
                         Text("You can tell the truth")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.gray)
-                            .textCase(.none)
                             .opacity(animateContent ? 1.0 : 0.0)
                     }
                     .padding(.horizontal, 32)
                 }
-                .padding(.top, 40)
+                .padding(.top, 80)
                 
                 Spacer()
                 

@@ -155,30 +155,23 @@ struct GoalsView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 6)
                         
-                        // Weekly Discipline Overview (moved to top)
-                        GoalProgressOverview(appState: appState)
+                        // Daily Discipline Overview (moved to top)
+                        GoalProgressOverview(
+                            todayScreenTime: todayScreenTime,
+                            puzzlesSolvedThisWeek: puzzlesSolvedThisWeek,
+                            disciplineScore: disciplineScore,
+                            streak: appState.currentStreak,
+                            longestStreak: appState.longestStreak
+                        )
                         .padding(.horizontal, 20)
                         
                         // Weekly Health Report (redesigned like Brainrot Report)
                         WeeklyHealthReport(weekStart: weekStart, appState: appState)
                             .padding(.horizontal, 20)
                         
-                        // Weekly Highlights Card
-                        WeeklyHighlightsCard(
-                            weekStart: weekStart,
-                            appState: appState,
-                            blockedAppsCount: BlockedAppsManager.shared.blockedCount,
-                            puzzlesSolved: puzzlesSolvedThisWeek,
-                            streak: appState.currentStreak
-                        )
-                        .padding(.horizontal, 20)
-                        
-                        // Focus Score Card
-                        FocusScoreCard(
-                            appState: appState,
-                            weekStart: weekStart
-                        )
-                        .padding(.horizontal, 20)
+                        // App Launches Report (with horizontal bar chart)
+                        AppLaunchesReport(weekStart: weekStart, appState: appState)
+                            .padding(.horizontal, 20)
                         
                         if !focusApps.isEmpty {
                             FocusAppsCard(apps: Array(focusApps.prefix(3)))
@@ -195,19 +188,13 @@ struct GoalsView: View {
                     }
                 }
                 .onAppear {
-                    // Load screen time data (non-blocking)
+                    // Force sync screen time data from shared container
                     appState.preloadScreenTimeFromSharedContainer()
                     appState.updatePetHealth()
                     
-                    // Refresh daily history
-                    appState.refreshDailyHistory()
-                    
-                    // Trigger report refresh in background (non-blocking)
-                    Task.detached(priority: .utility) {
+                    // Trigger report refresh
+                    Task {
                         await ScreenTimeService.shared.updateUsageFromReport()
-                        await MainActor.run {
-                            appState.refreshDailyHistory()
-                        }
                     }
                 }
             }
@@ -222,7 +209,7 @@ struct GoalsView: View {
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return appState.todayScreenTimeMinutes
         }
-        // NO synchronize() - UserDefaults reads don't need it and it blocks main thread
+        sharedDefaults.synchronize()
         let total = sharedDefaults.integer(forKey: "total_usage")
         return total > 0 ? total : appState.todayScreenTimeMinutes
     }
@@ -231,7 +218,7 @@ struct GoalsView: View {
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return 0
         }
-        // NO synchronize() - UserDefaults reads don't need it
+        sharedDefaults.synchronize()
         
         // Get puzzles solved history
         guard let puzzleHistory = sharedDefaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else {
@@ -376,7 +363,7 @@ struct GoalsView: View {
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return []
         }
-        // NO synchronize() - UserDefaults reads don't need it
+        sharedDefaults.synchronize()
         
         // Get top apps from per_app_usage
         guard let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] else {
@@ -421,7 +408,7 @@ struct GoalsView: View {
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return []
         }
-        // NO synchronize() - UserDefaults reads don't need it
+        sharedDefaults.synchronize()
         
         // Check if user has blocked apps
         if let selectionData = sharedDefaults.data(forKey: "blocked_apps_selection") {
@@ -691,7 +678,7 @@ struct WeeklyHealthReport: View {
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return nil
         }
-        // NO synchronize() for reads - UserDefaults syncs automatically
+        sharedDefaults.synchronize()
         
         // Check if we have an install date stored
         let timestamp = sharedDefaults.double(forKey: "app_install_date")
@@ -702,7 +689,7 @@ struct WeeklyHealthReport: View {
         // If not stored, store it now (first time)
         let now = Date()
         sharedDefaults.set(now.timeIntervalSince1970, forKey: "app_install_date")
-        // Only synchronize() for writes if absolutely necessary, but iOS syncs automatically
+        sharedDefaults.synchronize()
         return now
     }
     
@@ -763,7 +750,7 @@ struct WeeklyHealthReport: View {
             return (0, .sick, false)
         }
         
-        // NO synchronize() - UserDefaults reads don't need it
+        sharedDefaults.synchronize()
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -897,22 +884,17 @@ struct WeeklyHealthCard: View {
     }
 }
 
-// MARK: - Weekly Highlights Card
+// MARK: - App Launches Report (Horizontal Bar Chart)
 
-struct WeeklyHighlightsCard: View {
+struct AppLaunchesReport: View {
     let weekStart: Date
     let appState: AppState
-    let blockedAppsCount: Int
-    let puzzlesSolved: Int
-    let streak: Int
     
     private let appGroupID = "group.com.se7en.app"
     
-    // Cache data to avoid repeated UserDefaults reads
-    @State private var cachedTodayScreenTime: Int = 0
-    @State private var cachedBestDay: (day: String, screenTime: Int)? = nil
-    @State private var cachedAvgScreenTime: Int = 0
-    @State private var lastCacheUpdate: Date = Date.distantPast
+    // State to trigger refresh
+    @State private var refreshTrigger = false
+    @State private var isLoading = true
     
     private var weekDays: [Date] {
         (0..<7).compactMap { dayOffset in
@@ -920,544 +902,286 @@ struct WeeklyHighlightsCard: View {
         }
     }
     
-    // Load data once and cache it
-    private func loadScreenTimeData() {
-        // Only refresh cache every 5 seconds to avoid excessive reads
-        guard Date().timeIntervalSince(lastCacheUpdate) > 5.0 else { return }
-        
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
-        // NO synchronize() - UserDefaults reads don't need it and it blocks the main thread
-        
-        // Read today's screen time
-        var todayScreenTime = sharedDefaults.integer(forKey: "total_usage")
-        if todayScreenTime == 0, let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
-            todayScreenTime = perAppUsage.values.reduce(0, +)
-        }
-        cachedTodayScreenTime = todayScreenTime
-        
-        // Read historical data
-        let dailyScreenTime = sharedDefaults.dictionary(forKey: "daily_screen_time") as? [String: Int] ?? [:]
-        let dailyPerAppUsage = sharedDefaults.dictionary(forKey: "daily_per_app_usage") as? [String: [String: Int]] ?? [:]
-        
+    // Get TOTAL app opens for a specific date (all apps combined)
+    private func getTotalLaunches(for date: Date) -> Int {
         let calendar = Calendar.current
+        let isToday = calendar.isDateInToday(date)
+        let isFuture = date > Date()
+        
+        if isFuture {
+            return 0
+        }
+        
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return 0
+        }
+        
+        // CRITICAL: Force synchronize to get fresh data from disk
+        sharedDefaults.synchronize()
+        
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dayNameFormatter = DateFormatter()
-        dayNameFormatter.dateFormat = "EEEE"
+        let dateKey = dateFormatter.string(from: date)
         
-        var bestDay: (day: String, screenTime: Int)? = nil
-        var total = 0
-        var daysWithData = 0
-        
-        for dayOffset in 0..<7 {
-            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: Date()) else { continue }
-            let dateKey = dateFormatter.string(from: date)
-            
-            var screenTime = 0
-            
-            if calendar.isDateInToday(date) {
-                screenTime = todayScreenTime
-            } else if let daily = dailyScreenTime[dateKey] {
-                screenTime = daily
-            } else if let perApp = dailyPerAppUsage[dateKey] {
-                screenTime = perApp.values.reduce(0, +)
+        // For today, try multiple sources
+        if isToday {
+            // Source 1: Live total_app_opens from UserDefaults
+            let liveAppOpens = sharedDefaults.integer(forKey: "total_app_opens")
+            if liveAppOpens > 0 {
+                return liveAppOpens
             }
             
-            if screenTime > 0 {
-                total += screenTime
-                daysWithData += 1
-                
-                if bestDay == nil || screenTime < bestDay!.screenTime {
-                    bestDay = (dayNameFormatter.string(from: date), screenTime)
+            // Source 2: Today's entry in daily_app_opens
+            if let dailyAppOpens = sharedDefaults.dictionary(forKey: "daily_app_opens") as? [String: Int],
+               let todayOpens = dailyAppOpens[dateKey], todayOpens > 0 {
+                return todayOpens
+            }
+            
+            // Source 3: JSON backup file
+            if let jsonData = readScreenTimeJSONBackup() {
+                if let appOpens = jsonData["total_app_opens"] as? Int, appOpens > 0 {
+                    return appOpens
                 }
+                // Source 4: Count unique apps from per_app_usage
+                if let perAppUsage = jsonData["per_app_usage"] as? [String: Int], !perAppUsage.isEmpty {
+                    return perAppUsage.count
+                }
+            }
+            
+            // Source 5: Count from per_app_usage in UserDefaults
+            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int], !perAppUsage.isEmpty {
+                return perAppUsage.count
             }
         }
         
-        cachedBestDay = bestDay
-        cachedAvgScreenTime = daysWithData > 0 ? total / daysWithData : 0
-        lastCacheUpdate = Date()
+        // For past days: Load from daily app opens history
+        if let dailyAppOpens = sharedDefaults.dictionary(forKey: "daily_app_opens") as? [String: Int],
+           let appOpens = dailyAppOpens[dateKey] {
+            return appOpens
+        }
+        
+        return 0
     }
     
-    private var bestDay: (day: String, screenTime: Int)? {
-        cachedBestDay
+    // Read from JSON backup file in App Group container
+    private func readScreenTimeJSONBackup() -> [String: Any]? {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
+            return nil
+        }
+        let fileURL = containerURL.appendingPathComponent("screen_time_data.json")
+        guard FileManager.default.fileExists(atPath: fileURL.path),
+              let data = try? Data(contentsOf: fileURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        return json
     }
     
-    private var avgScreenTime: Int {
-        cachedAvgScreenTime
-    }
-    
-    // Calculate total puzzles blocked
-    private var totalPuzzlesBlocked: Int {
-        puzzlesSolved
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // Header with gradient icon
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Weekly Highlights")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.textPrimary)
-                    
-                    Text("Your achievements this week")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.textSecondary)
-                }
-                
-                Spacer()
-                
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.warning.opacity(0.2), .orange.opacity(0.15)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 36, height: 36)
-                    
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.warning)
-                }
-            }
+    // FIX: Get TOP 5 apps by WEEKLY usage (aggregate from daily history)
+    private var topApps: [(name: String, weeklyUsageMinutes: Int, icon: String, color: Color)] {
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            return []
+        }
+        sharedDefaults.synchronize()
+        
+        var weeklyUsage: [String: Int] = [:]
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        // Aggregate usage across all days in the week
+        for date in weekDays {
+            let isFuture = date > Date()
+            if isFuture { continue }
             
-            // Highlight cards grid with improved spacing
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                // Best Day Card
-                HighlightStatCard(
-                    icon: "star.fill",
-                    iconColor: .warning,
-                    title: "Best Day",
-                    value: bestDay?.day ?? "—",
-                    subtitle: bestDay != nil ? formatMinutes(bestDay!.screenTime) : "No data yet",
-                    gradientColors: [.warning.opacity(0.15), .orange.opacity(0.1)]
-                )
-                
-                // Average Screen Time
-                HighlightStatCard(
-                    icon: "chart.line.uptrend.xyaxis",
-                    iconColor: .blue,
-                    title: "Avg Screen",
-                    value: formatMinutes(avgScreenTime),
-                    subtitle: "This week",
-                    gradientColors: [.blue.opacity(0.15), .cyan.opacity(0.1)]
-                )
-                
-                // Blocked Apps
-                HighlightStatCard(
-                    icon: "hand.raised.fill",
-                    iconColor: .error,
-                    title: "Apps Blocked",
-                    value: "\(blockedAppsCount)",
-                    subtitle: "Active blocks",
-                    gradientColors: [.error.opacity(0.15), .pink.opacity(0.1)]
-                )
-                
-                // Puzzle Champion
-                HighlightStatCard(
-                    icon: "puzzlepiece.fill",
-                    iconColor: .purple,
-                    title: "Puzzles",
-                    value: "\(puzzlesSolved)",
-                    subtitle: "Solved this week",
-                    gradientColors: [.purple.opacity(0.15), .indigo.opacity(0.1)]
-                )
-            }
+            let dateKey = dateFormatter.string(from: date)
+            let isToday = Calendar.current.isDateInToday(date)
             
-            // Motivational message with improved styling
-            if streak > 0 || blockedAppsCount > 0 {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [motivationalColor.opacity(0.2), motivationalColor.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 32, height: 32)
-                        
-                        Image(systemName: motivationalIcon)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(motivationalColor)
+            if isToday {
+                // For today, get current per_app_usage
+                var todayUsage: [String: Int]? = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int]
+                
+                // Fallback: Try JSON backup
+                if todayUsage == nil || todayUsage?.isEmpty == true {
+                    if let jsonData = readScreenTimeJSONBackup(),
+                       let jsonPerAppUsage = jsonData["per_app_usage"] as? [String: Int] {
+                        todayUsage = jsonPerAppUsage
                     }
-                    
-                    Text(motivationalMessage)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.textPrimary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    Spacer()
-                }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(
-                            LinearGradient(
-                                colors: [motivationalColor.opacity(0.12), motivationalColor.opacity(0.06)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(motivationalColor.opacity(0.2), lineWidth: 1)
-                )
-            }
-        }
-        .padding(16)
-        .background(Color.cardBackground)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
-        .onAppear {
-            loadScreenTimeData()
-        }
-        .onChange(of: appState.todayScreenTimeMinutes) { _ in
-            // Refresh when appState updates
-            loadScreenTimeData()
-        }
-    }
-    
-    private var motivationalIcon: String {
-        if streak >= 7 { return "flame.fill" }
-        if blockedAppsCount >= 5 { return "shield.fill" }
-        if puzzlesSolved >= 5 { return "brain.head.profile" }
-        return "hand.thumbsup.fill"
-    }
-    
-    private var motivationalColor: Color {
-        if streak >= 7 { return .orange }
-        if blockedAppsCount >= 5 { return .success }
-        if puzzlesSolved >= 5 { return .purple }
-        return .blue
-    }
-    
-    private var motivationalMessage: String {
-        if streak >= 7 {
-            return "🔥 You're on fire! \(streak) day streak!"
-        } else if blockedAppsCount >= 5 {
-            return "🛡️ Great focus! Blocking \(blockedAppsCount) distracting apps."
-        } else if puzzlesSolved >= 5 {
-            return "🧩 Puzzle master! You've solved \(puzzlesSolved) this week."
-        } else if streak > 0 {
-            return "Keep going! You're building a \(streak) day streak."
-        } else {
-            return "Every day is a new opportunity to focus!"
-        }
-    }
-    
-    private func formatMinutes(_ minutes: Int) -> String {
-        if minutes == 0 { return "0m" }
-        let hours = minutes / 60
-        let mins = minutes % 60
-        if hours > 0 {
-            return mins > 0 ? "\(hours)h \(mins)m" : "\(hours)h"
-        }
-        return "\(mins)m"
-    }
-}
-
-// MARK: - Highlight Stat Card
-
-struct HighlightStatCard: View {
-    let icon: String
-    let iconColor: Color
-    let title: String
-    let value: String
-    let subtitle: String
-    let gradientColors: [Color]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Icon with background
-            HStack {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: gradientColors,
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 28, height: 28)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(iconColor)
                 }
                 
-                Spacer()
-            }
-            
-            Spacer()
-            
-            // Value (large, prominent)
-            Text(value)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.textPrimary)
-                .lineLimit(2)
-                .minimumScaleFactor(0.6)
-                .fixedSize(horizontal: false, vertical: true)
-            
-            // Title
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.textSecondary)
-            
-            // Subtitle
-            Text(subtitle)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.textSecondary.opacity(0.7))
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 100)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.cardBackground.opacity(0.8),
-                            Color.cardBackground.opacity(0.6)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(
-                    LinearGradient(
-                        colors: [iconColor.opacity(0.3), iconColor.opacity(0.1)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.5
-                )
-        )
-        .shadow(color: iconColor.opacity(0.1), radius: 8, x: 0, y: 2)
-    }
-}
-
-// MARK: - Focus Score Card
-
-struct FocusScoreCard: View {
-    let appState: AppState
-    let weekStart: Date
-    
-    private let appGroupID = "group.com.se7en.app"
-    
-    // Cache average screen time to avoid repeated reads
-    @State private var cachedAvgScreenTime: Int = 0
-    @State private var lastCacheUpdate: Date = Date.distantPast
-    
-    // Load average screen time data (cached)
-    private func loadAvgScreenTime() {
-        // Only refresh cache every 5 seconds
-        guard Date().timeIntervalSince(lastCacheUpdate) > 5.0 else { return }
-        
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
-        // NO synchronize() - blocks main thread
-        
-        let dailyScreenTime = sharedDefaults.dictionary(forKey: "daily_screen_time") as? [String: Int] ?? [:]
-        let dailyPerAppUsage = sharedDefaults.dictionary(forKey: "daily_per_app_usage") as? [String: [String: Int]] ?? [:]
-        
-        // Get today's screen time
-        var todayScreenTime = sharedDefaults.integer(forKey: "total_usage")
-        if todayScreenTime == 0, let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
-            todayScreenTime = perAppUsage.values.reduce(0, +)
-        }
-        
-        let calendar = Calendar.current
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        
-        var total = 0
-        var daysWithData = 0
-        
-        for dayOffset in 0..<7 {
-            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: Date()) else { continue }
-            let dateKey = dateFormatter.string(from: date)
-            
-            var screenTime = 0
-            
-            if calendar.isDateInToday(date) {
-                screenTime = todayScreenTime
-            } else if let daily = dailyScreenTime[dateKey] {
-                screenTime = daily
-            } else if let perApp = dailyPerAppUsage[dateKey] {
-                screenTime = perApp.values.reduce(0, +)
-            }
-            
-            if screenTime > 0 {
-                total += screenTime
-                daysWithData += 1
+                // Add today's usage to weekly totals
+                if let usage = todayUsage {
+                    for (appName, minutes) in usage {
+                        weeklyUsage[appName, default: 0] += minutes
+                    }
+                }
+            } else {
+                // For past days, read from daily_per_app_usage history
+                if let dailyPerAppUsage = sharedDefaults.dictionary(forKey: "daily_per_app_usage") as? [String: [String: Int]],
+                   let dayUsage = dailyPerAppUsage[dateKey] {
+                    for (appName, minutes) in dayUsage {
+                        weeklyUsage[appName, default: 0] += minutes
+                    }
+                }
             }
         }
         
-        cachedAvgScreenTime = daysWithData > 0 ? total / daysWithData : todayScreenTime
-        lastCacheUpdate = Date()
+        // If no weekly data found, fall back to today's data only
+        if weeklyUsage.isEmpty {
+            if let todayUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
+                weeklyUsage = todayUsage
+            } else if let jsonData = readScreenTimeJSONBackup(),
+                      let jsonPerAppUsage = jsonData["per_app_usage"] as? [String: Int] {
+                weeklyUsage = jsonPerAppUsage
+            }
+        }
+        
+        guard !weeklyUsage.isEmpty else {
+            return []
+        }
+        
+        // Sort by usage and get top 5
+        let sortedApps = weeklyUsage
+            .map { (name: $0.key, weeklyUsageMinutes: $0.value, icon: "app.fill", color: Color.primary) }
+            .filter { $0.weeklyUsageMinutes > 0 }
+            .sorted { $0.weeklyUsageMinutes > $1.weeklyUsageMinutes }
+            .prefix(5)
+        
+        return Array(sortedApps)
     }
     
-    // Calculate focus score based on multiple factors
-    private var focusScore: Int {
-        var score = 50 // Base score
-        
-        // Streak bonus (up to +20)
-        score += min(appState.currentStreak * 3, 20)
-        
-        // Blocked apps bonus (up to +15)
-        let blockedCount = BlockedAppsManager.shared.blockedCount
-        score += min(blockedCount * 3, 15)
-        
-        // Low screen time bonus (up to +15) - use average screen time
-        let avgScreenTimeHours = Double(avgScreenTimeMinutes) / 60.0
-        if avgScreenTimeHours < 2 {
-            score += 15
-        } else if avgScreenTimeHours < 4 {
-            score += 10
-        } else if avgScreenTimeHours < 6 {
-            score += 5
+    private var maxLaunches: Int {
+        let maxLaunch = weekDays.reduce(0) { maxTotal, date in
+            max(maxTotal, getTotalLaunches(for: date))
         }
-        
-        return min(100, max(0, score))
-    }
-    
-    private var focusGrade: String {
-        switch focusScore {
-        case 90...100: return "A+"
-        case 80..<90: return "A"
-        case 70..<80: return "B"
-        case 60..<70: return "C"
-        case 50..<60: return "D"
-        default: return "F"
-        }
-    }
-    
-    private var gradeColor: Color {
-        switch focusScore {
-        case 80...100: return .success
-        case 60..<80: return .warning
-        default: return .error
-        }
-    }
-    
-    private var focusTips: [String] {
-        var tips: [String] = []
-        
-        if appState.currentStreak < 3 {
-            tips.append("Build your streak by checking in daily")
-        }
-        
-        if BlockedAppsManager.shared.blockedCount < 3 {
-            tips.append("Block more distracting apps to boost your score")
-        }
-        
-        if appState.todayScreenTimeMinutes > 240 {
-            tips.append("Try to reduce screen time to under 4 hours")
-        }
-        
-        if tips.isEmpty {
-            tips.append("Great work! Keep up the good habits")
-        }
-        
-        return tips
+        return max(maxLaunch, 50)
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Focus Score")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.textPrimary)
-                    
-                    Text("Based on your habits this week")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.textSecondary)
-                }
-                
-                Spacer()
-                
-                // Grade badge
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [gradeColor, gradeColor.opacity(0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 56, height: 56)
-                    
-                    Text(focusGrade)
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                .shadow(color: gradeColor.opacity(0.4), radius: 8, x: 0, y: 4)
-            }
+            Text("App Opens Per Day")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.textPrimary)
             
-            // Score breakdown
-            VStack(spacing: 10) {
-                FocusScoreBar(
-                    title: "Streak",
-                    actualValue: appState.currentStreak,
-                    maxValue: 10,
-                    displayText: "\(appState.currentStreak) days",
-                    color: .orange,
-                    icon: "flame.fill"
-                )
-                FocusScoreBar(
-                    title: "App Blocking",
-                    actualValue: BlockedAppsManager.shared.blockedCount,
-                    maxValue: 10,
-                    displayText: "\(BlockedAppsManager.shared.blockedCount) apps",
-                    color: .success,
-                    icon: "hand.raised.fill"
-                )
-                FocusScoreBar(
-                    title: "Screen Time",
-                    actualValue: screenTimeHours,
-                    maxValue: 8,
-                    displayText: screenTimeDisplayText,
-                    color: .blue,
-                    icon: "iphone"
-                )
-            }
-            .padding(12)
-            .background(Color.cardBackground.opacity(0.5))
-            .cornerRadius(10)
-            
-            // Tips section
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Header showing total for week
                 HStack {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.warning)
-                    
-                    Text("Tips to improve")
-                        .font(.system(size: 12, weight: .semibold))
+                    Text("Total App Opens This Week")
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.textSecondary)
+                    
+                    Spacer()
+                    
+                    let weekTotal = weekDays.reduce(0) { total, date in
+                        total + getTotalLaunches(for: date)
+                    }
+                    Text("\(weekTotal)")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.success)
                 }
+                .padding(.horizontal, 12)
                 
-                ForEach(focusTips.prefix(2), id: \.self) { tip in
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(Color.textSecondary.opacity(0.3))
-                            .frame(width: 4, height: 4)
-                        
-                        Text(tip)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.textSecondary)
+                // Daily app opens bars
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(weekDays, id: \.self) { date in
+                            let totalLaunches = getTotalLaunches(for: date)
+                            let dayName = dayAbbreviation(for: date)
+                            let isToday = Calendar.current.isDateInToday(date)
+                            let isFuture = date > Date()
+                            
+                            VStack(spacing: 8) {
+                                Text(dayName)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(isFuture ? .textSecondary.opacity(0.5) : (isToday ? .primary : .textSecondary))
+                                
+                                if !isFuture {
+                                    VStack(spacing: 4) {
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: isToday ? [Color.success, Color.success.opacity(0.8)] : [Color.success.opacity(0.7), Color.success.opacity(0.5)],
+                                                    startPoint: .top,
+                                                    endPoint: .bottom
+                                                )
+                                            )
+                                            .frame(width: 40, height: CGFloat(min(120, max(12, totalLaunches * 2))))
+                                        
+                                        Text("\(totalLaunches)")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundColor(isToday ? .success : .textSecondary)
+                                    }
+                                } else {
+                                    VStack(spacing: 4) {
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(Color.gray.opacity(0.1))
+                                            .frame(width: 40, height: 12)
+                                        
+                                        Text("-")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(.textSecondary.opacity(0.3))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                }
+            }
+            .padding(.vertical, 12)
+            .background(Color.cardBackground.opacity(0.5))
+            .cornerRadius(12)
+            
+            Divider()
+                .padding(.vertical, 8)
+            
+            // Top 5 apps by weekly usage
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Top 5 Apps This Week")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.textPrimary)
+                
+                if topApps.isEmpty {
+                    Text("No app usage data available yet")
+                        .font(.system(size: 14))
+                        .foregroundColor(.textSecondary)
+                        .padding(.vertical, 8)
+                } else {
+                    ForEach(Array(topApps.enumerated()), id: \.offset) { index, app in
+                        HStack(spacing: 12) {
+                            // Rank badge
+                            ZStack {
+                                Circle()
+                                    .fill(Color.success.opacity(0.2))
+                                    .frame(width: 28, height: 28)
+                                
+                                Text("\(index + 1)")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.success)
+                            }
+                            
+                            // App icon
+                            ZStack {
+                                Circle()
+                                    .fill(app.color.opacity(0.2))
+                                    .frame(width: 36, height: 36)
+                                
+                                Image(systemName: app.icon)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(app.color)
+                            }
+                            
+                            // App name
+                            Text(app.name)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.textPrimary)
+                            
+                            Spacer()
+                            
+                            // Weekly usage
+                            Text(formatWeeklyUsage(app.weeklyUsageMinutes))
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.success)
+                        }
                     }
                 }
             }
@@ -1466,82 +1190,34 @@ struct FocusScoreCard: View {
         .background(Color.cardBackground)
         .cornerRadius(16)
         .onAppear {
-            loadAvgScreenTime()
+            // Force refresh data when view appears
+            refreshTrigger.toggle()
         }
-        .onChange(of: appState.todayScreenTimeMinutes) { _ in
-            loadAvgScreenTime()
-        }
+        .background(
+            // Hidden DeviceActivityReport to trigger data refresh
+            DeviceActivityReport(.todayOverview)
+                .frame(width: 0, height: 0)
+                .opacity(0)
+        )
+        .id(refreshTrigger) // Force view rebuild on refresh
     }
     
-    // Use cached average screen time
-    private var avgScreenTimeMinutes: Int {
-        cachedAvgScreenTime > 0 ? cachedAvgScreenTime : appState.todayScreenTimeMinutes
+    private func dayAbbreviation(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: date)
     }
     
-    private var screenTimeHours: Int {
-        Int(Double(avgScreenTimeMinutes) / 60.0)
-    }
-    
-    private var screenTimeDisplayText: String {
-        let hours = screenTimeHours
-        let mins = avgScreenTimeMinutes % 60
-        if hours > 0 {
-            return mins > 0 ? "\(hours)h \(mins)m" : "\(hours)h"
-        }
-        return "\(mins)m"
-    }
-}
-
-// MARK: - Focus Score Bar
-
-struct FocusScoreBar: View {
-    let title: String
-    let actualValue: Int // Actual number (e.g., 4 apps, 5 days, 3 hours)
-    let maxValue: Int // Max value for bar fill calculation
-    let displayText: String // Text to display (e.g., "4 apps", "5 days")
-    let color: Color
-    let icon: String
-    
-    private var fillPercentage: CGFloat {
-        let clampedValue = min(actualValue, maxValue)
-        return CGFloat(clampedValue) / CGFloat(maxValue)
-    }
-    
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(color)
-                .frame(width: 20)
-            
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.textSecondary)
-                .frame(width: 80, alignment: .leading)
-            
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 8)
-                    
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(
-                            LinearGradient(
-                                colors: [color, color.opacity(0.7)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: geometry.size.width * fillPercentage, height: 8)
-                }
-            }
-            .frame(height: 8)
-            
-            Text(displayText)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.textSecondary)
-                .frame(width: 60, alignment: .trailing)
+    private func formatWeeklyUsage(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let mins = minutes % 60
+        
+        if hours > 0 && mins > 0 {
+            return "\(hours)h \(mins)m"
+        } else if hours > 0 {
+            return "\(hours)h"
+        } else {
+            return "\(mins)m"
         }
     }
 }
@@ -1957,47 +1633,55 @@ struct GoalCard: View {
 }
 
 struct GoalProgressOverview: View {
-    let appState: AppState
+    let todayScreenTime: Int // in minutes
+    let puzzlesSolvedThisWeek: Int
+    let disciplineScore: Int
+    let streak: Int
+    let longestStreak: Int
     
-    private var petImageName: String {
-        guard let pet = appState.userPet else {
-            return "dogfullhealth" // Default fallback
-        }
-        let petType = pet.type.folderName.lowercased()
-        return "\(petType)fullhealth"
-    }
+    private let appGroupID = "group.com.se7en.app"
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Weekly Discipline")
-                    .font(.h4)
-                    .foregroundColor(.textPrimary)
+        VStack(spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Daily Discipline")
+                        .font(.h4)
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("Track your screen time and focus habits.")
+                        .font(.bodyMedium)
+                        .foregroundColor(.textPrimary.opacity(0.6))
+                }
                 
-                Text("Track your screen time and focus habits.")
-                    .font(.bodyMedium)
-                    .foregroundColor(.textPrimary.opacity(0.6))
+                Spacer()
+                
+                DisciplineBadge(score: disciplineScore)
             }
             
-            Spacer()
-            
-            // Pet image at full health (same size as previous badge) - use animation
-            if let pet = appState.userPet {
-                PetAnimationView(
-                    petType: pet.type,
-                    healthState: .fullHealth,
-                    height: 90
-                )
-            } else {
-                Image(petImageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 80, height: 80)
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+            HStack(spacing: 8) {
+                // Puzzles
+                CompactMetricPill(title: "Puzzles", value: "\(puzzlesSolvedThisWeek)", color: .purple.opacity(0.15), icon: "puzzlepiece.fill")
+                
+                // Screen Time
+                CompactMetricPill(title: "Screen", value: formatMinutes(todayScreenTime), color: .blue.opacity(0.15), icon: "iphone")
+                
+                // Streak
+                CompactMetricPill(title: "Streak", value: "\(streak)d", color: .primary.opacity(0.2), icon: "bolt.fill")
             }
         }
         .padding(20)
         .cardStyle()
+    }
+    
+    private func formatMinutes(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let mins = minutes % 60
+        if hours > 0 {
+            return "\(hours)h \(mins)m"
+        } else {
+            return "\(mins)m"
+        }
     }
 }
 
@@ -2267,4 +1951,3 @@ struct RecommendationSheet: View {
         }
     }
 }
-

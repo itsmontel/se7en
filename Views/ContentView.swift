@@ -31,7 +31,7 @@ struct ContentView: View {
                 .transition(.opacity)
             }
         }
-        .withProperTextCase()
+        .environment(\.textCase, .none)
         .onAppear {
             checkPuzzleMode()
         }
@@ -416,35 +416,56 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             DashboardView()
                 .tabItem {
-                    Label("Home", systemImage: "house.fill")
+                    VStack {
+                        Image(systemName: "house.fill")
+                        Text("Home")
+                            .textCase(.none)
+                    }
                 }
                 .tag(0)
             
             BlockingView()
                 .tabItem {
-                    Label("Limits", systemImage: "hand.raised.fill")
+                    VStack {
+                        Image(systemName: "hand.raised.fill")
+                        Text("Limits")
+                            .textCase(.none)
+                    }
                 }
                 .tag(1)
             
             GoalsView()
                 .tabItem {
-                    Label("Stats", systemImage: "chart.bar.fill")
+                    VStack {
+                        Image(systemName: "chart.bar.fill")
+                        Text("Stats")
+                            .textCase(.none)
+                    }
                 }
                 .tag(2)
             
             AchievementsView()
                 .tabItem {
-                    Label("Achievements", systemImage: "trophy.fill")
+                    VStack {
+                        Image(systemName: "trophy.fill")
+                        Text("Achievements")
+                            .textCase(.none)
+                    }
                 }
                 .tag(3)
             
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
+                    VStack {
+                        Image(systemName: "gearshape.fill")
+                        Text("Settings")
+                            .textCase(.none)
+                    }
                 }
                 .tag(4)
         }
         .tint(.primary)
+        .environment(\.textCase, .none)
     }
 }
 

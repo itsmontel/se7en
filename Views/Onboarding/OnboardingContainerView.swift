@@ -177,7 +177,7 @@ struct OnboardingContainerView: View {
                 }
             }
         }
-        .withProperTextCase()
+        .environment(\.textCase, .none)
     }
     
     private func completeOnboarding() {

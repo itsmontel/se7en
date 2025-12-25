@@ -67,7 +67,6 @@ struct WhyChooseSE7ENView: View {
                             Text("Build better habits through engaging challenges")
                                 .font(.system(size: 18, weight: .medium))
                                 .foregroundColor(.gray)
-                                .textCase(.none)
                                 .multilineTextAlignment(.center)
                                 .opacity(animateTitle ? 1.0 : 0.0)
                                 .lineLimit(2)
@@ -98,8 +97,8 @@ struct WhyChooseSE7ENView: View {
                         DifferentiatorCard(
                             icon: "chart.line.uptrend.xyaxis",
                             gradient: [Color.purple, Color.pink],
-                            title: "Gamified Accountability",
-                            description: "Build healthy habits through engaging challenges and puzzles. Your pet's health reflects your progress, making screen time management fun and rewarding.",
+                            title: "Designed to be Free",
+                            description: "Build healthy habits through gamification. The app rewards good behavior with engaging challenges, not payments.",
                             delay: 0.6
                         )
                     }

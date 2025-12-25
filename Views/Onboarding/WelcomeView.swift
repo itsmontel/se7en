@@ -26,15 +26,15 @@ struct WelcomeView: View {
                 
                 Spacer()
                 
-                // Pet animation - bigger size (no shadow/glow)
+                // Pet illustration - bigger size
                 VStack(spacing: 32) {
-                    PetAnimationView(
-                        petType: .dog,
-                        healthState: .fullHealth,
-                        height: 240
-                    )
-                    .scaleEffect(petAnimation ? 1.0 : 0.8)
-                    .opacity(petAnimation ? 1.0 : 0.0)
+                    Image("dogfullhealth")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 240, height: 240)
+                        .scaleEffect(petAnimation ? 1.0 : 0.8)
+                        .opacity(petAnimation ? 1.0 : 0.0)
+                        .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
                     
                     VStack(spacing: 16) {
                         Text("Welcome to Se7en")
@@ -195,10 +195,24 @@ struct OnboardingProgressBar: View {
     }
 }
 
-// Background for onboarding - matches homepage yellow tint
+// Subtle tinted background for onboarding
 struct OnboardingBackground: View {
     var body: some View {
-        Color.appBackground
+        ZStack {
+            Color.appBackground
+                .ignoresSafeArea()
+            
+            // Subtle gradient overlay for depth
+            LinearGradient(
+                colors: [
+                    Color.blue.opacity(0.02),
+                    Color.clear,
+                    Color.purple.opacity(0.015)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
             .ignoresSafeArea()
+        }
     }
 }

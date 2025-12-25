@@ -30,29 +30,6 @@ extension View {
     func preventTextUppercasing() -> some View {
         self.textCase(.none)
     }
-    
-    /// Applies proper text case environment to all child views
-    /// This ensures text case is correct from the very first render
-    func withProperTextCase() -> some View {
-        self.modifier(ProperTextCaseModifier())
-    }
-}
-
-/// A modifier that ensures .textCase(.none) is applied at the earliest possible moment
-struct ProperTextCaseModifier: ViewModifier {
-    @State private var isReady = false
-    
-    func body(content: Content) -> some View {
-        content
-            .environment(\.textCase, .none)
-            .opacity(isReady ? 1 : 0.99) // Tiny opacity change forces re-render
-            .onAppear {
-                // Force a very quick re-render to ensure environment propagates
-                DispatchQueue.main.async {
-                    isReady = true
-                }
-            }
-    }
 }
 
 struct SpringAppearModifier: ViewModifier {

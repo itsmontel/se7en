@@ -173,7 +173,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "week_warrior",
             title: "Week Warrior", 
-            description: "Keep apps blocked for your first full week",
+            description: "Complete your first full week",
             icon: "calendar.badge.checkmark",
             color: .primary,
             category: .gettingStarted,
@@ -196,7 +196,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_3",
             title: "On Fire",
-            description: "Keep apps blocked for 3 days straight",
+            description: "3-day streak",
             icon: "flame.fill",
             color: .warning,
             category: .streaks,
@@ -207,7 +207,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_7",
             title: "Week Master",
-            description: "Keep apps blocked for 7 days straight",
+            description: "7-day streak",
             icon: "flame.fill",
             color: .error,
             category: .streaks,
@@ -218,7 +218,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_14",
             title: "Two Week Champion",
-            description: "Keep apps blocked for 14 days straight",
+            description: "14-day streak",
             icon: "flame.fill", 
             color: .pink,
             category: .streaks,
@@ -229,7 +229,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_30",
             title: "Monthly Master",
-            description: "Keep apps blocked for 30 days straight",
+            description: "30-day streak",
             icon: "crown.fill",
             color: .yellow,
             category: .streaks,
@@ -240,7 +240,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_100",
             title: "Centurion",
-            description: "Keep apps blocked for 100 days straight",
+            description: "100-day streak - legendary discipline",
             icon: "crown.fill",
             color: .purple,
             category: .streaks,
@@ -557,7 +557,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "new_year_new_me",
             title: "New Year, New Me",
-            description: "Block apps on January 1st and maintain streak",
+            description: "Start a streak on January 1st",
             icon: "party.popper.fill",
             color: .yellow,
             category: .special,
@@ -680,7 +680,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "summer_discipline",
             title: "Summer Discipline", 
-            description: "Keep apps blocked during summer break",
+            description: "Maintain streaks during summer break",
             icon: "sun.max.fill",
             color: .yellow,
             category: .seasonal,
@@ -1193,7 +1193,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_45",
             title: "Month and a Half",
-            description: "Keep apps blocked for 45 days straight",
+            description: "45-day streak",
             icon: "flame.fill",
             color: .warning,
             category: .streaks,
@@ -1203,7 +1203,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_60",
             title: "Two Months Strong",
-            description: "Keep apps blocked for 60 days straight",
+            description: "60-day streak",
             icon: "flame.fill",
             color: .orange,
             category: .streaks,
@@ -1213,7 +1213,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_75",
             title: "Seventy-Five Alive",
-            description: "Keep apps blocked for 75 days straight",
+            description: "75-day streak",
             icon: "flame.fill",
             color: .pink,
             category: .streaks,
@@ -1223,7 +1223,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_90",
             title: "Quarter Year",
-            description: "Keep apps blocked for 90 days straight",
+            description: "90-day streak",
             icon: "flame.fill",
             color: .purple,
             category: .streaks,
@@ -1233,7 +1233,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_120",
             title: "Seasoned",
-            description: "Keep apps blocked for 120 days straight",
+            description: "120-day streak",
             icon: "flame.fill",
             color: .yellow,
             category: .streaks,
@@ -1243,7 +1243,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_150",
             title: "Half-Year Hero",
-            description: "Keep apps blocked for 150 days straight",
+            description: "150-day streak",
             icon: "flame.fill",
             color: .purple,
             category: .streaks,
@@ -1253,7 +1253,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_200",
             title: "Double Century",
-            description: "Keep apps blocked for 200 days straight",
+            description: "200-day streak",
             icon: "flame.fill",
             color: .indigo,
             category: .streaks,
@@ -1263,7 +1263,7 @@ struct Achievement: Identifiable {
         Achievement(
             id: "streak_365",
             title: "Year One",
-            description: "Keep apps blocked for 365 days straight",
+            description: "365-day streak",
             icon: "crown.fill",
             color: .yellow,
             category: .mastery,

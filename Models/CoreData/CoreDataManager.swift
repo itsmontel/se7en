@@ -469,7 +469,7 @@ class CoreDataManager: ObservableObject {
         let startOfYesterday = calendar.startOfDay(for: yesterday)
         let endOfYesterday = calendar.date(byAdding: .day, value: 1, to: startOfYesterday) ?? yesterday
         
-        // NEW LOGIC: Check if user had blocked apps at end of yesterday
+        // Check if app was opened yesterday (just using the app counts, not staying within limits)
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             userProfile.updatedAt = Date()
@@ -477,35 +477,32 @@ class CoreDataManager: ObservableObject {
             return
         }
         
-        // Get yesterday's blocked apps status (stored at end of day)
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let yesterdayKey = dateFormatter.string(from: yesterday)
-        let dailyBlockedStatus = sharedDefaults.dictionary(forKey: "daily_blocked_status") as? [String: Bool] ?? [:]
+        // Get last app open date
+        let lastAppOpenTimestamp = sharedDefaults.double(forKey: "last_app_open_date")
+        let lastAppOpenDate = lastAppOpenTimestamp > 0 ? Date(timeIntervalSince1970: lastAppOpenTimestamp) : nil
         
-        let hadBlockedAppsYesterday = dailyBlockedStatus[yesterdayKey] ?? false
-        
-        // For users with existing streaks, assume they had blocked apps if no data exists
-        let maintainedStreak: Bool
-        if dailyBlockedStatus.isEmpty && userProfile.currentStreak > 0 {
-            // Existing user with streak - don't break it
-            maintainedStreak = true
+        // Check if app was opened yesterday
+        let appWasOpenedYesterday: Bool
+        if let lastOpen = lastAppOpenDate {
+            appWasOpenedYesterday = lastOpen >= startOfYesterday && lastOpen < endOfYesterday
         } else {
-            maintainedStreak = hadBlockedAppsYesterday
+            // If no record exists, assume app was used (for existing users)
+            // This prevents breaking streaks for users who already have streaks
+            appWasOpenedYesterday = userProfile.currentStreak > 0
         }
         
-        if maintainedStreak {
-            // User had blocked apps yesterday - increment streak
+        if appWasOpenedYesterday {
+            // App was opened yesterday - increment streak
             let previousStreak = Int(userProfile.currentStreak)
             userProfile.currentStreak += 1
             if userProfile.currentStreak > userProfile.longestStreak {
                 userProfile.longestStreak = userProfile.currentStreak
             }
-            print("🔥 Streak updated: \(previousStreak) → \(userProfile.currentStreak) days (had blocked apps yesterday)")
+            print("🔥 Streak updated: \(previousStreak) → \(userProfile.currentStreak) days (app was opened yesterday)")
         } else {
-            // User had NO blocked apps at end of yesterday - reset streak
+            // App was not opened yesterday - reset streak
             if userProfile.currentStreak > 0 {
-                print("💔 Streak broken: Was \(userProfile.currentStreak) days (no blocked apps at end of yesterday)")
+                print("💔 Streak broken: Was \(userProfile.currentStreak) days (app was not opened yesterday)")
             }
             userProfile.currentStreak = 0
         }
@@ -514,45 +511,27 @@ class CoreDataManager: ObservableObject {
         save()
     }
     
-    /// Mark the blocked apps status for today (called when blocked apps change)
-    /// This method only uses UserDefaults, so it can be called from any context
-    nonisolated func markBlockedAppsStatus(hasBlockedApps: Bool) {
+    /// Mark that the app was opened today (call this when app becomes active)
+    func markAppOpened() {
         let appGroupID = "group.com.se7en.app"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let todayKey = dateFormatter.string(from: Date())
+        let today = Calendar.current.startOfDay(for: Date())
+        let lastOpenTimestamp = sharedDefaults.double(forKey: "last_app_open_date")
+        let lastOpenDate = lastOpenTimestamp > 0 ? Date(timeIntervalSince1970: lastOpenTimestamp) : nil
         
-        // Load existing daily blocked status
-        var dailyBlockedStatus = sharedDefaults.dictionary(forKey: "daily_blocked_status") as? [String: Bool] ?? [:]
-        
-        // Update today's status
-        dailyBlockedStatus[todayKey] = hasBlockedApps
-        
-        // Keep only last 14 days
-        let calendar = Calendar.current
-        let twoWeeksAgo = calendar.date(byAdding: .day, value: -14, to: Date()) ?? Date()
-        let cutoffKey = dateFormatter.string(from: twoWeeksAgo)
-        
-        dailyBlockedStatus = dailyBlockedStatus.filter { key, _ in
-            key >= cutoffKey
+        // Only update if we haven't already marked today
+        if let lastOpen = lastOpenDate {
+            let lastOpenDay = Calendar.current.startOfDay(for: lastOpen)
+            if lastOpenDay >= today {
+                return // Already marked today
+            }
         }
         
-        sharedDefaults.set(dailyBlockedStatus, forKey: "daily_blocked_status")
-        
-        print("📊 Marked blocked apps status for \(todayKey): \(hasBlockedApps)")
-    }
-    
-    /// Mark that the app was opened (for tracking app usage)
-    /// This method only uses UserDefaults, so it can be called from any context
-    nonisolated func markAppOpened() {
-        // This can be used for analytics or tracking when the app is opened
-        let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
-        
-        sharedDefaults.set(Date(), forKey: "last_app_opened")
-        print("📱 App opened at \(Date())")
+        // Mark that app was opened today
+        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_app_open_date")
+        sharedDefaults.synchronize()
+        print("📱 Marked app as opened today")
     }
     
     func getAppUsageRecord(for bundleID: String, on date: Date) -> AppUsageRecord? {
@@ -664,11 +643,8 @@ class CoreDataManager: ObservableObject {
         // Get puzzles solved history
         let puzzleHistory = sharedDefaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] ?? [:]
         
-        // Get daily screen time history (primary source)
-        let screenTimeHistory = sharedDefaults.dictionary(forKey: "daily_screen_time") as? [String: Int] ?? [:]
-        
-        // Fallback: Get per-app usage history and sum it
-        let dailyPerAppUsage = sharedDefaults.dictionary(forKey: "daily_per_app_usage") as? [String: [String: Int]] ?? [:]
+        // Get screen time history from daily_health
+        let healthHistory = sharedDefaults.dictionary(forKey: "daily_health") as? [String: [String: Any]] ?? [:]
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -678,27 +654,18 @@ class CoreDataManager: ObservableObject {
             guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: Date()) else { continue }
             let dateKey = dateFormatter.string(from: date)
             
+            // Get screen time for this day (default to 0)
             var screenTimeMinutes = 0
+            if let healthData = healthHistory[dateKey],
+               let score = healthData["score"] as? Int {
+                // Convert health score back to approximate screen time
+                // 100 health = 0-2 hours, 0 health = 10+ hours
+                screenTimeMinutes = max(0, (100 - score) * 6) // Rough approximation
+            }
             
             // For today, use live data
             if calendar.isDateInToday(date) {
                 screenTimeMinutes = sharedDefaults.integer(forKey: "total_usage")
-                
-                // Fallback: sum per_app_usage
-                if screenTimeMinutes == 0 {
-                    if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
-                        screenTimeMinutes = perAppUsage.values.reduce(0, +)
-                    }
-                }
-            } else {
-                // For past days: try daily_screen_time first
-                if let dailyMinutes = screenTimeHistory[dateKey] {
-                    screenTimeMinutes = dailyMinutes
-                }
-                // Fallback: sum from daily_per_app_usage
-                else if let dayUsage = dailyPerAppUsage[dateKey] {
-                    screenTimeMinutes = dayUsage.values.reduce(0, +)
-                }
             }
             
             // Get puzzles solved for this day
