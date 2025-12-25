@@ -1394,7 +1394,8 @@ final class ScreenTimeService: ObservableObject {
             let coreDataUsage = getCategoryUsageFromCoreData()
             if coreDataUsage.totalMinutes > 0 {
                 print("📊 Found category usage from Core Data: \(coreDataUsage.totalMinutes) minutes")
-                // Note: Don't write to shared container here - let the report extension be authoritative
+                // Write to shared container for health calculation
+                writeUsageToSharedContainer(totalMinutes: coreDataUsage.totalMinutes)
                 return coreDataUsage
             }
             
@@ -1528,16 +1529,27 @@ final class ScreenTimeService: ObservableObject {
         
         coreDataManager.save()
         
-        // NOTE: We DON'T write to shared container here for "All Categories Tracking"
-        // The DeviceActivityReport extension is the authoritative source for total_usage
-        // It reads from 12 AM, while monitor only tracks from when monitoring started
-        // Writing here would overwrite the report's correct value with a lower monitor value
+        // CRITICAL: If this is the "All Categories Tracking" goal, write to shared container
+        // so health calculation can access it
+        if bundleID == "com.se7en.allcategories" {
+            writeUsageToSharedContainer(totalMinutes: minutes)
+        }
     }
     
-    // NOTE: writeUsageToSharedContainer has been REMOVED
-    // The DeviceActivityReport extension is the ONLY authoritative source for total_usage
-    // It reads from 12 AM and provides accurate daily totals
-    // The monitor only tracks from when monitoring started, which is incorrect on install day
+    /// Write usage to shared container for health calculation
+    private func writeUsageToSharedContainer(totalMinutes: Int) {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ [SHARED_WRITE] Failed to access shared container")
+            return
+        }
+        
+        sharedDefaults.set(totalMinutes, forKey: "total_usage")
+        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
+        sharedDefaults.synchronize()
+        
+        print("✅ [SHARED_WRITE] Wrote total_usage=\(totalMinutes) to shared container")
+    }
     
     /// Get category usage from Core Data (All Categories Tracking goal)
     private func getCategoryUsageFromCoreData() -> (totalMinutes: Int, appsUsed: Int) {

@@ -111,36 +111,8 @@ struct TodayOverviewView: View {
         .background(appBackground)
         .cornerRadius(16)
         .onAppear {
-            let totalMinutes = Int(summary.totalDuration / 60)
-            print("📊 TodayOverviewView appeared with \(summary.appCount) apps, \(totalMinutes) min total")
-            
-            // CRITICAL: Write to shared container when view appears
-            // This ensures the main app gets the correct total for health calculation
-            writeToSharedContainer(totalMinutes: totalMinutes, appsCount: summary.appCount)
+            print("📊 TodayOverviewView appeared with \(summary.appCount) apps, \(Int(summary.totalDuration / 60)) min total")
         }
-    }
-    
-    /// Write usage data to shared container for main app to read
-    /// This is the AUTHORITATIVE source - main app should ONLY read, never write
-    private func writeToSharedContainer(totalMinutes: Int, appsCount: Int) {
-        let appGroupID = "group.com.se7en.app"
-        
-        guard totalMinutes > 0 else { return }
-        
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            print("❌ TodayOverviewView: Failed to access shared container")
-            return
-        }
-        
-        let currentValue = sharedDefaults.integer(forKey: "total_usage")
-        
-        // Write the authoritative value from the report
-        sharedDefaults.set(totalMinutes, forKey: "total_usage")
-        sharedDefaults.set(appsCount, forKey: "apps_count")
-        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
-        sharedDefaults.synchronize()
-        
-        print("✅ TodayOverviewView: Updated shared container - total_usage: \(currentValue) -> \(totalMinutes), apps_count: \(appsCount)")
     }
     
     private func format(duration: TimeInterval) -> String {

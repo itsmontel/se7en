@@ -737,9 +737,8 @@ struct WeeklyHealthReport: View {
         
         // For today, use the same screen time-based calculation as the main health system
         if isToday {
-            // Use petHealthValue which is the same value shown on the dashboard health bar
-            // This uses the correct formula from recalculatePetHealthValue()
-            let healthPercentage = appState.petHealthValue
+            // Use the same calculation as AppState.calculatePetHealthPercentage()
+            let healthPercentage = appState.calculatePetHealthPercentage()
             
             // Convert health percentage to PetHealthState (same logic as updatePetHealth)
             let mood: PetHealthState
@@ -821,11 +820,6 @@ struct WeeklyHealthReport: View {
         .padding(20)
         .background(Color.cardBackground)
         .cornerRadius(16)
-        .onAppear {
-            // Ensure health is recalculated when stats page appears
-            // This ensures the "This Week" section shows the correct current health
-            appState.recalculatePetHealthValue()
-        }
     }
     
     private func dayAbbreviation(for date: Date) -> String {

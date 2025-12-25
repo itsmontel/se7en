@@ -31,7 +31,6 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         var totalDurationFromSegments: TimeInterval = 0
         var totalDurationFromCategories: TimeInterval = 0
         var perAppDuration: [String: TimeInterval] = [:]
-        var perCategoryDuration: [String: TimeInterval] = [:] // Track category-level usage too
         var tokenToDuration: [Application: TimeInterval] = [:]
         var tokenToName: [Application: String] = [:]
         var uniqueApps: Set<String> = []
@@ -72,8 +71,6 @@ struct TodayOverviewReport: DeviceActivityReportScene {
                             uniqueCategories.insert(categoryName)
                             totalDurationFromCategories += categoryDuration
                         }
-                        // Track per-category duration (for when apps aren't available)
-                        perCategoryDuration[categoryName, default: 0] += categoryDuration
                     }
                     
                     for await app in category.applications {
@@ -171,7 +168,6 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         await saveToSharedContainer(
             summary: summary,
             perAppDuration: perAppDuration,
-            perCategoryDuration: perCategoryDuration,
             tokenToDuration: tokenToDuration,
             tokenToName: tokenToName,
             totalPickups: totalAppOpens
@@ -186,7 +182,6 @@ struct TodayOverviewReport: DeviceActivityReportScene {
     private func saveToSharedContainer(
         summary: UsageSummary,
         perAppDuration: [String: TimeInterval],
-        perCategoryDuration: [String: TimeInterval],
         tokenToDuration: [Application: TimeInterval],
         tokenToName: [Application: String],
         totalPickups: Int
@@ -205,28 +200,12 @@ struct TodayOverviewReport: DeviceActivityReportScene {
         print("💾 [REPORT_EXT] Preparing to write: totalMinutes=\(totalMinutes), appsCount=\(appsCount)")
         
         // Build per-app usage dictionary (minutes)
-        // If we have app-level data, use that; otherwise use category-level data
         var perAppUsage: [String: Int] = [:]
-        
-        if !perAppDuration.isEmpty {
-            // We have individual app data
-            for (appName, duration) in perAppDuration {
-                let minutes = Int(duration / 60)
-                if minutes > 0 {
-                    perAppUsage[appName] = minutes
-                }
+        for (appName, duration) in perAppDuration {
+            let minutes = Int(duration / 60)
+            if minutes > 0 {
+                perAppUsage[appName] = minutes
             }
-            print("💾 [REPORT_EXT] Using app-level data: \(perAppUsage.count) apps")
-        } else if !perCategoryDuration.isEmpty {
-            // Fallback to category data when apps aren't available
-            // This happens when user selects "All Categories" instead of individual apps
-            for (categoryName, duration) in perCategoryDuration {
-                let minutes = Int(duration / 60)
-                if minutes > 0 {
-                    perAppUsage["[Category] \(categoryName)"] = minutes
-                }
-            }
-            print("💾 [REPORT_EXT] Using category-level data: \(perAppUsage.count) categories")
         }
         
         // Build top apps payload

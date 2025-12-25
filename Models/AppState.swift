@@ -1118,41 +1118,40 @@ class AppState: ObservableObject {
     // MARK: - Pet Health Management
     
     /// Recalculate and update the pet health value based on screen time
-    /// IMPORTANT: Only the DeviceActivityReport extension writes to total_usage
-    /// The main app should ONLY READ, never write
     func recalculatePetHealthValue() {
         print("🔍 [HEALTH] Recalculating health value...")
         let appGroupID = "group.com.se7en.app"
-        var totalMinutes = 0
+        var totalMinutes = todayScreenTimeMinutes
         
-        // Read from shared container (written by DeviceActivityReport extension)
+        // Source 1: Shared container total_usage
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
             sharedDefaults.synchronize()
+            let freshTotalMinutes = sharedDefaults.integer(forKey: "total_usage")
+            print("🔍 [HEALTH] Shared container total_usage: \(freshTotalMinutes)")
             
-            // Source 1: total_usage (primary - set by report extension)
-            let totalUsage = sharedDefaults.integer(forKey: "total_usage")
-            print("🔍 [HEALTH] Shared container total_usage: \(totalUsage)")
-            
-            // Source 2: per_app_usage (backup - also set by report extension)
-            // This captures both individual apps AND categories
-            var perAppSum = 0
-            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
-                perAppSum = perAppUsage.values.reduce(0, +)
-                print("🔍 [HEALTH] Shared container per_app_usage sum: \(perAppSum) from \(perAppUsage.count) entries")
-            }
-            
-            // Use whichever is higher (report might write to one before the other)
-            totalMinutes = max(totalUsage, perAppSum)
-            
-            if totalMinutes > 0 {
-                print("🔍 [HEALTH] Using shared container: \(totalMinutes) min")
+            if freshTotalMinutes > 0 {
+                totalMinutes = freshTotalMinutes
             }
         }
         
-        // Fallback: todayScreenTimeMinutes (set by Dashboard when report loads)
-        if totalMinutes == 0 && todayScreenTimeMinutes > 0 {
-            totalMinutes = todayScreenTimeMinutes
-            print("🔍 [HEALTH] Using todayScreenTimeMinutes fallback: \(totalMinutes)")
+        // Source 2: Core Data - "All Categories Tracking" goal
+        if totalMinutes == 0 {
+            let coreDataManager = CoreDataManager.shared
+            let categoryBundleID = "com.se7en.allcategories"
+            if let record = coreDataManager.getTodaysUsageRecord(for: categoryBundleID) {
+                let coreDataMinutes = Int(record.actualUsageMinutes)
+                print("🔍 [HEALTH] Core Data (All Categories): \(coreDataMinutes)")
+                if coreDataMinutes > 0 {
+                    totalMinutes = coreDataMinutes
+                    // Write to shared container so next time it's faster
+                    if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                        sharedDefaults.set(totalMinutes, forKey: "total_usage")
+                        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
+                        sharedDefaults.synchronize()
+                        print("✅ [HEALTH] Wrote \(totalMinutes) to shared container from Core Data")
+                    }
+                }
+            }
         }
         
         let totalHours = Double(totalMinutes) / 60.0
@@ -1305,18 +1304,18 @@ class AppState: ObservableObject {
             print("🔍 [HEALTH_CALC] UserDefaults total_usage = \(freshTotalMinutes)")
         }
         
-        // Source 2: Core Data - "All Categories Tracking" goal (read-only, don't write)
-        // NOTE: We don't write from Core Data because it only tracks from install time
-        // The DeviceActivityReport is authoritative and tracks from 12 AM
+        // Source 2: Core Data - "All Categories Tracking" goal
         if freshTotalMinutes == 0 {
             let coreDataManager = CoreDataManager.shared
             let categoryBundleID = "com.se7en.allcategories"
             if let record = coreDataManager.getTodaysUsageRecord(for: categoryBundleID) {
-                let coreDataMinutes = Int(record.actualUsageMinutes)
-                print("🔍 [HEALTH_CALC] Core Data (All Categories) = \(coreDataMinutes) (read-only, not writing)")
-                // Only use if report hasn't written yet (shouldn't happen, but fallback)
-                if coreDataMinutes > 0 {
-                    freshTotalMinutes = coreDataMinutes
+                freshTotalMinutes = Int(record.actualUsageMinutes)
+                print("🔍 [HEALTH_CALC] Core Data (All Categories) = \(freshTotalMinutes)")
+                // Write to shared container for next time
+                if freshTotalMinutes > 0, let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                    sharedDefaults.set(freshTotalMinutes, forKey: "total_usage")
+                    sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
+                    sharedDefaults.synchronize()
                 }
             }
         }
@@ -1428,8 +1427,10 @@ class AppState: ObservableObject {
         if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
             let sumFromPerApp = perAppUsage.values.reduce(0, +)
             if sumFromPerApp > 0 {
-                print("📊 Pet health using per_app_usage sum: \(sumFromPerApp) minutes")
-                // NOTE: Don't write to total_usage here - only the report extension should write it
+                print("📊 Pet health using per_app_usage sum: \(sumFromPerApp) minutes (total_usage was 0)")
+                // Also update total_usage for future reads
+                sharedDefaults.set(sumFromPerApp, forKey: "total_usage")
+                sharedDefaults.synchronize()
                 return sumFromPerApp
             }
         }
