@@ -94,7 +94,19 @@ final class ScreenTimeService: ObservableObject {
             
             // ⚠️ CRITICAL: Start monitoring immediately if authorized
             if self.isAuthorized {
-                self.refreshAllMonitoring()
+                // CRITICAL FIX: Process categories immediately on launch (bypass throttle)
+                // This ensures global monitoring is set up even if refreshAllMonitoring is throttled
+                if let allApps = self._allAppsSelection, !allApps.categoryTokens.isEmpty {
+                    print("🚀 CRITICAL: Processing categories on app launch to set up global monitoring")
+                    Task {
+                        await self.updateUsageFromAllAppsSelection(allApps)
+                        // Also call refreshAllMonitoring for other monitoring setup
+                        self.refreshAllMonitoring()
+                    }
+                } else {
+                    // No categories, use normal refresh
+                    self.refreshAllMonitoring()
+                }
             }
         }
     }
@@ -130,6 +142,14 @@ final class ScreenTimeService: ObservableObject {
     ) {
         guard isAuthorized else {
             print("❌ Cannot add app - not authorized")
+            return
+        }
+        
+        // ✅ FIX: Handle category-only selections - skip individual app creation
+        // Categories are tracked via "All Categories Tracking" goal, not individual apps
+        if selection.applicationTokens.isEmpty && !selection.categoryTokens.isEmpty {
+            print("⚠️ Skipping individual app creation - selection has categories only")
+            print("   Categories are tracked via 'All Categories Tracking' goal")
             return
         }
         
@@ -222,6 +242,14 @@ final class ScreenTimeService: ObservableObject {
     ) {
         guard isAuthorized else {
             print("❌ Cannot add app - not authorized")
+            return
+        }
+        
+        // ✅ FIX: Handle category-only selections - skip individual app creation
+        // Categories are tracked via "All Categories Tracking" goal, not individual apps
+        if selection.applicationTokens.isEmpty && !selection.categoryTokens.isEmpty {
+            print("⚠️ Skipping individual app limit - selection has categories only")
+            print("   Categories are tracked via 'All Categories Tracking' goal")
             return
         }
         
@@ -385,7 +413,12 @@ final class ScreenTimeService: ObservableObject {
             // REJECT any selection with category tokens - categories are for Dashboard ONLY
             guard !selection.applicationTokens.isEmpty,
                   selection.categoryTokens.isEmpty else {
-                print("⚠️ Skipping \(goal.appName ?? tokenHash) - has categories (Limits are ONLY for individual apps)")
+                // This is expected for "All Categories Tracking" - it's tracked separately
+                if goal.appName == "All Categories Tracking" {
+                    // Silently skip - this is tracked via global monitoring, not individual limits
+                } else {
+                    print("⚠️ Skipping \(goal.appName ?? tokenHash) - has categories (Limits are ONLY for individual apps)")
+                }
                 continue
             }
             
@@ -1119,6 +1152,39 @@ final class ScreenTimeService: ObservableObject {
         print("✅ updateUsageFromReport: Completed")
     }
     
+    /// Initialize the shared container with selection info so pet health can read data
+    /// This is called after user selects apps in onboarding, before DeviceActivityReport runs
+    func initializeSharedContainerForSelection(_ selection: FamilyActivitySelection) async {
+        let appGroupID = "group.com.se7en.app"
+        
+        await MainActor.run {
+            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+                print("❌ Failed to access shared container for initialization")
+                return
+            }
+            
+            // Check if we already have data - don't overwrite existing data
+            let existingUsage = sharedDefaults.integer(forKey: "total_usage")
+            if existingUsage > 0 {
+                print("📊 Shared container already has usage data: \(existingUsage) minutes")
+                return
+            }
+            
+            // Store selection metadata so we know tracking is set up
+            let appsCount = selection.applicationTokens.count
+            let categoriesCount = selection.categoryTokens.count
+            
+            sharedDefaults.set(true, forKey: "tracking_initialized")
+            sharedDefaults.set(appsCount, forKey: "tracked_apps_count")
+            sharedDefaults.set(categoriesCount, forKey: "tracked_categories_count")
+            sharedDefaults.set(Date().timeIntervalSince1970, forKey: "tracking_setup_time")
+            sharedDefaults.synchronize()
+            
+            print("📊 Initialized shared container: \(appsCount) apps, \(categoriesCount) categories tracked")
+            print("📊 DeviceActivityReport will populate actual usage when dashboard loads")
+        }
+    }
+    
     /// Update usage data from all apps selection
     private func updateUsageFromAllAppsSelection(_ selection: FamilyActivitySelection) async {
         let realAppDiscovery = RealAppDiscoveryService.shared
@@ -1372,8 +1438,9 @@ final class ScreenTimeService: ObservableObject {
         return await MainActor.run {
             guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
                 print("❌ Failed to access shared container for category usage")
-                // Fallback to Core Data
-                return getCategoryUsageFromCoreData()
+                // Fallback to estimate
+                let estimatedApps = selection.categoryTokens.count * 15
+                return (0, estimatedApps)
             }
             
             // CRITICAL FIX: Force synchronize for cross-process access
@@ -1386,21 +1453,12 @@ final class ScreenTimeService: ObservableObject {
             let appsCount = sharedDefaults.integer(forKey: "apps_count")
             
             if totalUsage > 0 || appsCount > 0 {
-                print("📊 Found category usage from shared container: \(totalUsage) minutes, \(appsCount) apps")
+                print("📊 Found category usage from extension: \(totalUsage) minutes, \(appsCount) apps (with usage)")
                 return (totalUsage, appsCount)
             }
             
-            // Fallback: Try Core Data (All Categories Tracking goal)
-            let coreDataUsage = getCategoryUsageFromCoreData()
-            if coreDataUsage.totalMinutes > 0 {
-                print("📊 Found category usage from Core Data: \(coreDataUsage.totalMinutes) minutes")
-                // Write to shared container for health calculation
-                writeUsageToSharedContainer(totalMinutes: coreDataUsage.totalMinutes)
-                return coreDataUsage
-            }
-            
             // No usage data yet - return 0 for both
-            print("📊 No category usage data yet")
+            print("📊 No category usage data yet from extension")
             return (0, 0)
         }
         
@@ -1528,38 +1586,6 @@ final class ScreenTimeService: ObservableObject {
         }
         
         coreDataManager.save()
-        
-        // CRITICAL: If this is the "All Categories Tracking" goal, write to shared container
-        // so health calculation can access it
-        if bundleID == "com.se7en.allcategories" {
-            writeUsageToSharedContainer(totalMinutes: minutes)
-        }
-    }
-    
-    /// Write usage to shared container for health calculation
-    private func writeUsageToSharedContainer(totalMinutes: Int) {
-        let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            print("❌ [SHARED_WRITE] Failed to access shared container")
-            return
-        }
-        
-        sharedDefaults.set(totalMinutes, forKey: "total_usage")
-        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
-        sharedDefaults.synchronize()
-        
-        print("✅ [SHARED_WRITE] Wrote total_usage=\(totalMinutes) to shared container")
-    }
-    
-    /// Get category usage from Core Data (All Categories Tracking goal)
-    private func getCategoryUsageFromCoreData() -> (totalMinutes: Int, appsUsed: Int) {
-        let categoryBundleID = "com.se7en.allcategories"
-        if let record = coreDataManager.getTodaysUsageRecord(for: categoryBundleID) {
-            let minutes = Int(record.actualUsageMinutes)
-            print("📊 [CORE_DATA] Found All Categories Tracking: \(minutes) minutes")
-            return (minutes, 0) // We don't have per-app breakdown with categories
-        }
-        return (0, 0)
     }
     
     // MARK: - Persistence
@@ -1571,19 +1597,46 @@ final class ScreenTimeService: ObservableObject {
         do {
             let data = try PropertyListEncoder().encode(selection)
             UserDefaults.standard.set(data, forKey: allAppsSelectionKey)
-            // Force UserDefaults to sync immediately for critical onboarding data
             UserDefaults.standard.synchronize()
             print("💾 Saved all apps selection with \(selection.applicationTokens.count) apps and \(selection.categoryTokens.count) categories to UserDefaults")
             
-            // Verify the save by immediately reading it back
+            // Verify the save
             if let verification = loadAllAppsSelection() {
                 print("✅ Verification: Successfully saved and loaded \(verification.applicationTokens.count) apps and \(verification.categoryTokens.count) categories")
             } else {
                 print("❌ ERROR: Failed to verify save - could not load back the selection!")
             }
+            
+            // ✅ CRITICAL: Initialize shared container to indicate screen time is configured
+            initializeSharedContainerForScreenTime(selection: selection)
+            
+            // ✅ CRITICAL: Start global monitoring so DeviceActivityReport receives data going forward
+            setupGlobalMonitoringForReports(selection: selection)
+            
         } catch {
             print("❌ Failed to save all apps selection: \(error)")
         }
+    }
+    
+    /// Initialize the shared container with config flags after app selection
+    /// This indicates screen time is configured even before DeviceActivityReport runs
+    private func initializeSharedContainerForScreenTime(selection: FamilyActivitySelection) {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ Failed to access shared container for initialization")
+            return
+        }
+        
+        // Store that screen time is configured (so AppState knows 0 usage is valid)
+        sharedDefaults.set(true, forKey: "screen_time_configured")
+        sharedDefaults.set(selection.applicationTokens.count, forKey: "configured_apps_count")
+        sharedDefaults.set(selection.categoryTokens.count, forKey: "configured_categories_count")
+        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "configuration_timestamp")
+        sharedDefaults.synchronize()
+        
+        print("✅ Initialized shared container for screen time:")
+        print("   - Apps selected: \(selection.applicationTokens.count)")
+        print("   - Categories selected: \(selection.categoryTokens.count)")
     }
     
     func loadAllAppsSelection() -> FamilyActivitySelection? {
@@ -1593,7 +1646,7 @@ final class ScreenTimeService: ObservableObject {
         
         do {
             let selection = try PropertyListDecoder().decode(FamilyActivitySelection.self, from: data)
-            print("📂 Loaded all apps selection with \(selection.applicationTokens.count) apps")
+            print("📂 Loaded all apps selection with \(selection.applicationTokens.count) apps and \(selection.categoryTokens.count) categories")
             return selection
         } catch {
             print("❌ Failed to load all apps selection: \(error)")

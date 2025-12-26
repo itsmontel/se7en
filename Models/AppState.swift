@@ -47,16 +47,7 @@ class AppState: ObservableObject {
     @Published var newStreakValue = 0
     @Published var shouldShowAchievementCelebration = false
     @Published var newAchievement: Achievement?
-    @Published var todayScreenTimeMinutes: Int = 0 {
-        didSet {
-            // Update health value whenever screen time changes
-            // Use async dispatch to avoid "Publishing changes from within view updates" warning
-            DispatchQueue.main.async { [weak self] in
-                self?.recalculatePetHealthValue()
-            }
-        }
-    }
-    @Published var petHealthValue: Int = 100
+    @Published var todayScreenTimeMinutes: Int = 0
     
     private var previousStreak = 0
     private var isRefreshingPetHealth = false
@@ -1117,77 +1108,6 @@ class AppState: ObservableObject {
     
     // MARK: - Pet Health Management
     
-    /// Recalculate and update the pet health value based on screen time
-    func recalculatePetHealthValue() {
-        print("🔍 [HEALTH] Recalculating health value...")
-        let appGroupID = "group.com.se7en.app"
-        var totalMinutes = todayScreenTimeMinutes
-        
-        // Source 1: Shared container total_usage
-        if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-            sharedDefaults.synchronize()
-            let freshTotalMinutes = sharedDefaults.integer(forKey: "total_usage")
-            print("🔍 [HEALTH] Shared container total_usage: \(freshTotalMinutes)")
-            
-            if freshTotalMinutes > 0 {
-                totalMinutes = freshTotalMinutes
-            }
-        }
-        
-        // Source 2: Core Data - "All Categories Tracking" goal
-        if totalMinutes == 0 {
-            let coreDataManager = CoreDataManager.shared
-            let categoryBundleID = "com.se7en.allcategories"
-            if let record = coreDataManager.getTodaysUsageRecord(for: categoryBundleID) {
-                let coreDataMinutes = Int(record.actualUsageMinutes)
-                print("🔍 [HEALTH] Core Data (All Categories): \(coreDataMinutes)")
-                if coreDataMinutes > 0 {
-                    totalMinutes = coreDataMinutes
-                    // Write to shared container so next time it's faster
-                    if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-                        sharedDefaults.set(totalMinutes, forKey: "total_usage")
-                        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
-                        sharedDefaults.synchronize()
-                        print("✅ [HEALTH] Wrote \(totalMinutes) to shared container from Core Data")
-                    }
-                }
-            }
-        }
-        
-        let totalHours = Double(totalMinutes) / 60.0
-        print("🔍 [HEALTH] Screen time: \(totalMinutes) min (\(String(format: "%.1f", totalHours)) hrs)")
-        
-        // Calculate health value (0-100) where 100 is best health
-        // Inverse relationship: more screen time = lower health
-        let newHealthValue: Int
-        switch totalHours {
-        case 0..<2:
-            // Full health: 90-100
-            newHealthValue = max(90, 100 - Int(totalHours * 5))
-        case 2..<4:
-            // Happy: 70-89
-            newHealthValue = max(70, 89 - Int((totalHours - 2) * 9.5))
-        case 4..<6:
-            // Content: 50-69
-            newHealthValue = max(50, 69 - Int((totalHours - 4) * 9.5))
-        case 6..<8:
-            // Sad: 20-49
-            newHealthValue = max(20, 49 - Int((totalHours - 6) * 14.5))
-        default:
-            // Sick: 0-19
-            let excessHours = totalHours - 8
-            newHealthValue = max(0, 19 - Int(excessHours * 2))
-        }
-        
-        // Update if changed
-        if petHealthValue != newHealthValue {
-            print("✅ [HEALTH] Health changed: \(petHealthValue) -> \(newHealthValue)")
-            petHealthValue = newHealthValue
-        } else {
-            print("ℹ️ [HEALTH] Health unchanged: \(petHealthValue)")
-        }
-    }
-    
     func updatePetHealth() {
         guard var pet = userPet else { return }
         
@@ -1292,7 +1212,6 @@ class AppState: ObservableObject {
     
     /// Calculate pet health based on daily screen time
     func calculatePetHealthPercentage() -> Int {
-        print("🔍 [HEALTH_CALC] calculatePetHealthPercentage() called")
         // ALWAYS sync from shared container first to get latest data
         let appGroupID = "group.com.se7en.app"
         var freshTotalMinutes = 0
@@ -1301,26 +1220,13 @@ class AppState: ObservableObject {
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
             sharedDefaults.synchronize()
             freshTotalMinutes = sharedDefaults.integer(forKey: "total_usage")
-            print("🔍 [HEALTH_CALC] UserDefaults total_usage = \(freshTotalMinutes)")
+            
+            #if DEBUG
+            print("📱 Health: UserDefaults total_usage = \(freshTotalMinutes)")
+            #endif
         }
         
-        // Source 2: Core Data - "All Categories Tracking" goal
-        if freshTotalMinutes == 0 {
-            let coreDataManager = CoreDataManager.shared
-            let categoryBundleID = "com.se7en.allcategories"
-            if let record = coreDataManager.getTodaysUsageRecord(for: categoryBundleID) {
-                freshTotalMinutes = Int(record.actualUsageMinutes)
-                print("🔍 [HEALTH_CALC] Core Data (All Categories) = \(freshTotalMinutes)")
-                // Write to shared container for next time
-                if freshTotalMinutes > 0, let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-                    sharedDefaults.set(freshTotalMinutes, forKey: "total_usage")
-                    sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
-                    sharedDefaults.synchronize()
-                }
-            }
-        }
-        
-        // Source 3: Sum per_app_usage
+        // Source 2: Sum per_app_usage
         if freshTotalMinutes == 0 {
             if let sharedDefaults = UserDefaults(suiteName: appGroupID),
                let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") {
@@ -1330,21 +1236,23 @@ class AppState: ObservableObject {
                     if let doubleValue = value as? Double { return partial + Int(doubleValue) }
                     return partial
                 }
-                print("🔍 [HEALTH_CALC] per_app_usage sum = \(freshTotalMinutes)")
+                #if DEBUG
+                print("📱 Health: per_app_usage sum = \(freshTotalMinutes)")
+                #endif
             }
         }
         
-        // Source 4: JSON file backup
+        // Source 3: JSON file backup
         if freshTotalMinutes == 0 {
             freshTotalMinutes = readTotalUsageFromSharedFileBackup(appGroupID: appGroupID)
-            print("🔍 [HEALTH_CALC] File backup total_usage = \(freshTotalMinutes)")
+            #if DEBUG
+            print("📱 Health: File backup total_usage = \(freshTotalMinutes)")
+            #endif
         }
         
-        // Schedule update to todayScreenTimeMinutes asynchronously to avoid view update issues
-        if freshTotalMinutes > 0 && freshTotalMinutes != todayScreenTimeMinutes {
-            DispatchQueue.main.async { [weak self] in
-                self?.todayScreenTimeMinutes = freshTotalMinutes
-            }
+        // ALWAYS update todayScreenTimeMinutes with fresh data
+        if freshTotalMinutes > 0 {
+            todayScreenTimeMinutes = freshTotalMinutes
         }
         
         let totalMinutes = freshTotalMinutes > 0 ? freshTotalMinutes : todayScreenTimeMinutes
@@ -1362,7 +1270,9 @@ class AppState: ObservableObject {
         default: healthPercentage = 0
         }
         
-        print("🔍 [HEALTH_CALC] RESULT: totalMinutes=\(totalMinutes), hours=\(String(format: "%.1f", totalHours)), health=\(healthPercentage)%")
+        #if DEBUG
+        print("📱 AppState: calculatePetHealthPercentage - totalMinutes=\(totalMinutes), hours=\(String(format: "%.1f", totalHours)), health=\(healthPercentage)%")
+        #endif
         
         return max(0, min(100, healthPercentage))
     }

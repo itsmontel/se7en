@@ -1,6 +1,7 @@
 import SwiftUI
 import FamilyControls
 import Combine
+import DeviceActivity
 
 struct ScreenTimeConnectionView: View {
     @EnvironmentObject var appState: AppState
@@ -11,6 +12,7 @@ struct ScreenTimeConnectionView: View {
     
     @State private var isRequesting = false
     @State private var showFamilyPicker = false
+    @State private var shouldTriggerReport = false
     
     private var petImageName: String {
         if let pet = appState.userPet {
@@ -19,9 +21,33 @@ struct ScreenTimeConnectionView: View {
         return "dogfullhealth"
     }
     
+    @ViewBuilder
+    private var hiddenReportTrigger: some View {
+        if shouldTriggerReport {
+            let dateInterval = DateInterval(
+                start: Calendar.current.startOfDay(for: Date()),
+                end: Date()
+            )
+            let filter = DeviceActivityFilter(
+                segment: .daily(during: dateInterval),
+                users: .all,
+                devices: .init([.iPhone, .iPad])
+            )
+            
+            // This triggers TotalActivityReport extension which writes to shared container
+            DeviceActivityReport(.totalActivity, filter: filter)
+                .frame(width: 1, height: 1)
+                .opacity(0)
+                .allowsHitTesting(false)
+        }
+    }
+    
     var body: some View {
         ZStack {
             OnboardingBackground()
+            
+            // Hidden report trigger
+            hiddenReportTrigger
             
             VStack(spacing: 0) {
                 // Header with back button and progress bar
@@ -211,7 +237,6 @@ struct ScreenTimeConnectionView: View {
                         DispatchQueue.main.async {
                             // Save selection to allAppsSelection for dashboard FIRST
                             screenTimeService.allAppsSelection = familyActivityService.selection
-                            let totalItems = familyActivityService.selection.applicationTokens.count + familyActivityService.selection.categoryTokens.count
                             print("💾 Saved allAppsSelection with \(familyActivityService.selection.applicationTokens.count) apps and \(familyActivityService.selection.categoryTokens.count) categories")
                             
                             // Verify it was saved
@@ -227,7 +252,12 @@ struct ScreenTimeConnectionView: View {
                             print("🔄 Processed apps with RealAppDiscoveryService")
                             
                             // Close picker
-                                showFamilyPicker = false
+                            showFamilyPicker = false
+                            
+                            // ✅ CRITICAL FIX: Trigger DeviceActivityReport to fetch today's FULL usage
+                            // This includes usage from BEFORE the app was installed
+                            shouldTriggerReport = true
+                            print("📊 Triggered DeviceActivityReport to fetch historical usage for today")
                             
                             // Force immediate update of usage from reports in background
                             Task {
@@ -242,8 +272,11 @@ struct ScreenTimeConnectionView: View {
                             
                             print("✅ Completed app selection processing, continuing...")
                             
-                            // Continue to next step after a brief delay to ensure save completes
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            // Give the report extension time to run and write to shared container
+                            // Then continue to next step
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                // Force AppState to preload the new data
+                                // AppState will be refreshed via notification
                                 onContinue()
                             }
                         }
@@ -262,31 +295,23 @@ struct ScreenTimeConnectionView: View {
         isRequesting = true
         
         Task {
-            do {
-                // Request notification permission first
-                _ = await NotificationService.shared.requestNotificationPermission()
-                
-                // Then request Screen Time authorization
-                await screenTimeService.requestAuthorization()
-                
-                await MainActor.run {
-                    isRequesting = false
-                    if screenTimeService.isAuthorized {
-                        HapticFeedback.success.trigger()
-                        
-                        // Show family picker after successful authorization
-                        // Give a bit more time for authorization to fully complete
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            print("🔐 Authorization complete, showing picker")
-                            showFamilyPicker = true
-                        }
+            // Request notification permission first
+            _ = await NotificationService.shared.requestNotificationPermission()
+            
+            // Then request Screen Time authorization
+            await screenTimeService.requestAuthorization()
+            
+            await MainActor.run {
+                isRequesting = false
+                if screenTimeService.isAuthorized {
+                    HapticFeedback.success.trigger()
+                    
+                    // Show family picker after successful authorization
+                    // Give a bit more time for authorization to fully complete
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        print("🔐 Authorization complete, showing picker")
+                        showFamilyPicker = true
                     }
-                }
-            } catch {
-                await MainActor.run {
-                    isRequesting = false
-                    print("❌ Failed to request authorization: \(error)")
-                    // Optionally show an error message to the user
                 }
             }
         }

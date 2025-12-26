@@ -69,7 +69,6 @@
 		1081 /* bunnyintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3029 /* bunnyintro.mp4 */; };
 		1082 /* hamsterintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3030 /* hamsterintro.mp4 */; };
 		1083 /* horseintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3031 /* horseintro.mp4 */; };
-		3032 /* Animation in Resources */ = {isa = PBXBuildFile; fileRef = 3033 /* Animation */; };
 		3035 /* Components/StreakCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3034 /* Components/StreakCelebrationView.swift */; };
 		3036 /* Components/AchievementCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3037 /* Components/AchievementCelebrationView.swift */; };
 		4001 /* Views/Dashboard/ExtendLimitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4000 /* Views/Dashboard/ExtendLimitSheet.swift */; };
@@ -85,6 +84,58 @@
 		8F667A2A2EF3524E0028D462 /* SE7ENShieldConfigurationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8F667A1E2EF3524D0028D462 /* SE7ENShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8F667A362EF354490028D462 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */; };
 		8F667A3E2EF354490028D462 /* SE7ENShieldActionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8F667A352EF354490028D462 /* SE7ENShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8F9B9D342EFE24A6005E2CDF /* Animation in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9D332EFE2499005E2CDF /* Animation */; };
+		8F9B9D362EFE24A6005E2CDF /* Animation in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9D332EFE2499005E2CDF /* Animation */; };
+		8F9B9E402EFE2FC1005E2CDF /* DarkHamsterSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E0E2EFE2FBD005E2CDF /* DarkHamsterSickAnimation.mp4 */; };
+		8F9B9E412EFE2FC1005E2CDF /* DarkHorseFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E0F2EFE2FBD005E2CDF /* DarkHorseFullHealthAnimation.mp4 */; };
+		8F9B9E422EFE2FC1005E2CDF /* CatHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E102EFE2FBD005E2CDF /* CatHappyAnimation.mp4 */; };
+		8F9B9E432EFE2FC1005E2CDF /* DarkHorseContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E112EFE2FBD005E2CDF /* DarkHorseContentAnimation.mp4 */; };
+		8F9B9E442EFE2FC1005E2CDF /* BunnyFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E122EFE2FBD005E2CDF /* BunnyFullHealthAnimation.mp4 */; };
+		8F9B9E452EFE2FC1005E2CDF /* DarkHamsterContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E132EFE2FBD005E2CDF /* DarkHamsterContentAnimation.mp4 */; };
+		8F9B9E462EFE2FC1005E2CDF /* HamsterSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E142EFE2FBD005E2CDF /* HamsterSickAnimation.mp4 */; };
+		8F9B9E472EFE2FC1005E2CDF /* HorseHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E152EFE2FBD005E2CDF /* HorseHappyAnimation.mp4 */; };
+		8F9B9E482EFE2FC1005E2CDF /* DarkCatSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E162EFE2FBD005E2CDF /* DarkCatSadAnimation.mp4 */; };
+		8F9B9E492EFE2FC1005E2CDF /* HorseSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E172EFE2FBD005E2CDF /* HorseSadAnimation.mp4 */; };
+		8F9B9E4A2EFE2FC1005E2CDF /* DarkHamsterHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E182EFE2FBD005E2CDF /* DarkHamsterHappyAnimation.mp4 */; };
+		8F9B9E4B2EFE2FC1005E2CDF /* DogSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E192EFE2FBD005E2CDF /* DogSickAnimation.mp4 */; };
+		8F9B9E4C2EFE2FC1005E2CDF /* HorseFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1A2EFE2FBE005E2CDF /* HorseFullHealthAnimation.mp4 */; };
+		8F9B9E4D2EFE2FC1005E2CDF /* DarkHamsterFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1B2EFE2FBE005E2CDF /* DarkHamsterFullHealthAnimation.mp4 */; };
+		8F9B9E4E2EFE2FC1005E2CDF /* DarkCatSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1C2EFE2FBE005E2CDF /* DarkCatSickAnimation.mp4 */; };
+		8F9B9E4F2EFE2FC1005E2CDF /* DarkBunnyHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1D2EFE2FBE005E2CDF /* DarkBunnyHappyAnimation.mp4 */; };
+		8F9B9E502EFE2FC1005E2CDF /* DarkCatFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1E2EFE2FBE005E2CDF /* DarkCatFullHealthAnimation.mp4 */; };
+		8F9B9E512EFE2FC1005E2CDF /* DarkHorseSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1F2EFE2FBE005E2CDF /* DarkHorseSadAnimation.mp4 */; };
+		8F9B9E522EFE2FC1005E2CDF /* DarkDogContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E202EFE2FBE005E2CDF /* DarkDogContentAnimation.mp4 */; };
+		8F9B9E532EFE2FC1005E2CDF /* DarkBunnyContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E212EFE2FBE005E2CDF /* DarkBunnyContentAnimation.mp4 */; };
+		8F9B9E542EFE2FC1005E2CDF /* DogFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E222EFE2FBE005E2CDF /* DogFullHealthAnimation.mp4 */; };
+		8F9B9E552EFE2FC1005E2CDF /* DarkBunnySadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E232EFE2FBE005E2CDF /* DarkBunnySadAnimation.mp4 */; };
+		8F9B9E562EFE2FC1005E2CDF /* BunnySickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E242EFE2FBF005E2CDF /* BunnySickAnimation.mp4 */; };
+		8F9B9E572EFE2FC1005E2CDF /* DarkCatHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E252EFE2FBF005E2CDF /* DarkCatHappyAnimation.mp4 */; };
+		8F9B9E582EFE2FC1005E2CDF /* HorseSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E262EFE2FBF005E2CDF /* HorseSickAnimation.mp4 */; };
+		8F9B9E592EFE2FC1005E2CDF /* BunnyContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E272EFE2FBF005E2CDF /* BunnyContentAnimation.mp4 */; };
+		8F9B9E5A2EFE2FC1005E2CDF /* DarkHorseSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E282EFE2FBF005E2CDF /* DarkHorseSickAnimation.mp4 */; };
+		8F9B9E5B2EFE2FC1005E2CDF /* CatSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E292EFE2FBF005E2CDF /* CatSadAnimation.mp4 */; };
+		8F9B9E5C2EFE2FC1005E2CDF /* CatSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2A2EFE2FBF005E2CDF /* CatSickAnimation.mp4 */; };
+		8F9B9E5D2EFE2FC1005E2CDF /* DarkBunnySickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2B2EFE2FBF005E2CDF /* DarkBunnySickAnimation.mp4 */; };
+		8F9B9E5E2EFE2FC1005E2CDF /* DarkHorseHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2C2EFE2FBF005E2CDF /* DarkHorseHappyAnimation.mp4 */; };
+		8F9B9E5F2EFE2FC1005E2CDF /* DogHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2D2EFE2FBF005E2CDF /* DogHappyAnimation.mp4 */; };
+		8F9B9E602EFE2FC1005E2CDF /* DarkBunnyFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2E2EFE2FC0005E2CDF /* DarkBunnyFullHealthAnimation.mp4 */; };
+		8F9B9E612EFE2FC1005E2CDF /* DogSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2F2EFE2FC0005E2CDF /* DogSadAnimation.mp4 */; };
+		8F9B9E622EFE2FC1005E2CDF /* DogContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E302EFE2FC0005E2CDF /* DogContentAnimation.mp4 */; };
+		8F9B9E632EFE2FC1005E2CDF /* DarkCatContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E312EFE2FC0005E2CDF /* DarkCatContentAnimation.mp4 */; };
+		8F9B9E642EFE2FC1005E2CDF /* BunnySadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E322EFE2FC0005E2CDF /* BunnySadAnimation.mp4 */; };
+		8F9B9E652EFE2FC1005E2CDF /* DarkDogSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E332EFE2FC0005E2CDF /* DarkDogSadAnimation.mp4 */; };
+		8F9B9E662EFE2FC1005E2CDF /* CatFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E342EFE2FC0005E2CDF /* CatFullHealthAnimation.mp4 */; };
+		8F9B9E672EFE2FC1005E2CDF /* DarkHamsterSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E352EFE2FC0005E2CDF /* DarkHamsterSadAnimation.mp4 */; };
+		8F9B9E682EFE2FC1005E2CDF /* DarkDogFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E362EFE2FC0005E2CDF /* DarkDogFullHealthAnimation.mp4 */; };
+		8F9B9E692EFE2FC1005E2CDF /* HamsterFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E372EFE2FC0005E2CDF /* HamsterFullHealthAnimation.mp4 */; };
+		8F9B9E6A2EFE2FC1005E2CDF /* BunnyHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E382EFE2FC0005E2CDF /* BunnyHappyAnimation.mp4 */; };
+		8F9B9E6B2EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E392EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 */; };
+		8F9B9E6C2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3A2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 */; };
+		8F9B9E6D2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3B2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 */; };
+		8F9B9E6E2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3C2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 */; };
+		8F9B9E6F2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3D2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 */; };
+		8F9B9E702EFE2FC1005E2CDF /* CatContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3E2EFE2FC1005E2CDF /* CatContentAnimation.mp4 */; };
+		8F9B9E712EFE2FC1005E2CDF /* HorseContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3F2EFE2FC1005E2CDF /* HorseContentAnimation.mp4 */; };
 		8FB3DA092EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8FB3DA3A2EE38ECD005BC03C /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */; };
 		8FB3DA422EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -214,7 +265,6 @@
 		3029 /* bunnyintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = bunnyintro.mp4; sourceTree = "<group>"; };
 		3030 /* hamsterintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = hamsterintro.mp4; sourceTree = "<group>"; };
 		3031 /* horseintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = horseintro.mp4; sourceTree = "<group>"; };
-		3033 /* Animation */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Animation; sourceTree = "<group>"; };
 		3034 /* Components/StreakCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakCelebrationView.swift; sourceTree = "<group>"; };
 		3037 /* Components/AchievementCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementCelebrationView.swift; sourceTree = "<group>"; };
 		4000 /* Views/Dashboard/ExtendLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/ExtendLimitSheet.swift; sourceTree = "<group>"; };
@@ -230,6 +280,57 @@
 		8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
 		8F667A212EF3524E0028D462 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
 		8F667A352EF354490028D462 /* SE7ENShieldActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SE7ENShieldActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F9B9D332EFE2499005E2CDF /* Animation */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Animation; sourceTree = "<group>"; };
+		8F9B9E0E2EFE2FBD005E2CDF /* DarkHamsterSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterSickAnimation.mp4; path = Animation/DarkHamsterSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E0F2EFE2FBD005E2CDF /* DarkHorseFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseFullHealthAnimation.mp4; path = Animation/DarkHorseFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E102EFE2FBD005E2CDF /* CatHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatHappyAnimation.mp4; path = Animation/CatHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E112EFE2FBD005E2CDF /* DarkHorseContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseContentAnimation.mp4; path = Animation/DarkHorseContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E122EFE2FBD005E2CDF /* BunnyFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnyFullHealthAnimation.mp4; path = Animation/BunnyFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E132EFE2FBD005E2CDF /* DarkHamsterContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterContentAnimation.mp4; path = Animation/DarkHamsterContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E142EFE2FBD005E2CDF /* HamsterSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterSickAnimation.mp4; path = Animation/HamsterSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E152EFE2FBD005E2CDF /* HorseHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseHappyAnimation.mp4; path = Animation/HorseHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E162EFE2FBD005E2CDF /* DarkCatSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatSadAnimation.mp4; path = Animation/DarkCatSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E172EFE2FBD005E2CDF /* HorseSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseSadAnimation.mp4; path = Animation/HorseSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E182EFE2FBD005E2CDF /* DarkHamsterHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterHappyAnimation.mp4; path = Animation/DarkHamsterHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E192EFE2FBD005E2CDF /* DogSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogSickAnimation.mp4; path = Animation/DogSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1A2EFE2FBE005E2CDF /* HorseFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseFullHealthAnimation.mp4; path = Animation/HorseFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1B2EFE2FBE005E2CDF /* DarkHamsterFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterFullHealthAnimation.mp4; path = Animation/DarkHamsterFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1C2EFE2FBE005E2CDF /* DarkCatSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatSickAnimation.mp4; path = Animation/DarkCatSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1D2EFE2FBE005E2CDF /* DarkBunnyHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnyHappyAnimation.mp4; path = Animation/DarkBunnyHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1E2EFE2FBE005E2CDF /* DarkCatFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatFullHealthAnimation.mp4; path = Animation/DarkCatFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1F2EFE2FBE005E2CDF /* DarkHorseSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseSadAnimation.mp4; path = Animation/DarkHorseSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E202EFE2FBE005E2CDF /* DarkDogContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogContentAnimation.mp4; path = Animation/DarkDogContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E212EFE2FBE005E2CDF /* DarkBunnyContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnyContentAnimation.mp4; path = Animation/DarkBunnyContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E222EFE2FBE005E2CDF /* DogFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogFullHealthAnimation.mp4; path = Animation/DogFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E232EFE2FBE005E2CDF /* DarkBunnySadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnySadAnimation.mp4; path = Animation/DarkBunnySadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E242EFE2FBF005E2CDF /* BunnySickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnySickAnimation.mp4; path = Animation/BunnySickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E252EFE2FBF005E2CDF /* DarkCatHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatHappyAnimation.mp4; path = Animation/DarkCatHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E262EFE2FBF005E2CDF /* HorseSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseSickAnimation.mp4; path = Animation/HorseSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E272EFE2FBF005E2CDF /* BunnyContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnyContentAnimation.mp4; path = Animation/BunnyContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E282EFE2FBF005E2CDF /* DarkHorseSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseSickAnimation.mp4; path = Animation/DarkHorseSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E292EFE2FBF005E2CDF /* CatSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatSadAnimation.mp4; path = Animation/CatSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2A2EFE2FBF005E2CDF /* CatSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatSickAnimation.mp4; path = Animation/CatSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2B2EFE2FBF005E2CDF /* DarkBunnySickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnySickAnimation.mp4; path = Animation/DarkBunnySickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2C2EFE2FBF005E2CDF /* DarkHorseHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseHappyAnimation.mp4; path = Animation/DarkHorseHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2D2EFE2FBF005E2CDF /* DogHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogHappyAnimation.mp4; path = Animation/DogHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2E2EFE2FC0005E2CDF /* DarkBunnyFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnyFullHealthAnimation.mp4; path = Animation/DarkBunnyFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2F2EFE2FC0005E2CDF /* DogSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogSadAnimation.mp4; path = Animation/DogSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E302EFE2FC0005E2CDF /* DogContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogContentAnimation.mp4; path = Animation/DogContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E312EFE2FC0005E2CDF /* DarkCatContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatContentAnimation.mp4; path = Animation/DarkCatContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E322EFE2FC0005E2CDF /* BunnySadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnySadAnimation.mp4; path = Animation/BunnySadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E332EFE2FC0005E2CDF /* DarkDogSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogSadAnimation.mp4; path = Animation/DarkDogSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E342EFE2FC0005E2CDF /* CatFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatFullHealthAnimation.mp4; path = Animation/CatFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E352EFE2FC0005E2CDF /* DarkHamsterSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterSadAnimation.mp4; path = Animation/DarkHamsterSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E362EFE2FC0005E2CDF /* DarkDogFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogFullHealthAnimation.mp4; path = Animation/DarkDogFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E372EFE2FC0005E2CDF /* HamsterFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterFullHealthAnimation.mp4; path = Animation/HamsterFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E382EFE2FC0005E2CDF /* BunnyHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnyHappyAnimation.mp4; path = Animation/BunnyHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E392EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogHappyAnimation.mp4; path = Animation/DarkDogHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3A2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterSadAnimation.mp4; path = Animation/HamsterSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3B2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogSickAnimation.mp4; path = Animation/DarkDogSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3C2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterHappyAnimation.mp4; path = Animation/HamsterHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3D2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterContentAnimation.mp4; path = Animation/HamsterContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3E2EFE2FC1005E2CDF /* CatContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatContentAnimation.mp4; path = Animation/CatContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3F2EFE2FC1005E2CDF /* HorseContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseContentAnimation.mp4; path = Animation/HorseContentAnimation.mp4; sourceTree = "<group>"; };
 		8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = SE7ENDeviceActivityReportExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SE7ENDeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
@@ -251,7 +352,7 @@
 			);
 			target = 8F667A342EF354490028D462 /* SE7ENShieldActionExtension */;
 		};
-		8FB3DA0D2EE37903005BC03C /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		8F9B9E0D2EFE2F7F005E2CDF /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -270,7 +371,7 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8F667A232EF3524E0028D462 /* SE7ENShieldConfigurationExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8F667A2D2EF3524E0028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SE7ENShieldConfigurationExtension; sourceTree = "<group>"; };
 		8F667A372EF354490028D462 /* SE7ENShieldActionExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8F667A3F2EF354490028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SE7ENShieldActionExtension; sourceTree = "<group>"; };
-		8FB3D9FE2EE37903005BC03C /* SE7ENDeviceActivityReportExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8FB3DA0D2EE37903005BC03C /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SE7ENDeviceActivityReportExtension; sourceTree = "<group>"; };
+		8FB3D9FE2EE37903005BC03C /* SE7ENDeviceActivityReportExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8F9B9E0D2EFE2F7F005E2CDF /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SE7ENDeviceActivityReportExtension; sourceTree = "<group>"; };
 		8FB3DA3B2EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8FB3DA462EE38ECD005BC03C /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SE7ENDeviceActivityMonitorExtension; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -427,6 +528,56 @@
 		89 = {
 			isa = PBXGroup;
 			children = (
+				8F9B9E352EFE2FC0005E2CDF /* DarkHamsterSadAnimation.mp4 */,
+				8F9B9E0E2EFE2FBD005E2CDF /* DarkHamsterSickAnimation.mp4 */,
+				8F9B9E112EFE2FBD005E2CDF /* DarkHorseContentAnimation.mp4 */,
+				8F9B9E0F2EFE2FBD005E2CDF /* DarkHorseFullHealthAnimation.mp4 */,
+				8F9B9E3E2EFE2FC1005E2CDF /* CatContentAnimation.mp4 */,
+				8F9B9E342EFE2FC0005E2CDF /* CatFullHealthAnimation.mp4 */,
+				8F9B9E102EFE2FBD005E2CDF /* CatHappyAnimation.mp4 */,
+				8F9B9E272EFE2FBF005E2CDF /* BunnyContentAnimation.mp4 */,
+				8F9B9E122EFE2FBD005E2CDF /* BunnyFullHealthAnimation.mp4 */,
+				8F9B9E3B2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 */,
+				8F9B9E132EFE2FBD005E2CDF /* DarkHamsterContentAnimation.mp4 */,
+				8F9B9E3C2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 */,
+				8F9B9E3A2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 */,
+				8F9B9E142EFE2FBD005E2CDF /* HamsterSickAnimation.mp4 */,
+				8F9B9E3F2EFE2FC1005E2CDF /* HorseContentAnimation.mp4 */,
+				8F9B9E1A2EFE2FBE005E2CDF /* HorseFullHealthAnimation.mp4 */,
+				8F9B9E152EFE2FBD005E2CDF /* HorseHappyAnimation.mp4 */,
+				8F9B9E252EFE2FBF005E2CDF /* DarkCatHappyAnimation.mp4 */,
+				8F9B9E162EFE2FBD005E2CDF /* DarkCatSadAnimation.mp4 */,
+				8F9B9E172EFE2FBD005E2CDF /* HorseSadAnimation.mp4 */,
+				8F9B9E1B2EFE2FBE005E2CDF /* DarkHamsterFullHealthAnimation.mp4 */,
+				8F9B9E182EFE2FBD005E2CDF /* DarkHamsterHappyAnimation.mp4 */,
+				8F9B9E2F2EFE2FC0005E2CDF /* DogSadAnimation.mp4 */,
+				8F9B9E192EFE2FBD005E2CDF /* DogSickAnimation.mp4 */,
+				8F9B9E1C2EFE2FBE005E2CDF /* DarkCatSickAnimation.mp4 */,
+				8F9B9E2E2EFE2FC0005E2CDF /* DarkBunnyFullHealthAnimation.mp4 */,
+				8F9B9E1D2EFE2FBE005E2CDF /* DarkBunnyHappyAnimation.mp4 */,
+				8F9B9E312EFE2FC0005E2CDF /* DarkCatContentAnimation.mp4 */,
+				8F9B9E1E2EFE2FBE005E2CDF /* DarkCatFullHealthAnimation.mp4 */,
+				8F9B9E2C2EFE2FBF005E2CDF /* DarkHorseHappyAnimation.mp4 */,
+				8F9B9E1F2EFE2FBE005E2CDF /* DarkHorseSadAnimation.mp4 */,
+				8F9B9E202EFE2FBE005E2CDF /* DarkDogContentAnimation.mp4 */,
+				8F9B9E2A2EFE2FBF005E2CDF /* CatSickAnimation.mp4 */,
+				8F9B9E212EFE2FBE005E2CDF /* DarkBunnyContentAnimation.mp4 */,
+				8F9B9E302EFE2FC0005E2CDF /* DogContentAnimation.mp4 */,
+				8F9B9E222EFE2FBE005E2CDF /* DogFullHealthAnimation.mp4 */,
+				8F9B9E232EFE2FBE005E2CDF /* DarkBunnySadAnimation.mp4 */,
+				8F9B9E382EFE2FC0005E2CDF /* BunnyHappyAnimation.mp4 */,
+				8F9B9E322EFE2FC0005E2CDF /* BunnySadAnimation.mp4 */,
+				8F9B9E242EFE2FBF005E2CDF /* BunnySickAnimation.mp4 */,
+				8F9B9E262EFE2FBF005E2CDF /* HorseSickAnimation.mp4 */,
+				8F9B9E282EFE2FBF005E2CDF /* DarkHorseSickAnimation.mp4 */,
+				8F9B9E292EFE2FBF005E2CDF /* CatSadAnimation.mp4 */,
+				8F9B9E2B2EFE2FBF005E2CDF /* DarkBunnySickAnimation.mp4 */,
+				8F9B9E2D2EFE2FBF005E2CDF /* DogHappyAnimation.mp4 */,
+				8F9B9E392EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 */,
+				8F9B9E332EFE2FC0005E2CDF /* DarkDogSadAnimation.mp4 */,
+				8F9B9E362EFE2FC0005E2CDF /* DarkDogFullHealthAnimation.mp4 */,
+				8F9B9E3D2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 */,
+				8F9B9E372EFE2FC0005E2CDF /* HamsterFullHealthAnimation.mp4 */,
 				90,
 				8FB3D9FE2EE37903005BC03C /* SE7ENDeviceActivityReportExtension */,
 				8FB3DA3B2EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension */,
@@ -470,7 +621,7 @@
 				3029 /* bunnyintro.mp4 */,
 				3030 /* hamsterintro.mp4 */,
 				3031 /* horseintro.mp4 */,
-				3033 /* Animation */,
+				8F9B9D332EFE2499005E2CDF /* Animation */,
 				9000 /* Localizable.strings */,
 				91,
 				92,
@@ -609,7 +760,7 @@
 			buildPhases = (
 				8FB3D9F92EE37903005BC03C /* Sources */,
 				8FB3D9FA2EE37903005BC03C /* Frameworks */,
-				8FB3D9FB2EE37903005BC03C /* Resources */,
+				8F9B9E0C2EFE2F7F005E2CDF /* Resources */,
 			);
 			buildRules = (
 			);
@@ -726,13 +877,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				9002 /* Localizable.strings in Resources */,
+				8F9B9D342EFE24A6005E2CDF /* Animation in Resources */,
 				1078 /* Assets.xcassets in Resources */,
 				1079 /* dogintro.mp4 in Resources */,
 				1080 /* catintro.mp4 in Resources */,
 				1081 /* bunnyintro.mp4 in Resources */,
 				1082 /* hamsterintro.mp4 in Resources */,
 				1083 /* horseintro.mp4 in Resources */,
-				3032 /* Animation in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -740,7 +891,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3032 /* Animation in Resources */,
+				8F9B9D362EFE24A6005E2CDF /* Animation in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -751,10 +902,60 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		8FB3D9FB2EE37903005BC03C /* Resources */ = {
+		8F9B9E0C2EFE2F7F005E2CDF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8F9B9E402EFE2FC1005E2CDF /* DarkHamsterSickAnimation.mp4 in Resources */,
+				8F9B9E412EFE2FC1005E2CDF /* DarkHorseFullHealthAnimation.mp4 in Resources */,
+				8F9B9E422EFE2FC1005E2CDF /* CatHappyAnimation.mp4 in Resources */,
+				8F9B9E432EFE2FC1005E2CDF /* DarkHorseContentAnimation.mp4 in Resources */,
+				8F9B9E442EFE2FC1005E2CDF /* BunnyFullHealthAnimation.mp4 in Resources */,
+				8F9B9E452EFE2FC1005E2CDF /* DarkHamsterContentAnimation.mp4 in Resources */,
+				8F9B9E462EFE2FC1005E2CDF /* HamsterSickAnimation.mp4 in Resources */,
+				8F9B9E472EFE2FC1005E2CDF /* HorseHappyAnimation.mp4 in Resources */,
+				8F9B9E482EFE2FC1005E2CDF /* DarkCatSadAnimation.mp4 in Resources */,
+				8F9B9E492EFE2FC1005E2CDF /* HorseSadAnimation.mp4 in Resources */,
+				8F9B9E4A2EFE2FC1005E2CDF /* DarkHamsterHappyAnimation.mp4 in Resources */,
+				8F9B9E4B2EFE2FC1005E2CDF /* DogSickAnimation.mp4 in Resources */,
+				8F9B9E4C2EFE2FC1005E2CDF /* HorseFullHealthAnimation.mp4 in Resources */,
+				8F9B9E4D2EFE2FC1005E2CDF /* DarkHamsterFullHealthAnimation.mp4 in Resources */,
+				8F9B9E4E2EFE2FC1005E2CDF /* DarkCatSickAnimation.mp4 in Resources */,
+				8F9B9E4F2EFE2FC1005E2CDF /* DarkBunnyHappyAnimation.mp4 in Resources */,
+				8F9B9E502EFE2FC1005E2CDF /* DarkCatFullHealthAnimation.mp4 in Resources */,
+				8F9B9E512EFE2FC1005E2CDF /* DarkHorseSadAnimation.mp4 in Resources */,
+				8F9B9E522EFE2FC1005E2CDF /* DarkDogContentAnimation.mp4 in Resources */,
+				8F9B9E532EFE2FC1005E2CDF /* DarkBunnyContentAnimation.mp4 in Resources */,
+				8F9B9E542EFE2FC1005E2CDF /* DogFullHealthAnimation.mp4 in Resources */,
+				8F9B9E552EFE2FC1005E2CDF /* DarkBunnySadAnimation.mp4 in Resources */,
+				8F9B9E562EFE2FC1005E2CDF /* BunnySickAnimation.mp4 in Resources */,
+				8F9B9E572EFE2FC1005E2CDF /* DarkCatHappyAnimation.mp4 in Resources */,
+				8F9B9E582EFE2FC1005E2CDF /* HorseSickAnimation.mp4 in Resources */,
+				8F9B9E592EFE2FC1005E2CDF /* BunnyContentAnimation.mp4 in Resources */,
+				8F9B9E5A2EFE2FC1005E2CDF /* DarkHorseSickAnimation.mp4 in Resources */,
+				8F9B9E5B2EFE2FC1005E2CDF /* CatSadAnimation.mp4 in Resources */,
+				8F9B9E5C2EFE2FC1005E2CDF /* CatSickAnimation.mp4 in Resources */,
+				8F9B9E5D2EFE2FC1005E2CDF /* DarkBunnySickAnimation.mp4 in Resources */,
+				8F9B9E5E2EFE2FC1005E2CDF /* DarkHorseHappyAnimation.mp4 in Resources */,
+				8F9B9E5F2EFE2FC1005E2CDF /* DogHappyAnimation.mp4 in Resources */,
+				8F9B9E602EFE2FC1005E2CDF /* DarkBunnyFullHealthAnimation.mp4 in Resources */,
+				8F9B9E612EFE2FC1005E2CDF /* DogSadAnimation.mp4 in Resources */,
+				8F9B9E622EFE2FC1005E2CDF /* DogContentAnimation.mp4 in Resources */,
+				8F9B9E632EFE2FC1005E2CDF /* DarkCatContentAnimation.mp4 in Resources */,
+				8F9B9E642EFE2FC1005E2CDF /* BunnySadAnimation.mp4 in Resources */,
+				8F9B9E652EFE2FC1005E2CDF /* DarkDogSadAnimation.mp4 in Resources */,
+				8F9B9E662EFE2FC1005E2CDF /* CatFullHealthAnimation.mp4 in Resources */,
+				8F9B9E672EFE2FC1005E2CDF /* DarkHamsterSadAnimation.mp4 in Resources */,
+				8F9B9E682EFE2FC1005E2CDF /* DarkDogFullHealthAnimation.mp4 in Resources */,
+				8F9B9E692EFE2FC1005E2CDF /* HamsterFullHealthAnimation.mp4 in Resources */,
+				8F9B9E6A2EFE2FC1005E2CDF /* BunnyHappyAnimation.mp4 in Resources */,
+				8F9B9E6B2EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 in Resources */,
+				8F9B9E6C2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 in Resources */,
+				8F9B9E6D2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 in Resources */,
+				8F9B9E6E2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 in Resources */,
+				8F9B9E6F2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 in Resources */,
+				8F9B9E702EFE2FC1005E2CDF /* CatContentAnimation.mp4 in Resources */,
+				8F9B9E712EFE2FC1005E2CDF /* HorseContentAnimation.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -26,11 +26,6 @@ struct DashboardView: View {
     @State private var topDistractionTokens: [String: AnyHashable] = [:] // Store tokens by bundleID (as AnyHashable to avoid ApplicationToken type)
     @State private var topAppToken: AnyHashable? = nil // Store token for top app
     
-    private var healthScore: Int {
-        // Use the published petHealthValue which is updated reactively
-        return appState.petHealthValue
-    }
-    
     @State private var totalScreenTimeMinutes: Int = 0
     @State private var appsUsedToday: Int = 0
     @State private var topAppToday: TopAppData?
@@ -231,31 +226,8 @@ struct DashboardView: View {
         
         // Try UserDefaults
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
-            sharedDefaults.synchronize() // Force sync for cross-process access
             totalUsage = sharedDefaults.integer(forKey: "total_usage")
-            let appsCount = sharedDefaults.integer(forKey: "apps_count")
-            let lastUpdated = sharedDefaults.double(forKey: "last_updated")
-            let lastUpdatedDate = lastUpdated > 0 ? Date(timeIntervalSince1970: lastUpdated) : nil
-            
-            print("📊 [SHARED_READ] total_usage: \(totalUsage)")
-            print("📊 [SHARED_READ] apps_count: \(appsCount)")
-            if let date = lastUpdatedDate {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "HH:mm:ss"
-                print("📊 [SHARED_READ] last_updated: \(formatter.string(from: date))")
-            } else {
-                print("📊 [SHARED_READ] last_updated: never")
-            }
-            
-            // Check if we have per_app_usage data
-            if let perAppUsage = sharedDefaults.dictionary(forKey: "per_app_usage") as? [String: Int] {
-                let sumFromPerApp = perAppUsage.values.reduce(0, +)
-                print("📊 [SHARED_READ] per_app_usage entries: \(perAppUsage.count), sum: \(sumFromPerApp)")
-                if sumFromPerApp > 0 && totalUsage == 0 {
-                    totalUsage = sumFromPerApp
-                    print("📊 [SHARED_READ] Using per_app_usage sum as fallback")
-                }
-            }
+            print("🏠 Dashboard: Read total_usage from shared container: \(totalUsage)")
         }
         
         // Try file backup
@@ -266,13 +238,13 @@ struct DashboardView: View {
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let usage = json["total_usage"] as? Int {
                     totalUsage = usage
-                    print("📊 [SHARED_READ] Read from file backup: \(totalUsage)")
+                    print("🏠 Dashboard: Read total_usage from file backup: \(totalUsage)")
                 }
             }
         }
         
         if totalUsage == 0 {
-            print("⚠️ [SHARED_READ] No usage data found - report extension may not have run")
+            print("🏠 Dashboard: No usage data found in shared container or file backup")
         }
         
         return totalUsage
@@ -301,6 +273,37 @@ struct DashboardView: View {
         formatter.dateStyle = .short
         formatter.timeStyle = .medium
         return formatter.string(from: date)
+    }
+    
+    /// FALLBACK: Write usage data to shared container if extension doesn't work
+    private func writeUsageToSharedContainer(minutes: Int, apps: Int) {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            print("❌ Failed to access shared container for fallback write")
+            return
+        }
+        
+        sharedDefaults.set(minutes, forKey: "total_usage")
+        sharedDefaults.set(apps, forKey: "apps_count")
+        sharedDefaults.set(Date().timeIntervalSince1970, forKey: "last_updated")
+        sharedDefaults.synchronize()
+        
+        print("💾 FALLBACK: Wrote \(minutes) minutes, \(apps) apps to shared container")
+    }
+    
+    /// Simple: Sync data from shared container (health score is computed by extension)
+    private func syncFromSharedContainerAndUpdateHealth() {
+        let sharedUsage = readUsageFromSharedContainer()
+        let sharedApps = readAppsCountFromSharedContainer()
+        
+        if sharedUsage > 0 {
+            totalScreenTimeMinutes = sharedUsage
+            appsUsedToday = sharedApps
+            appState.todayScreenTimeMinutes = sharedUsage
+        }
+        
+        // Let AppState read health_score from shared container
+        appState.preloadScreenTimeFromSharedContainer()
     }
     
     
@@ -538,16 +541,6 @@ struct DashboardView: View {
         }
     }
     
-    private var healthColor: Color {
-        switch healthScore {
-        case 0..<25: return .red
-        case 25..<50: return .orange
-        case 50..<75: return .yellow
-        case 75...100: return .green
-        default: return .green
-        }
-    }
-    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -559,7 +552,6 @@ struct DashboardView: View {
                         headerSection
                         petNameSection
                         petImageSection
-                        healthSection
                         screenTimeSection
                         topDistractionsSection
                     }
@@ -717,83 +709,10 @@ struct DashboardView: View {
             }
         }
                         }
-                        
-    private var healthSection: some View {
-        VStack(spacing: 0) {
-                        Text("\(healthScore)")
-                            .font(.system(size: 48, weight: .bold, design: .rounded))
-                            .foregroundColor(.textPrimary)
-                            .padding(.bottom, 12)
-                        
-                        // Health bar with full border and proportional fill
-                        GeometryReader { geometry in
-                            ZStack(alignment: .leading) {
-                                // Full track/border (always visible from 0-100) - visible in both light and dark mode
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.primary.opacity(0.3), lineWidth: 2)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(Color.primary.opacity(0.1))
-                                    )
-                                
-                                // Fill based on healthScore (0-100) - only colored portion
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(healthColor)
-                                    .frame(width: max(0, geometry.size.width * CGFloat(healthScore) / 100))
-                            }
-                        }
-                        .frame(height: 10)
-                        .padding(.horizontal, 40)
-                        .padding(.bottom, 10)
-                        
-                        Text("Health")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.textSecondary)
-                            .padding(.bottom, 24)
-                        
-                        Divider()
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 24)
-        }
-    }
-                        
     private var screenTimeSection: some View {
         VStack(spacing: 16) {
             // Today's Screen Time Card
-                        VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Spacer()
-                    
-                    Text("Today's Dashboard")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.textPrimary)
-                    
-                    Spacer()
-                    
-                    // Screen Time API Status
-                    HStack(spacing: 6) {
-                        let goals = CoreDataManager.shared.getActiveAppGoals()
-                        let connectedCount = goals.filter { goal in
-                            guard let bundleID = goal.appBundleID else { return false }
-                            return ScreenTimeService.shared.hasSelection(for: bundleID)
-                        }.count
-                        
-                        let statusColor: Color = {
-                            if !ScreenTimeService.shared.isAuthorized {
-                                return .red
-                            } else if connectedCount == 0 {
-                                return .orange
-                            } else {
-                                return .green
-                            }
-                        }()
-                        
-                        Circle()
-                            .fill(statusColor)
-                            .frame(width: 6, height: 6)
-                    }
-                }
-                                .padding(.horizontal, 20)
+            VStack(alignment: .leading, spacing: 12) {
                             
                 if isLoadingScreenTime {
                     HStack {
@@ -862,15 +781,15 @@ struct DashboardView: View {
                 } else {
                     // Show actual usage data
                     VStack(spacing: 16) {
-                        // Show DeviceActivityReport for today's overview
-                        // This displays the TodayOverviewView with total time, apps used, and top 10 apps
-                        if screenTimeService.isAuthorized {
-                            todayOverviewReportView
-                        }
+                    // Show DeviceActivityReport for today's overview
+                    // This displays the TodayOverviewView with total time, apps used, and top 10 apps
+                    if screenTimeService.isAuthorized {
+                        todayOverviewReportView
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-                    .padding(.horizontal, 8) // Minimal padding to maximize width
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 200) // Add top padding to move report view lower (so pet animation isn't cut off)
+                .padding(.bottom, 24)
                 }
             }
             .background(Color.appBackground)
@@ -1030,31 +949,21 @@ struct DashboardView: View {
         
         DeviceActivityReport(.todayOverview, filter: filter)
             .frame(maxWidth: .infinity, alignment: .top)
-            .frame(minHeight: 620) // Height to fit all 10 items without scrolling
+            .frame(minHeight: 1000) // Increased height to fit all 10 distractions plus pet animation
             .background(Color.appBackground)
             .cornerRadius(12)
-            .padding(.horizontal, 4) // Minimal padding to maximize width
             .onAppear {
-                print("📊 [DASHBOARD] DeviceActivityReport(.todayOverview) appeared!")
-                print("📊 [DASHBOARD] Filter: \(startOfDay) to \(endOfDay)")
+                print("📊 DashboardView: DeviceActivityReport view appeared - extension should be invoked")
+                print("📊 DashboardView: Filter date range: \(startOfDay) to \(endOfDay)")
                 
-                // Check shared container multiple times as report extension writes data
-                for delay in [1.0, 2.0, 3.0, 5.0] {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                        let sharedUsage = readUsageFromSharedContainer()
-                        let sharedApps = readAppsCountFromSharedContainer()
-                        print("📊 [DASHBOARD] Check at \(delay)s - usage: \(sharedUsage), apps: \(sharedApps)")
-                        
-                        if sharedUsage > 0 || sharedApps > 0 {
-                            totalScreenTimeMinutes = sharedUsage
-                            appsUsedToday = sharedApps
-                            // CRITICAL FIX: Update AppState so pet health can use the latest data
-                            print("📊 [DASHBOARD] Updating appState.todayScreenTimeMinutes to: \(sharedUsage)")
-                            appState.todayScreenTimeMinutes = sharedUsage
-                            // Update pet health when screen time changes
-                            appState.updatePetHealth()
-                        }
-                    }
+                // CRITICAL: Check for extension data after a short delay (extension should write quickly)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    syncFromSharedContainerAndUpdateHealth()
+                }
+                
+                // Also check after a longer delay in case extension is slow
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    syncFromSharedContainerAndUpdateHealth()
                 }
             }
     }

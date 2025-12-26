@@ -7,6 +7,7 @@
 
 import Foundation
 import ManagedSettings
+import FamilyControls
 
 // MARK: - App Usage Info
 struct AppUsageInfo: Identifiable {
@@ -49,6 +50,7 @@ struct UsageSummary {
 struct AppUsage {
     let name: String
     let duration: TimeInterval
+    let application: Application?  // For displaying app icon
     
     var minutes: Int {
         Int(duration / 60)
