@@ -1,5 +1,11 @@
 import SwiftUI
 import DeviceActivity
+import FamilyControls
+
+// Define the weekly stats report context (must match extension)
+extension DeviceActivityReport.Context {
+    static let weeklyStats = Self("weeklyStats")
+}
 
 // MARK: - Coach Insight Model
 struct CoachInsight: Identifiable {
@@ -110,18 +116,8 @@ struct GoalsView: View {
                                 Spacer()
                             }
                             
-                            // Week navigation
+                            // Week navigation (locked to current week)
                             HStack {
-                                Button(action: {
-                                    withAnimation {
-                                        selectedWeekOffset -= 1
-                                    }
-                                }) {
-                                    Image(systemName: "chevron.left.circle.fill")
-                                        .font(.system(size: 24))
-                                        .foregroundColor(.blue)
-                                }
-                                
                                 Spacer()
                                 
                                 VStack(spacing: 4) {
@@ -129,27 +125,12 @@ struct GoalsView: View {
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(.textPrimary)
                                     
-                                    if selectedWeekOffset == 0 {
-                                        Text("This Week")
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(.textSecondary)
-                                    }
+                                    Text("This Week")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.textSecondary)
                                 }
                                 
                                 Spacer()
-                                
-                                Button(action: {
-                                    if canGoForward {
-                                        withAnimation {
-                                            selectedWeekOffset += 1
-                                        }
-                                    }
-                                }) {
-                                    Image(systemName: "chevron.right.circle.fill")
-                                        .font(.system(size: 24))
-                                        .foregroundColor(canGoForward ? .blue : .gray.opacity(0.3))
-                                }
-                                .disabled(!canGoForward)
                             }
                         }
                         .padding(.horizontal, 20)
@@ -159,11 +140,11 @@ struct GoalsView: View {
                         GoalProgressOverview(appState: appState)
                         .padding(.horizontal, 20)
                         
-                        // Weekly Health Report (redesigned like Brainrot Report)
-                        WeeklyHealthReport(weekStart: weekStart, appState: appState)
-                            .padding(.horizontal, 20)
+                        // Weekly Health Report - MOVED TO STATS REPORT (using real DeviceActivity data)
+                        // WeeklyHealthReport(weekStart: weekStart, appState: appState)
+                        //     .padding(.horizontal, 20)
                         
-                        // Weekly Highlights Card
+                        // Weekly Highlights Card (simplified)
                         WeeklyHighlightsCard(
                             weekStart: weekStart,
                             appState: appState,
@@ -173,22 +154,14 @@ struct GoalsView: View {
                         )
                         .padding(.horizontal, 20)
                         
-                        // Focus Score Card
-                        FocusScoreCard(
-                            appState: appState,
-                            weekStart: weekStart
-                        )
-                        .padding(.horizontal, 20)
+                        // Weekly Stats from Report Extension (real data)
+                        WeeklyStatsReportView()
+                            .padding(.horizontal, 20)
                         
                         if !focusApps.isEmpty {
                             FocusAppsCard(apps: Array(focusApps.prefix(3)))
                                 .padding(.horizontal, 20)
                         }
-                        
-                        // Coach Insights (moved to bottom, showing all insights)
-                        GoalRecommendationsCard(recommendations: recommendations)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 32)
                         }
                         .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
                         Spacer()
@@ -1024,28 +997,8 @@ struct WeeklyHighlightsCard: View {
                 }
             }
             
-            // Highlight cards grid with improved spacing
+            // Highlight cards grid with improved spacing (only 2 cards now)
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                // Best Day Card
-                HighlightStatCard(
-                    icon: "star.fill",
-                    iconColor: .warning,
-                    title: "Best Day",
-                    value: bestDay?.day ?? "—",
-                    subtitle: bestDay != nil ? formatMinutes(bestDay!.screenTime) : "No data yet",
-                    gradientColors: [.warning.opacity(0.15), .orange.opacity(0.1)]
-                )
-                
-                // Average Screen Time
-                HighlightStatCard(
-                    icon: "chart.line.uptrend.xyaxis",
-                    iconColor: .blue,
-                    title: "Avg Screen",
-                    value: formatMinutes(avgScreenTime),
-                    subtitle: "This week",
-                    gradientColors: [.blue.opacity(0.15), .cyan.opacity(0.1)]
-                )
-                
                 // Blocked Apps
                 HighlightStatCard(
                     icon: "hand.raised.fill",
@@ -2268,3 +2221,46 @@ struct RecommendationSheet: View {
     }
 }
 
+// MARK: - Weekly Stats Report View (uses DeviceActivityReport for real data)
+struct WeeklyStatsReportView: View {
+    var body: some View {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Get start of current week (Monday)
+        var modifiedCalendar = calendar
+        modifiedCalendar.firstWeekday = 2 // Monday = 2
+        
+        let today = calendar.startOfDay(for: now)
+        let weekday = calendar.component(.weekday, from: today)
+        
+        // Calculate days since Monday (if today is Monday, daysFromMonday = 0)
+        let daysFromMonday = (weekday - 2 + 7) % 7
+        
+        // Get this week's Monday
+        let startOfWeek = calendar.date(byAdding: .day, value: -daysFromMonday, to: today) ?? today
+        
+        // End of today
+        let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now
+        
+        let dateInterval = DateInterval(start: startOfWeek, end: endOfDay)
+        
+        let filter = DeviceActivityFilter(
+            segment: .daily(during: dateInterval),
+            users: .all,
+            devices: .init([.iPhone, .iPad])
+        )
+        
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("This Week's Activity")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.textPrimary)
+                .padding(.horizontal, 4)
+            
+            DeviceActivityReport(.weeklyStats, filter: filter)
+                .frame(height: 1600) // Increased to fit "This Week" section plus all other content
+                .background(Color.clear)
+        }
+        .padding(.vertical, 8)
+    }
+}

@@ -358,6 +358,17 @@ class AppState: ObservableObject {
             isOnboarding: isOnboarding,
             averageScreenTimeHours: averageScreenTimeHours
         )
+        
+        // Save pet info to shared container for report extensions
+        if let pet = userPet {
+            let appGroupID = "group.com.se7en.app"
+            guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
+            sharedDefaults.set(pet.type.rawValue, forKey: "user_pet_type")
+            sharedDefaults.set(pet.name, forKey: "user_pet_name")
+            sharedDefaults.set(pet.healthState.rawValue, forKey: "user_pet_health_state")
+            sharedDefaults.synchronize()
+            print("💾 AppState: Saved pet type '\(pet.type.rawValue)' to shared container")
+        }
     }
     
     // MARK: - Data Loading Methods

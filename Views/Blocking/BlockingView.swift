@@ -97,6 +97,9 @@ class BlockedAppsManager: ObservableObject {
         // Save unblock duration
         defaults.set(unblockDurationMinutes, forKey: "unblock_duration_minutes")
         
+        // Save blocked apps count for report extension
+        defaults.set(blockedCount, forKey: "blocked_apps_count")
+        
         defaults.synchronize()
     }
     

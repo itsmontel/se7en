@@ -136,6 +136,7 @@
 		8F9B9E6F2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3D2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 */; };
 		8F9B9E702EFE2FC1005E2CDF /* CatContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3E2EFE2FC1005E2CDF /* CatContentAnimation.mp4 */; };
 		8F9B9E712EFE2FC1005E2CDF /* HorseContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3F2EFE2FC1005E2CDF /* HorseContentAnimation.mp4 */; };
+		8F9B9E9C2EFF1520005E2CDF /* Animation in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9D332EFE2499005E2CDF /* Animation */; };
 		8FB3DA092EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3D9FD2EE37903005BC03C /* SE7ENDeviceActivityReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8FB3DA3A2EE38ECD005BC03C /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */; };
 		8FB3DA422EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -939,6 +940,7 @@
 				8F9B9E5E2EFE2FC1005E2CDF /* DarkHorseHappyAnimation.mp4 in Resources */,
 				8F9B9E5F2EFE2FC1005E2CDF /* DogHappyAnimation.mp4 in Resources */,
 				8F9B9E602EFE2FC1005E2CDF /* DarkBunnyFullHealthAnimation.mp4 in Resources */,
+				8F9B9E9C2EFF1520005E2CDF /* Animation in Resources */,
 				8F9B9E612EFE2FC1005E2CDF /* DogSadAnimation.mp4 in Resources */,
 				8F9B9E622EFE2FC1005E2CDF /* DogContentAnimation.mp4 in Resources */,
 				8F9B9E632EFE2FC1005E2CDF /* DarkCatContentAnimation.mp4 in Resources */,

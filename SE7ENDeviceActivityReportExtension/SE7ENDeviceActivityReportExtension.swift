@@ -16,9 +16,14 @@ struct SE7ENDeviceActivityReportExtension: DeviceActivityReportExtension {
             TotalActivityView(activityReport: totalMinutes)
         }
         
-        // Detailed app usage report
+        // Detailed app usage report (home page)
         TodayOverviewReport { summary in
             TodayOverviewView(summary: summary)
+        }
+        
+        // Weekly stats report (stats page)
+        WeeklyStatsReport { stats in
+            WeeklyStatsView(stats: stats)
         }
     }
 }

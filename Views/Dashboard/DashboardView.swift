@@ -949,7 +949,7 @@ struct DashboardView: View {
         
         DeviceActivityReport(.todayOverview, filter: filter)
             .frame(maxWidth: .infinity, alignment: .top)
-            .frame(minHeight: 1000) // Increased height to fit all 10 distractions plus pet animation
+            .frame(minHeight: 1300) // Increased height to fit all 10 distractions plus pet animation
             .background(Color.appBackground)
             .cornerRadius(12)
             .onAppear {

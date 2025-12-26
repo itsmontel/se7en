@@ -357,10 +357,10 @@ struct PetAnimationPlayerView: View {
         .onDisappear {
             player?.pause()
         }
-        .onChange(of: healthState) { _ in
+        .onChange(of: healthState) {
             setupPlayer()
         }
-        .onChange(of: colorScheme) { _ in
+        .onChange(of: colorScheme) {
             setupPlayer()
         }
     }
