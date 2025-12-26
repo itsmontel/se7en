@@ -2260,6 +2260,7 @@ struct WeeklyStatsReportView: View {
             DeviceActivityReport(.weeklyStats, filter: filter)
                 .frame(height: 1600) // Increased to fit "This Week" section plus all other content
                 .background(Color.clear)
+                .allowsHitTesting(false) // Allow scroll gestures to pass through to parent ScrollView
         }
         .padding(.vertical, 8)
     }

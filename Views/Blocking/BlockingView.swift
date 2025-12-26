@@ -283,7 +283,7 @@ struct BlockingView: View {
                                 Button("Done") {
                                     blockedAppsManager.updateBlockedApps(tempSelection)
                                     showingAppPicker = false
-                                    HapticFeedback.success.trigger()
+                                    HapticsManager.shared.success()
                                 }
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.blue)
@@ -341,7 +341,7 @@ struct BlockingView: View {
             blockedAppsManager.updateBlockedApps(FamilyActivitySelection())
             tempSelection = FamilyActivitySelection()
         }
-        HapticFeedback.medium.trigger()
+        HapticsManager.shared.medium()
     }
     
     // MARK: - Background
@@ -451,6 +451,7 @@ struct BlockingView: View {
             Button(action: {
                 tempSelection = blockedAppsManager.blockedSelection
                 showingAppPicker = true
+                HapticsManager.shared.light()
             }) {
                 HStack(spacing: 10) {
                     Image(systemName: "plus.circle.fill")
@@ -575,7 +576,7 @@ struct BlockingView: View {
     private var puzzleButton: some View {
         Button(action: {
             showingPuzzle = true
-            HapticFeedback.medium.trigger()
+            HapticsManager.shared.medium()
         }) {
             HStack(spacing: 14) {
                 ZStack {
@@ -636,6 +637,7 @@ struct BlockingView: View {
                 Button(action: {
                     tempSelection = blockedAppsManager.blockedSelection
                     showingAppPicker = true
+                    HapticsManager.shared.light()
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: blockedAppsManager.blockedCount > 0 ? "pencil" : "plus")
@@ -707,6 +709,7 @@ struct BlockingView: View {
                         .onTapGesture {
                             tempSelection = blockedAppsManager.blockedSelection
                             showingAppPicker = true
+                            HapticsManager.shared.light()
                         }
                     }
                 }

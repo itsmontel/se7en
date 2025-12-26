@@ -40,6 +40,7 @@
 		1035 /* Models/CoreData/CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2035 /* Models/CoreData/CoreDataManager.swift */; };
 		1036 /* Services/ScreenTimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2036 /* Services/ScreenTimeService.swift */; };
 		1037 /* Services/NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2037 /* Services/NotificationService.swift */; };
+F6468888 /* Services/HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A539999 /* Services/HapticsManager.swift */; };
 		1038 /* Services/DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2038 /* Services/DeviceActivityMonitorExtension.swift */; };
 		1039 /* Services/StoreKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2039 /* Services/StoreKitService.swift */; };
 		1040 /* Models/CoreData/SE7ENDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 2040 /* Models/CoreData/SE7ENDataModel.xcdatamodeld */; };
@@ -236,6 +237,7 @@
 		2035 /* Models/CoreData/CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/CoreData/CoreDataManager.swift; sourceTree = "<group>"; };
 		2036 /* Services/ScreenTimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ScreenTimeService.swift; sourceTree = "<group>"; };
 		2037 /* Services/NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/NotificationService.swift; sourceTree = "<group>"; };
+4A539999 /* Services/HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HapticsManager.swift; sourceTree = "<group>"; };
 		2038 /* Services/DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
 		2039 /* Services/StoreKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/StoreKitService.swift; sourceTree = "<group>"; };
 		2041 /* SE7ENDataModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = SE7ENDataModel.xcdatamodel; sourceTree = "<group>"; };
@@ -686,6 +688,7 @@
 			children = (
 				2036 /* Services/ScreenTimeService.swift */,
 				2037 /* Services/NotificationService.swift */,
+				4A539999 /* Services/HapticsManager.swift */,
 				2038 /* Services/DeviceActivityMonitorExtension.swift */,
 				2063 /* Services/FamilyActivityService.swift */,
 				2064 /* Services/DeviceActivityReportExtension.swift */,
@@ -1053,6 +1056,7 @@
 				1035 /* Models/CoreData/CoreDataManager.swift in Sources */,
 				1036 /* Services/ScreenTimeService.swift in Sources */,
 				1037 /* Services/NotificationService.swift in Sources */,
+				F6468888 /* Services/HapticsManager.swift in Sources */,
 				1038 /* Services/DeviceActivityMonitorExtension.swift in Sources */,
 				1044 /* Services/FamilyActivityService.swift in Sources */,
 				1059 /* Services/DeviceActivityReportExtension.swift in Sources */,

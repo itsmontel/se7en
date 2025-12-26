@@ -206,6 +206,14 @@ struct WeeklyStatsReport: DeviceActivityReportScene {
             
             // Get user's pet type
             userPetType = sharedDefaults.string(forKey: "user_pet_type") ?? "dog"
+            print("🐾 WeeklyStatsReport: Read user_pet_type from shared container: '\(userPetType)'")
+            print("🐾 WeeklyStatsReport: All pet-related keys in shared container:")
+            if let petName = sharedDefaults.string(forKey: "user_pet_name") {
+                print("   - user_pet_name: '\(petName)'")
+            }
+            if let petHealthState = sharedDefaults.string(forKey: "user_pet_health_state") {
+                print("   - user_pet_health_state: '\(petHealthState)'")
+            }
             
             // Get install date
             if let installTimestamp = sharedDefaults.object(forKey: "install_date") as? Double {
@@ -260,6 +268,8 @@ struct WeeklyStatsReport: DeviceActivityReportScene {
             }
             let clampedScore = max(0, min(100, healthScore))
             
+            print("🐾 Day \(dayName) (\(dateKey)): \(minutes) mins = \(String(format: "%.1f", totalHours))h → score: \(clampedScore)")
+            
             // Determine pet mood from health score
             let petMood: String
             switch clampedScore {
@@ -270,12 +280,20 @@ struct WeeklyStatsReport: DeviceActivityReportScene {
             default: petMood = "sick"
             }
             
-            // Override with stored data if available (for past days)
+            print("🐾 Day \(dayName): Calculated mood: \(petMood), isToday: \(isToday), hasData: \(minutes > 0)")
+            
+            // Only use stored data if we don't have actual DeviceActivity data for this day
+            // Always prefer calculated values from actual screen time data
             var finalScore = clampedScore
             var finalMood = petMood
-            if !isFuture && !isBeforeInstall, let dayData = dailyHealthHistory[dateKey] {
+            if minutes == 0 && !isFuture && !isBeforeInstall, let dayData = dailyHealthHistory[dateKey] {
+                // No DeviceActivity data available, use stored data as fallback
                 finalScore = dayData["score"] as? Int ?? clampedScore
                 finalMood = dayData["mood"] as? String ?? petMood
+                print("🐾 Day \(dayName): No DeviceActivity data, using stored data - score: \(finalScore), mood: \(finalMood)")
+            } else if minutes > 0 {
+                // We have actual screen time data, always use calculated values (never stale stored data)
+                print("🐾 Day \(dayName): Using calculated values from DeviceActivity data - score: \(finalScore), mood: \(finalMood)")
             }
             
             dailyHealthDataArray.append(DailyHealthData(

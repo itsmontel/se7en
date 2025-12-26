@@ -343,6 +343,18 @@ class AppState: ObservableObject {
         isOnboarding = preferences.isOnboarding
         averageScreenTimeHours = preferences.averageScreenTimeHours
         
+        // Save pet info to shared container for report extensions (critical for "This Week" view)
+        if let pet = userPet {
+            let appGroupID = "group.com.se7en.app"
+            if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+                sharedDefaults.set(pet.type.rawValue, forKey: "user_pet_type")
+                sharedDefaults.set(pet.name, forKey: "user_pet_name")
+                sharedDefaults.set(pet.healthState.rawValue, forKey: "user_pet_health_state")
+                sharedDefaults.synchronize()
+                print("💾 AppState: Loaded and synced pet type '\(pet.type.rawValue)' to shared container")
+            }
+        }
+        
         // Update pet health based on usage
         if userPet != nil {
             updatePetHealth()

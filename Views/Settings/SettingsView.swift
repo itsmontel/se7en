@@ -3,9 +3,9 @@ import AVKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
-    @State private var remindersEnabled = true
-    @State private var weeklySummaryEnabled = true
-    @State private var hapticsEnabled = true
+    @AppStorage("notificationsEnabled") private var notificationsEnabled = true
+    @AppStorage("weeklySummaryEnabled") private var weeklySummaryEnabled = true
+    @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @AppStorage("isDarkMode") private var isDarkMode = false
     @State private var showingPetSelection = false
     @State private var showingRenamePet = false
@@ -37,7 +37,7 @@ struct SettingsView: View {
                                         subtitle: "Switch your companion"
                                     ) {
                                         showingPetSelection = true
-                                        HapticFeedback.light.trigger()
+                                        HapticsManager.shared.light()
                                     }
                                     
                                     SettingRow(
@@ -48,7 +48,7 @@ struct SettingsView: View {
                                     ) {
                                         newPetName = pet.name
                                         showingRenamePet = true
-                                        HapticFeedback.light.trigger()
+                                        HapticsManager.shared.light()
                                     }
                                 }
                             }
@@ -56,12 +56,16 @@ struct SettingsView: View {
                             // Preferences
                             SettingsGroup(title: "Preferences") {
                                 SettingToggle(
-                                    isOn: $remindersEnabled,
+                                    isOn: $notificationsEnabled,
                                     icon: "bell.fill",
                                     color: .red,
                                     title: "Notifications",
                                     subtitle: "Get reminded about limits"
                                 )
+                                .onChange(of: notificationsEnabled) { newValue in
+                                    HapticsManager.shared.light()
+                                    NotificationService.shared.setNotificationsEnabled(newValue)
+                                }
                                 
                                 SettingToggle(
                                     isOn: $hapticsEnabled,
@@ -70,6 +74,13 @@ struct SettingsView: View {
                                     title: "Haptics",
                                     subtitle: "Vibrations on interaction"
                                 )
+                                .onChange(of: hapticsEnabled) { newValue in
+                                    HapticsManager.shared.isEnabled = newValue
+                                    // Give immediate feedback when enabling
+                                    if newValue {
+                                        HapticsManager.shared.success()
+                                    }
+                                }
                                 
                                 SettingToggle(
                                     isOn: $isDarkMode,
@@ -78,6 +89,9 @@ struct SettingsView: View {
                                     title: "Dark Mode",
                                     subtitle: "Adjust appearance"
                                 )
+                                .onChange(of: isDarkMode) { _ in
+                                    HapticsManager.shared.light()
+                                }
                             }
                             
                             // Support

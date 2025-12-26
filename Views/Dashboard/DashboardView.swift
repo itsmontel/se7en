@@ -616,6 +616,8 @@ struct DashboardView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.appBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                         HStack(spacing: 6) {
@@ -657,14 +659,17 @@ struct DashboardView: View {
     // MARK: - View Sections
     
     private var headerSection: some View {
-                            VStack(alignment: .leading, spacing: 12) {
-                            Text(timeBasedGreeting(userName: appState.userName))
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundColor(.textPrimary)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 12)
-                        .padding(.bottom, 16)
+        VStack(alignment: .center, spacing: 12) {
+            Text(timeBasedGreeting(userName: appState.userName))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(.textPrimary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
+        .background(Color.appBackground)
     }
                         
     private var petNameSection: some View {
@@ -952,6 +957,7 @@ struct DashboardView: View {
             .frame(minHeight: 1300) // Increased height to fit all 10 distractions plus pet animation
             .background(Color.appBackground)
             .cornerRadius(12)
+            .allowsHitTesting(false) // Allow scroll gestures to pass through to parent ScrollView
             .onAppear {
                 print("📊 DashboardView: DeviceActivityReport view appeared - extension should be invoked")
                 print("📊 DashboardView: Filter date range: \(startOfDay) to \(endOfDay)")

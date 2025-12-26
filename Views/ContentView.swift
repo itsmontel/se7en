@@ -445,6 +445,9 @@ struct MainTabView: View {
                 .tag(4)
         }
         .tint(.primary)
+        .onChange(of: selectedTab) { _ in
+            HapticsManager.shared.selection()
+        }
     }
 }
 

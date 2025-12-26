@@ -5,7 +5,29 @@ import UIKit
 class NotificationService: ObservableObject {
     static let shared = NotificationService()
     
+    private let notificationsEnabledKey = "notificationsEnabled"
+    
     private init() {}
+    
+    // MARK: - Settings
+    
+    /// Check if notifications are enabled by user
+    var isEnabled: Bool {
+        UserDefaults.standard.bool(forKey: notificationsEnabledKey)
+    }
+    
+    /// Set notification enabled state
+    func setNotificationsEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: notificationsEnabledKey)
+        
+        if !enabled {
+            // Cancel all pending notifications when disabled
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            print("🔕 Notifications disabled - cancelled all pending notifications")
+        } else {
+            print("🔔 Notifications enabled")
+        }
+    }
     
     // MARK: - Authorization
     
@@ -24,6 +46,8 @@ class NotificationService: ObservableObject {
     // MARK: - App Blocking Notifications
     
     func sendAppBlockedNotification(appName: String) {
+        guard isEnabled else { return }
+        
         let content = UNMutableNotificationContent()
         content.title = "🚫 App Blocked"
         content.body = "\(appName) has been blocked for exceeding your daily limit. Wait until tomorrow or spend 1 credit to unblock now."
@@ -41,6 +65,7 @@ class NotificationService: ObservableObject {
     }
     
     func sendAppUnblockedNotification(appName: String) {
+        guard isEnabled else { return }
         let content = UNMutableNotificationContent()
         content.title = "✅ App Unblocked"
         content.body = "\(appName) has been unblocked. You can use it now!"
@@ -58,6 +83,8 @@ class NotificationService: ObservableObject {
     }
     
     func sendCreditUsedForUnblockNotification(appName: String, creditsRemaining: Int) {
+        guard isEnabled else { return }
+        
         let content = UNMutableNotificationContent()
         content.title = "💳 Credit Used"
         
@@ -83,6 +110,8 @@ class NotificationService: ObservableObject {
     // MARK: - Credit Loss Notifications (Legacy)
     
     func sendCreditLostNotification(appName: String, creditsRemaining: Int) {
+        guard isEnabled else { return }
+        
         let content = UNMutableNotificationContent()
         content.title = "Credit Lost! 💳"
         
@@ -108,6 +137,8 @@ class NotificationService: ObservableObject {
     // MARK: - Warning Notifications
     
     func sendLimitWarningNotification(appName: String, timeRemaining: Int) {
+        guard isEnabled else { return }
+        
         let content = UNMutableNotificationContent()
         content.title = "⚠️ Limit Warning"
         content.body = "You have \(timeRemaining) minutes left on \(appName) before losing a credit."
@@ -127,6 +158,8 @@ class NotificationService: ObservableObject {
     // MARK: - Achievement Notifications
     
     func sendAchievementUnlockedNotification(achievementTitle: String) {
+        guard isEnabled else { return }
+        
         let content = UNMutableNotificationContent()
         content.title = "🏆 Achievement Unlocked!"
         content.body = "You earned: \(achievementTitle)"
@@ -146,6 +179,8 @@ class NotificationService: ObservableObject {
     // MARK: - Weekly Summary Notifications
     
     func scheduleWeeklySummaryNotification() {
+        guard isEnabled else { return }
+        
         let content = UNMutableNotificationContent()
         content.title = "📊 Weekly Summary"
         content.body = "Check your SE7EN app to see how you did this week and settle your payment."
@@ -171,6 +206,8 @@ class NotificationService: ObservableObject {
     // MARK: - Daily Reminder Notifications
     
     func scheduleDailyReminderNotification(at hour: Int, minute: Int = 0) {
+        guard isEnabled else { return }
+        
         let content = UNMutableNotificationContent()
         content.title = "🎯 Daily Check-in"
         content.body = "How are your digital habits today? Check your progress in SE7EN."
@@ -194,6 +231,8 @@ class NotificationService: ObservableObject {
     // MARK: - Streak Notifications
     
     func sendStreakMilestoneNotification(streak: Int) {
+        guard isEnabled else { return }
+        
         let content = UNMutableNotificationContent()
         content.title = "🔥 Streak Milestone!"
         
@@ -341,6 +380,8 @@ class NotificationService: ObservableObject {
     // MARK: - Pet Health Notifications
     
     func sendPetHealthAlert(petName: String, healthState: PetHealthState) {
+        guard isEnabled else { return }
+        
         let content = UNMutableNotificationContent()
         
         switch healthState {
