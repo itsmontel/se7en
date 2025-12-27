@@ -4,11 +4,14 @@
 //
 
 import SwiftUI
-import AVKit
+import ImageIO
 import FamilyControls
 
 struct TodayOverviewView: View {
     let summary: UsageSummary
+    
+    // Use @State for pet type so it refreshes
+    @State private var currentPetType: PetType = .dog
     
     // Calculate health score from total screen time (direct from DeviceActivity data)
     private var healthScore: Int {
@@ -26,20 +29,6 @@ struct TodayOverviewView: View {
     }
     
     @Environment(\.colorScheme) var colorScheme
-    
-    // Get pet info from shared container
-    private var petType: PetType {
-        let appGroupID = "group.com.se7en.app"
-        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
-            return .dog  // Default fallback
-        }
-        sharedDefaults.synchronize()
-        guard let petTypeString = sharedDefaults.string(forKey: "user_pet_type"),
-              let type = PetType(rawValue: petTypeString) else {
-            return .dog
-        }
-        return type
-    }
     
     // Calculate health state from health score
     private var petHealthState: PetHealthState {
@@ -63,23 +52,25 @@ struct TodayOverviewView: View {
         })
         
         VStack(alignment: .leading, spacing: 16) {
-            // Pet Animation Section (at the top) - same style as dashboard
-            PetAnimationPlayerView(
-                petType: petType,
+            // Pet Animation Section (at the top) - using GIF animation
+            GIFAnimationView(
+                petType: currentPetType,
                 healthState: petHealthState,
                 colorScheme: colorScheme,
-                height: 220
+                height: 340
             )
+            .id("\(currentPetType.rawValue)-\(petHealthState.rawValue)-\(colorScheme == .dark ? "dark" : "light")")
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)
-            .padding(.top, 8)
-            .padding(.bottom, 24)
+            .padding(.top, 0)
+            .padding(.bottom, 0)
             
             // Health Score Section (below pet animation)
             VStack(spacing: 0) {
                 Text("\(healthScore)")
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
+                    .padding(.top, -20)
                     .padding(.bottom, 12)
                 
                 // Health bar with full border and proportional fill
@@ -100,7 +91,7 @@ struct TodayOverviewView: View {
                     }
                 }
                 .frame(height: 10)
-                .padding(.horizontal, 24) // Reduced padding to make health bar longer
+                .padding(.horizontal, 24)
                 .padding(.bottom, 10)
                 
                 Text("Health")
@@ -109,34 +100,34 @@ struct TodayOverviewView: View {
                     .padding(.bottom, 16)
             }
             .frame(maxWidth: .infinity)
-            .padding(.top, 8)
+            .padding(.top, 0)
             .padding(.bottom, 8)
             
             // Divider line
             Rectangle()
                 .fill(Color.gray.opacity(0.2))
                 .frame(height: 1)
-                .padding(.horizontal, 12) // Reduced padding to make wider
+                .padding(.horizontal, 12)
             
             // Today's Dashboard header with green dot (center justified)
             HStack(alignment: .center, spacing: 0) {
                 Spacer()
                 
                 Text("Today's Dashboard")
-                    .font(.system(size: 16, weight: .bold)) // Smaller text
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.primary)
                 
-                // Green circular dot (smaller, further right)
+                // Green circular dot
                 Circle()
                     .fill(Color.green)
                     .frame(width: 5, height: 5)
-                    .padding(.leading, 16) // Push dot further right
+                    .padding(.leading, 16)
                 
                 Spacer()
             }
-                .padding(.horizontal, 12) // Reduced padding to make wider
-                .padding(.top, 12)
-                .padding(.bottom, 4)
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
             
             // Summary stats - side by side
             HStack(alignment: .top, spacing: 0) {
@@ -164,7 +155,7 @@ struct TodayOverviewView: View {
                         .foregroundColor(.primary)
                 }
             }
-            .padding(.horizontal, 12) // Reduced padding to make wider
+            .padding(.horizontal, 12)
             .padding(.top, 8)
             .padding(.bottom, 16)
             
@@ -172,7 +163,7 @@ struct TodayOverviewView: View {
             Rectangle()
                 .fill(Color.gray.opacity(0.2))
                 .frame(height: 1)
-                .padding(.horizontal, 12) // Reduced padding to make wider
+                .padding(.horizontal, 12)
             
             // Top 10 Distractions list
             if !summary.topApps.isEmpty {
@@ -180,7 +171,7 @@ struct TodayOverviewView: View {
                     Text("Top 10 Distractions")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.primary)
-                        .padding(.horizontal, 12) // Reduced padding to make wider
+                        .padding(.horizontal, 12)
                         .padding(.top, 8)
                     
                     VStack(spacing: 0) {
@@ -219,7 +210,7 @@ struct TodayOverviewView: View {
                                     .font(.system(size: 18, weight: .regular))
                                     .foregroundColor(.primary)
                             }
-                            .padding(.horizontal, 12) // Reduced padding to make wider
+                            .padding(.horizontal, 12)
                             .padding(.vertical, 12)
                             
                             // Divider between items (but not after last item)
@@ -227,7 +218,7 @@ struct TodayOverviewView: View {
                                 Rectangle()
                                     .fill(Color.gray.opacity(0.2))
                                     .frame(height: 1)
-                                    .padding(.horizontal, 12) // Reduced padding to make wider
+                                    .padding(.horizontal, 12)
                             }
                         }
                     }
@@ -244,10 +235,13 @@ struct TodayOverviewView: View {
         .background(appBackground)
         .cornerRadius(16)
         .onAppear {
+            // Load pet type from shared container
+            loadPetType()
+            
             let totalMinutes = Int(summary.totalDuration / 60)
             let healthScore = calculateHealthScore(totalMinutes: totalMinutes)
             
-            print("📊 TodayOverviewView appeared: \(summary.appCount) apps, \(totalMinutes) min, health: \(healthScore)%")
+            print("📊 TodayOverviewView appeared: \(summary.appCount) apps, \(totalMinutes) min, health: \(healthScore)%, pet: \(currentPetType.rawValue)")
             
             // CRITICAL: Ensure data is written to shared container when view appears
             let appGroupID = "group.com.se7en.app"
@@ -262,6 +256,24 @@ struct TodayOverviewView: View {
         }
     }
     
+    /// Load pet type from shared container
+    private func loadPetType() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
+            currentPetType = .dog
+            return
+        }
+        sharedDefaults.synchronize()
+        if let petTypeString = sharedDefaults.string(forKey: "user_pet_type"),
+           let type = PetType(rawValue: petTypeString) {
+            currentPetType = type
+            print("🐾 TodayOverviewView: Loaded pet type '\(type.rawValue)' from shared container")
+        } else {
+            currentPetType = .dog
+            print("🐾 TodayOverviewView: No pet type found, using default 'dog'")
+        }
+    }
+    
     /// Calculate health score based on total screen time
     private func calculateHealthScore(totalMinutes: Int) -> Int {
         let totalHours = Double(totalMinutes) / 60.0
@@ -271,22 +283,16 @@ struct TodayOverviewView: View {
         case 0..<2: 
             healthScore = 100
         case 2..<4: 
-            // 2-4 hours: 100-80 health (linear decrease: -10 per hour)
             healthScore = Int(100.0 - (10.0 * (totalHours - 2.0)))
         case 4..<6: 
-            // 4-6 hours: 80-60 health (linear decrease: -10 per hour)
             healthScore = Int(80.0 - (10.0 * (totalHours - 4.0)))
         case 6..<8: 
-            // 6-8 hours: 60-40 health (linear decrease: -10 per hour)
             healthScore = Int(60.0 - (10.0 * (totalHours - 6.0)))
         case 8..<10: 
-            // 8-10 hours: 40-20 health (linear decrease: -10 per hour)
             healthScore = Int(40.0 - (10.0 * (totalHours - 8.0)))
         case 10..<12: 
-            // 10-12 hours: 20-0 health (linear decrease: -10 per hour)
             healthScore = Int(20.0 - (10.0 * (totalHours - 10.0)))
         default: 
-            // 12+ hours: 0 health
             healthScore = 0
         }
         
@@ -294,7 +300,6 @@ struct TodayOverviewView: View {
     }
     
     private func format(duration: TimeInterval) -> String {
-        // Show sub-minute usage as "<1m" when there is non-zero activity.
         if duration > 0 && duration < 60 {
             return "<1m"
         }
@@ -311,15 +316,12 @@ struct TodayOverviewView: View {
     }
 }
 
-// MARK: - Pet Animation Player View (same style as dashboard)
-struct PetAnimationPlayerView: View {
+// MARK: - GIF Animation View
+struct GIFAnimationView: View {
     let petType: PetType
     let healthState: PetHealthState
     let colorScheme: ColorScheme
     let height: CGFloat
-    
-    @State private var player: AVPlayer?
-    @State private var hasVideo = false
     
     private func animationFileName() -> String {
         let petName = petType.folderName
@@ -336,228 +338,102 @@ struct PetAnimationPlayerView: View {
     }
     
     var body: some View {
-        Group {
-            if hasVideo, let player = player {
-                // Use TransparentVideoPlayer (same as dashboard)
-                TransparentVideoPlayer(player: player)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: height)
-            } else {
-                // Fallback to static image if video not found
-                let imageName = "\(petType.folderName.lowercased())\(healthState.rawValue)"
-                Image(imageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: height)
-            }
-        }
-        .onAppear {
-            setupPlayer()
-        }
-        .onDisappear {
-            player?.pause()
-        }
-        .onChange(of: healthState) {
-            setupPlayer()
-        }
-        .onChange(of: colorScheme) {
-            setupPlayer()
-        }
-    }
-    
-    private func setupPlayer() {
-        let fileName = animationFileName()
-        
-        // Try multiple ways to find the video (handles different bundle configurations)
-        let videoURL = Bundle.main.url(forResource: fileName, withExtension: "mp4", subdirectory: "Animation")
-            ?? Bundle.main.url(forResource: "Animation/\(fileName)", withExtension: "mp4")
-            ?? Bundle.main.url(forResource: fileName, withExtension: "mp4")
-        
-        guard let url = videoURL else {
-            #if DEBUG
-            print("⚠️ PetAnimationPlayerView: Video not found for \(fileName).mp4")
-            print("   Tried: subdirectory 'Animation', 'Animation/\(fileName)', and root")
-            #endif
-            hasVideo = false
-            return
-        }
-        
-        #if DEBUG
-        print("✅ PetAnimationPlayerView: Loading video from \(url.path)")
-        #endif
-        
-        let newPlayerItem = AVPlayerItem(url: url)
-        let newPlayer = AVPlayer(playerItem: newPlayerItem)
-        newPlayer.actionAtItemEnd = .none
-        
-        // Mute the video
-        newPlayer.isMuted = true
-        
-        // Loop the video
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: newPlayerItem,
-            queue: .main
-        ) { [weak newPlayer] _ in
-            newPlayer?.seek(to: .zero)
-            newPlayer?.play()
-        }
-        
-        // Start playing immediately and retry if needed
-        newPlayer.play()
-        
-        // Also try playing after delays (extensions sometimes need this)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if newPlayer.rate == 0 {
-                newPlayer.play()
-            }
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            if newPlayer.rate == 0 && newPlayerItem.status == .readyToPlay {
-                newPlayer.play()
-            }
-        }
-        
-        self.player = newPlayer
-        self.hasVideo = true
+        GIFImageView(fileName: animationFileName(), height: height, petType: petType, healthState: healthState)
+            .frame(height: height)
     }
 }
 
-// MARK: - Transparent Video Player (same as dashboard)
-struct TransparentVideoPlayer: UIViewControllerRepresentable {
-    let player: AVPlayer
+// MARK: - GIF Image View with Animation using UIViewRepresentable
+struct GIFImageView: UIViewRepresentable {
+    let fileName: String
+    let height: CGFloat
+    let petType: PetType
+    let healthState: PetHealthState
     
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let controller = AVPlayerViewController()
-        controller.player = player
-        controller.showsPlaybackControls = false
-        controller.videoGravity = .resizeAspect
-        controller.allowsPictureInPicturePlayback = false
-        controller.updatesNowPlayingInfoCenter = false
+    func makeUIView(context: Context) -> UIView {
+        let containerView = UIView()
+        containerView.backgroundColor = .clear
         
-        // Make the background transparent
-        controller.view.backgroundColor = .clear
-        controller.view.isOpaque = false
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
+        imageView.clipsToBounds = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
         
-        // Also make the content overlay view transparent
-        if let contentOverlayView = controller.contentOverlayView {
-            contentOverlayView.backgroundColor = .clear
-            contentOverlayView.isOpaque = false
-        }
+        containerView.addSubview(imageView)
         
-        // Find and make the AVPlayerLayer's superview transparent
-        DispatchQueue.main.async {
-            // Remove all shadows from the main view layer
-            controller.view.layer.shadowOpacity = 0
-            controller.view.layer.shadowRadius = 0
-            controller.view.layer.shadowOffset = .zero
-            controller.view.layer.shadowColor = nil
-            
-            if let playerLayer = controller.view.layer.sublayers?.first(where: { $0 is AVPlayerLayer }) {
-                playerLayer.backgroundColor = UIColor.clear.cgColor
-                playerLayer.shadowOpacity = 0
-                playerLayer.shadowRadius = 0
-                playerLayer.shadowOffset = .zero
-                playerLayer.shadowColor = nil
-            }
-            
-            // Make all subviews transparent and remove shadows, hide play buttons
-            controller.view.subviews.forEach { subview in
-                subview.backgroundColor = .clear
-                subview.isOpaque = false
-                subview.layer.shadowOpacity = 0
-                subview.layer.shadowRadius = 0
-                subview.layer.shadowOffset = .zero
-                subview.layer.shadowColor = nil
-                
-                // Hide any play button overlays
-                if subview is UIButton {
-                    subview.isHidden = true
-                    subview.alpha = 0
-                }
-                subview.subviews.forEach { buttonSubview in
-                    if buttonSubview is UIButton {
-                        buttonSubview.isHidden = true
-                        buttonSubview.alpha = 0
-                    }
-                }
-            }
-            
-            // Hide play button in content overlay
-            if let contentOverlay = controller.contentOverlayView {
-                contentOverlay.subviews.forEach { overlaySubview in
-                    if overlaySubview is UIButton {
-                        overlaySubview.isHidden = true
-                        overlaySubview.alpha = 0
-                    }
-                    overlaySubview.subviews.forEach { buttonSubview in
-                        if buttonSubview is UIButton {
-                            buttonSubview.isHidden = true
-                            buttonSubview.alpha = 0
-                        }
-                    }
-                }
-            }
-            
-            // Remove shadows from all sublayers
-            controller.view.layer.sublayers?.forEach { layer in
-                layer.shadowOpacity = 0
-                layer.shadowRadius = 0
-                layer.shadowOffset = .zero
-                layer.shadowColor = nil
-            }
-            
-            // Force play after a delay (extensions sometimes need this)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                if player.rate == 0 {
-                    player.play()
-                }
-            }
-        }
+        // Pin imageView to container edges
+        NSLayoutConstraint.activate([
+            imageView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            imageView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            imageView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor)
+        ])
         
-        return controller
+        loadGIF(into: imageView)
+        return containerView
     }
     
-    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
-        if uiViewController.player != player {
-            uiViewController.player = player
-        }
+    func updateUIView(_ uiView: UIView, context: Context) {
+        guard let imageView = uiView.subviews.first as? UIImageView else { return }
+        loadGIF(into: imageView)
+    }
+    
+    private func loadGIF(into imageView: UIImageView) {
+        // Try multiple ways to find the GIF
+        let gifURL = Bundle.main.url(forResource: fileName, withExtension: "gif", subdirectory: "AnimationGIF")
+            ?? Bundle.main.url(forResource: "AnimationGIF/\(fileName)", withExtension: "gif")
+            ?? Bundle.main.url(forResource: fileName, withExtension: "gif")
         
-        // Ensure controls are hidden
-        uiViewController.showsPlaybackControls = false
-        
-        // Ensure transparency is maintained
-        uiViewController.view.backgroundColor = .clear
-        uiViewController.view.isOpaque = false
-        
-        // Ensure shadows remain removed
-        uiViewController.view.layer.shadowOpacity = 0
-        uiViewController.view.layer.shadowRadius = 0
-        uiViewController.view.layer.shadowOffset = .zero
-        uiViewController.view.layer.shadowColor = nil
-        
-        // Hide play buttons in content overlay
-        DispatchQueue.main.async {
-            if let contentOverlay = uiViewController.contentOverlayView {
-                contentOverlay.subviews.forEach { overlaySubview in
-                    if overlaySubview is UIButton {
-                        overlaySubview.isHidden = true
-                        overlaySubview.alpha = 0
-                    }
-                    overlaySubview.subviews.forEach { buttonSubview in
-                        if buttonSubview is UIButton {
-                            buttonSubview.isHidden = true
-                            buttonSubview.alpha = 0
-                        }
+        if let url = gifURL,
+           let data = try? Data(contentsOf: url),
+           let source = CGImageSourceCreateWithData(data as CFData, nil) {
+            
+            let frameCount = CGImageSourceGetCount(source)
+            var images: [UIImage] = []
+            var totalDuration: Double = 0
+            
+            for i in 0..<frameCount {
+                if let cgImage = CGImageSourceCreateImageAtIndex(source, i, nil) {
+                    images.append(UIImage(cgImage: cgImage))
+                    
+                    // Get frame duration
+                    if let properties = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [String: Any],
+                       let gifProperties = properties[kCGImagePropertyGIFDictionary as String] as? [String: Any] {
+                        let delay = gifProperties[kCGImagePropertyGIFUnclampedDelayTime as String] as? Double
+                            ?? gifProperties[kCGImagePropertyGIFDelayTime as String] as? Double
+                            ?? 0.1
+                        totalDuration += max(0.02, delay)
+                    } else {
+                        totalDuration += 0.1
                     }
                 }
             }
             
-            // Force play if not playing
-            if let player = uiViewController.player, player.rate == 0 {
-                player.play()
+            if !images.isEmpty {
+                imageView.animationImages = images
+                imageView.animationDuration = totalDuration
+                imageView.animationRepeatCount = 0 // Infinite loop
+                imageView.startAnimating()
+                
+                // Also set the first frame as the static image
+                imageView.image = images.first
+                
+                print("✅ GIFImageView: Loaded \(frameCount) frames for \(fileName).gif, duration: \(totalDuration)s")
+                return
             }
+        }
+        
+        // Fallback to static image
+        let imageName = "\(petType.folderName.lowercased())\(healthState.rawValue)"
+        if let staticImage = UIImage(named: imageName) {
+            imageView.image = staticImage
+            imageView.animationImages = nil
+            print("⚠️ GIFImageView: Using static fallback image '\(imageName)' for \(fileName).gif")
+        } else {
+            // Ultimate fallback - use system image
+            imageView.image = UIImage(systemName: "pawprint.fill")
+            imageView.tintColor = .secondaryLabel
+            print("⚠️ GIFImageView: GIF not found for \(fileName).gif, using pawprint fallback")
         }
     }
 }

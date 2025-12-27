@@ -20,7 +20,7 @@ struct PrivacyPolicyView: View {
                         .font(.title2.bold())
                         .foregroundColor(.textPrimary)
                     
-                    Text("Last updated: December 2024")
+                    Text("Last updated: December 27, 2024")
                         .font(.subheadline)
                         .foregroundColor(.textSecondary)
                 }
@@ -37,7 +37,7 @@ struct PrivacyPolicyView: View {
                         "Account information (email, subscription status)",
                         "Device information (iOS version, device model)",
                         "Payment information (processed securely by Apple)",
-                        "Puzzle completion data (to track unblock requests)"
+                        "Puzzle completion data (Sudoku, Memory, Pattern, Jigsaw) to track unblock requests"
                     ]
                 )
                 

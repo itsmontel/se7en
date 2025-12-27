@@ -1,5 +1,4 @@
 import SwiftUI
-import AVKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -267,14 +266,11 @@ struct SettingsHeroCard: View {
     }
 }
 
-// MARK: - Pet Content Animation View
+// MARK: - Pet Content Animation View (MP4 Video)
 struct PetContentAnimationView: View {
     let petType: PetType
     let colorScheme: ColorScheme
     let height: CGFloat
-    
-    @State private var player: AVPlayer?
-    @State private var hasVideo = false
     
     init(petType: PetType, colorScheme: ColorScheme, height: CGFloat = 80) {
         self.petType = petType
@@ -282,107 +278,16 @@ struct PetContentAnimationView: View {
         self.height = height
     }
     
-    private func animationFileName() -> String {
-        let petName = petType.folderName
-        let prefix = colorScheme == .dark ? "Dark" : ""
-        return "\(prefix)\(petName)ContentAnimation"
-    }
-    
     var body: some View {
-        Group {
-            if hasVideo, let player = player {
-                TransparentVideoPlayer(player: player)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: height)
-            } else {
-                // Fallback to static image if video not found
-                let imageName = "\(petType.folderName.lowercased())content"
-                Image(imageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: height)
-            }
-        }
-        .onAppear {
-            setupPlayer()
-        }
-        .onDisappear {
-            cleanupPlayer()
-        }
-        .onChange(of: petType) { _ in
-            // Pet changed - reload immediately
-            cleanupPlayer()
-            setupPlayer()
-        }
-        .onChange(of: colorScheme) { _ in
-            // Color scheme changed - reload immediately
-            cleanupPlayer()
-            setupPlayer()
-        }
-    }
-    
-    private func cleanupPlayer() {
-        player?.pause()
-        player?.replaceCurrentItem(with: nil)
-        player = nil
-        hasVideo = false
-    }
-    
-    private func setupPlayer() {
-        let fileName = animationFileName()
-        
-        #if DEBUG
-        print("🎬 PetContentAnimationView: Setting up player for \(fileName).mp4 (pet: \(petType.folderName), dark: \(colorScheme == .dark))")
-        #endif
-        
-        // Try multiple ways to find the video (handles different bundle configurations)
-        let videoURL = Bundle.main.url(forResource: fileName, withExtension: "mp4", subdirectory: "Animation")
-            ?? Bundle.main.url(forResource: "Animation/\(fileName)", withExtension: "mp4")
-            ?? Bundle.main.url(forResource: fileName, withExtension: "mp4")
-        
-        guard let url = videoURL else {
-            #if DEBUG
-            print("⚠️ PetContentAnimationView: Video not found for \(fileName).mp4")
-            #endif
-            hasVideo = false
-            return
-        }
-        
-        #if DEBUG
-        print("✅ PetContentAnimationView: Loading video from \(url.path)")
-        #endif
-        
-        let newPlayerItem = AVPlayerItem(url: url)
-        let newPlayer = AVPlayer(playerItem: newPlayerItem)
-        newPlayer.actionAtItemEnd = .none
-        
-        // Mute the video
-        newPlayer.isMuted = true
-        
-        // Loop the video
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: newPlayerItem,
-            queue: .main
-        ) { _ in
-            newPlayer.seek(to: .zero)
-            newPlayer.play()
-        }
-        
-        self.player = newPlayer
-        self.hasVideo = true
-        
-        // Start playing immediately
-        newPlayer.play()
-        
-        #if DEBUG
-        print("▶️ PetContentAnimationView: Started playing \(fileName).mp4")
-        #endif
-        
-        self.player = newPlayer
-        self.hasVideo = true
+        PetAnimationView(
+            petType: petType,
+            healthState: .content,
+            height: height
+        )
+        .id("\(petType.folderName)-content-\(colorScheme == .dark ? "dark" : "light")")
     }
 }
+
 
 
 struct SettingsGroup<Content: View>: View {

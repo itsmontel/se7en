@@ -20,7 +20,7 @@ struct TermsOfServiceView: View {
                         .font(.title2.bold())
                         .foregroundColor(.textPrimary)
                     
-                    Text("Last updated: December 2024")
+                    Text("Last updated: December 27, 2025")
                         .font(.subheadline)
                         .foregroundColor(.textSecondary)
                 }
@@ -61,6 +61,7 @@ struct TermsOfServiceView: View {
                         "Only apps you explicitly select are blocked",
                         "Blocked apps display iOS Screen Time shields",
                         "Solving puzzles grants temporary unblock access",
+                        "Four puzzle types available: Sudoku, Memory Game, Pattern Sequence, and Jigsaw Puzzle",
                         "Unblock duration is configurable (5, 10, 15, 30, or 60 minutes)",
                         "You can modify or remove blocked apps at any time"
                     ]

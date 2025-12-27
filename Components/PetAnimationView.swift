@@ -190,4 +190,3 @@ struct TransparentVideoPlayer: UIViewControllerRepresentable {
         uiViewController.view.layer.shadowColor = nil
     }
 }
-

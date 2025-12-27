@@ -551,7 +551,7 @@ struct DashboardView: View {
                     VStack(spacing: 0) {
                         headerSection
                         petNameSection
-                        petImageSection
+                            .padding(.bottom, 8)
                         screenTimeSection
                         topDistractionsSection
                     }
@@ -686,36 +686,11 @@ struct DashboardView: View {
             CompactStreakView(streak: appState.currentStreak)
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 20)
+        .padding(.bottom, 0)
     }
     
-    private var petImageSection: some View {
-        Group {
-            if let pet = appState.userPet {
-                // Ensure pet health state reflects latest usage
-                let healthState = pet.healthState
-                let petImageName = "\(pet.type.folderName.lowercased())\(healthState.rawValue)"
-                let glowColor = healthState.color
-                
-                ZStack {
-                    // Use animation for all pets (with fallback to static image if animation not available)
-                    PetAnimationView(
-                        petType: pet.type,
-                        healthState: healthState,
-                        height: 220
-                    )
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
-                .id(healthState) // force refresh on state change
-                .onAppear {
-                    appState.updatePetHealth()
-                }
-            }
-        }
-                        }
     private var screenTimeSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             // Today's Screen Time Card
             VStack(alignment: .leading, spacing: 12) {
                             
@@ -785,7 +760,7 @@ struct DashboardView: View {
                     .padding(.vertical, 20)
                 } else {
                     // Show actual usage data
-                    VStack(spacing: 16) {
+                    VStack(spacing: 0) {
                     // Show DeviceActivityReport for today's overview
                     // This displays the TodayOverviewView with total time, apps used, and top 10 apps
                     if screenTimeService.isAuthorized {
@@ -793,7 +768,6 @@ struct DashboardView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.top, 200) // Add top padding to move report view lower (so pet animation isn't cut off)
                 .padding(.bottom, 24)
                 }
             }
@@ -808,8 +782,9 @@ struct DashboardView: View {
                     }
                 }
             )
-            .padding(.horizontal, 20)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 0)
+            .padding(.top, 0)
+            .padding(.bottom, 4)
             
             // Top App Today Card
             if let topApp = topAppToday, topApp.minutesUsed > 0 {
@@ -954,7 +929,7 @@ struct DashboardView: View {
         
         DeviceActivityReport(.todayOverview, filter: filter)
             .frame(maxWidth: .infinity, alignment: .top)
-            .frame(minHeight: 1300) // Increased height to fit all 10 distractions plus pet animation
+            .frame(minHeight: 1500) // Height to fit pet animation (340pt) + all 10 distractions
             .background(Color.appBackground)
             .cornerRadius(12)
             .allowsHitTesting(false) // Allow scroll gestures to pass through to parent ScrollView

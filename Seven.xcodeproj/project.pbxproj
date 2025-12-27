@@ -40,7 +40,6 @@
 		1035 /* Models/CoreData/CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2035 /* Models/CoreData/CoreDataManager.swift */; };
 		1036 /* Services/ScreenTimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2036 /* Services/ScreenTimeService.swift */; };
 		1037 /* Services/NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2037 /* Services/NotificationService.swift */; };
-F6468888 /* Services/HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A539999 /* Services/HapticsManager.swift */; };
 		1038 /* Services/DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2038 /* Services/DeviceActivityMonitorExtension.swift */; };
 		1039 /* Services/StoreKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2039 /* Services/StoreKitService.swift */; };
 		1040 /* Models/CoreData/SE7ENDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 2040 /* Models/CoreData/SE7ENDataModel.xcdatamodeld */; };
@@ -142,6 +141,7 @@ F6468888 /* Services/HapticsManager.swift in Sources */ = {isa = PBXBuildFile; f
 		8FB3DA3A2EE38ECD005BC03C /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */; };
 		8FB3DA422EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3DA372EE38ECD005BC03C /* SE7ENDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9002 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9000 /* Localizable.strings */; };
+		F6468888 /* Services/HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A539999 /* Services/HapticsManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -237,7 +237,6 @@ F6468888 /* Services/HapticsManager.swift in Sources */ = {isa = PBXBuildFile; f
 		2035 /* Models/CoreData/CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/CoreData/CoreDataManager.swift; sourceTree = "<group>"; };
 		2036 /* Services/ScreenTimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ScreenTimeService.swift; sourceTree = "<group>"; };
 		2037 /* Services/NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/NotificationService.swift; sourceTree = "<group>"; };
-4A539999 /* Services/HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HapticsManager.swift; sourceTree = "<group>"; };
 		2038 /* Services/DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
 		2039 /* Services/StoreKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/StoreKitService.swift; sourceTree = "<group>"; };
 		2041 /* SE7ENDataModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = SE7ENDataModel.xcdatamodel; sourceTree = "<group>"; };
@@ -272,6 +271,7 @@ F6468888 /* Services/HapticsManager.swift in Sources */ = {isa = PBXBuildFile; f
 		3037 /* Components/AchievementCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementCelebrationView.swift; sourceTree = "<group>"; };
 		4000 /* Views/Dashboard/ExtendLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/ExtendLimitSheet.swift; sourceTree = "<group>"; };
 		4002 /* Views/Blocking/BlockingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Blocking/BlockingView.swift; sourceTree = "<group>"; };
+		4A539999 /* Services/HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HapticsManager.swift; sourceTree = "<group>"; };
 		7001 /* Services/PuzzleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/PuzzleManager.swift; sourceTree = "<group>"; };
 		7002 /* Models/PuzzleModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/PuzzleModels.swift; sourceTree = "<group>"; };
 		7003 /* SudokuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SudokuView.swift; sourceTree = "<group>"; };

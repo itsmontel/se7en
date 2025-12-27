@@ -130,6 +130,9 @@ struct SE7ENApp: App {
                     BlockedAppsManager.shared.loadState()
                     BlockedAppsManager.shared.checkAndReblock()
                     
+                    // Mark blocked apps status for streak tracking
+                    updateBlockedAppsStatusForStreak()
+                    
                     // Sync data
                     appState.syncDataFromBackground()
                 }
@@ -226,6 +229,9 @@ struct SE7ENApp: App {
     private func handleAppDidBecomeActive() {
         print("📱 App became active")
         
+        // Mark blocked apps status for streak tracking
+        updateBlockedAppsStatusForStreak()
+        
         // Check time since last background - if long, check one-session apps
         checkAndHandleOneSessionAfterBackground()
     }
@@ -233,8 +239,20 @@ struct SE7ENApp: App {
     private func handleAppWillResignActive() {
         print("📱 App will resign active")
         
+        // Mark blocked apps status for streak tracking before going to background
+        updateBlockedAppsStatusForStreak()
+        
         // Pre-emptively mark one-session apps
         markOneSessionAppsForReBlock()
+    }
+    
+    // MARK: - Streak Tracking
+    
+    private func updateBlockedAppsStatusForStreak() {
+        let blockedCount = BlockedAppsManager.shared.blockedCount
+        let hasBlockedApps = blockedCount > 0
+        print("📊 Updating blocked apps status for streak: \(hasBlockedApps) (\(blockedCount) apps)")
+        CoreDataManager.shared.markBlockedAppsStatus(hasBlockedApps: hasBlockedApps)
     }
     
     // MARK: - One-Session Mode Helpers
