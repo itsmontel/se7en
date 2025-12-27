@@ -42,6 +42,7 @@ struct DashboardView: View {
     @State private var lastScreenTimeRefresh: Date = Date.distantPast
     @State private var isInitializing = false
     private let minScreenTimeRefreshInterval: TimeInterval = 30.0 // Only refresh every 30 seconds
+    @State private var reportRefreshTrigger = UUID() // Force report refresh when pet changes
 
     
     
@@ -629,12 +630,6 @@ struct DashboardView: View {
                         .foregroundColor(.textPrimary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(Color.appBackground)
-                        .cornerRadius(8)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.cardBackground.opacity(0.8))
-                        .cornerRadius(16)
                     }
             }
             .sheet(isPresented: $showingAddAppSheet) {
@@ -652,6 +647,11 @@ struct DashboardView: View {
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 // 🚀 OPTIMIZED: Throttled foreground refresh
                 performOptimizedForegroundRefresh()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .petChanged)) { _ in
+                // Refresh report when pet is changed
+                reportRefreshTrigger = UUID()
+                print("🐾 DashboardView: Pet changed, refreshing report")
             }
         }
     }
@@ -929,9 +929,11 @@ struct DashboardView: View {
         
         DeviceActivityReport(.todayOverview, filter: filter)
             .frame(maxWidth: .infinity, alignment: .top)
-            .frame(minHeight: 1500) // Height to fit pet animation (340pt) + all 10 distractions
+            .frame(minHeight: 1200) // Adjusted for smaller pet size
             .background(Color.appBackground)
             .cornerRadius(12)
+            .padding(.horizontal, 24) // Narrower width for better scrolling and UI
+            .id(reportRefreshTrigger) // Force refresh when trigger changes
             .allowsHitTesting(false) // Allow scroll gestures to pass through to parent ScrollView
             .onAppear {
                 print("📊 DashboardView: DeviceActivityReport view appeared - extension should be invoked")
@@ -1098,7 +1100,7 @@ struct DashboardView: View {
         let bundleID = goals.first(where: { $0.appName == app.name })?.appBundleID
         
         return VStack(spacing: 0) {
-                                        HStack(spacing: 12) {
+                                        HStack(spacing: 2) {
                                             Text("\(index + 1)")
                                                 .font(.system(size: 16, weight: .bold))
                                                 .foregroundColor(.textSecondary)

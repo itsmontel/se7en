@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
@@ -29,6 +30,7 @@ struct ContentView: View {
                 )
                 .environmentObject(appState)
                 .transition(.opacity)
+                .zIndex(2)
             }
         }
         .withProperTextCase()
@@ -36,25 +38,49 @@ struct ContentView: View {
             checkPuzzleMode()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            // ✅ FIX: Check for puzzle mode when app becomes active (handles shield action opening app)
             checkPuzzleMode()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            // ✅ FIX: Also check when app enters foreground (covers all cases)
             checkPuzzleMode()
         }
         .onReceive(NotificationCenter.default.publisher(for: .appBlocked)) { notification in
-            // Check if this is puzzle mode
             if let userInfo = notification.userInfo,
                userInfo["puzzleMode"] as? Bool == true {
                 checkPuzzleMode()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .puzzleNotificationTapped)) { _ in
+            // User tapped the puzzle notification - clear shield flag and show puzzle
+            clearShieldTapNotificationFlag()
+            loadPuzzleData()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showPuzzleMode = true
+                }
+            }
+        }
+    }
+    
+    /// Clear the shield "tap notification" flag so shield dismisses
+    private func clearShieldTapNotificationFlag() {
+        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
+        defaults.set(false, forKey: "showTapNotificationShield")
+        defaults.synchronize()
+    }
+    
+    /// Load puzzle data from UserDefaults
+    private func loadPuzzleData() {
+        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
+        
+        if let tokenHash = defaults.string(forKey: "puzzleTokenHash") {
+            puzzleTokenHash = tokenHash
+            puzzleAppName = defaults.string(forKey: "puzzleAppName_\(tokenHash)") ?? 
+                           defaults.string(forKey: "tapNotificationAppName") ?? "App"
+        }
     }
     
     private func checkPuzzleMode() {
-        let appGroupID = "group.com.se7en.app"
-        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
+        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
         
         // Don't check if already showing puzzle
         guard !showPuzzleMode else { return }
@@ -98,8 +124,6 @@ struct ContentView: View {
     }
     
     private func handlePuzzleComplete() {
-        let appGroupID = "group.com.se7en.app"
-        
         // ✅ NEW: Use BlockedAppsManager to grant unblock
         BlockedAppsManager.shared.grantUnblock()
         
@@ -117,8 +141,7 @@ struct ContentView: View {
     
     /// Clear puzzle mode flags from shared container
     private func clearPuzzleFlags() {
-        let appGroupID = "group.com.se7en.app"
-        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
+        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
         
         defaults.set(false, forKey: "puzzleMode")
         defaults.set(false, forKey: "shouldOpenPuzzle")
@@ -408,6 +431,10 @@ struct FullscreenPuzzleView: View {
         }
     }
 }
+
+// MARK: - Tap Notification Screen
+// This screen appears after user taps "Solve Puzzle" on shield
+// It shows the SE7EN logo and triggers a notification
 
 struct MainTabView: View {
     @State private var selectedTab = 0

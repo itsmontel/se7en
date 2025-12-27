@@ -26,8 +26,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         if categoryIdentifier == "PUZZLE_UNLOCK" {
             print("🧩 Puzzle notification tapped - triggering puzzle mode")
             
-            // Post notification to trigger puzzle mode check
+            // ✅ Post custom notification to dismiss tap screen and show puzzle
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                NotificationCenter.default.post(
+                    name: .puzzleNotificationTapped,
+                    object: nil
+                )
+            }
+            
+            // Also trigger the standard app active notification
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 NotificationCenter.default.post(
                     name: UIApplication.didBecomeActiveNotification,
                     object: nil
@@ -178,41 +186,16 @@ struct SE7ENApp: App {
     }
     
     /// Check if shield action set a pending puzzle notification flag
+    /// Note: Notification is now sent from TapNotificationScreen in ContentView
+    /// This method only clears stale flags if needed
     private func checkAndSendPendingPuzzleNotification() {
-        let appGroupID = "group.com.se7en.app"
-        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
-        
-        // Check if there's a pending puzzle notification
-        if defaults.bool(forKey: "pendingPuzzleNotification") {
-            let appName = defaults.string(forKey: "pendingPuzzleAppName") ?? "App"
-            
-            // Clear the flag first
-            defaults.removeObject(forKey: "pendingPuzzleNotification")
-            defaults.removeObject(forKey: "pendingPuzzleAppName")
-            defaults.synchronize()
-            
-            // Send local notification from main app (this works reliably)
-            let content = UNMutableNotificationContent()
-            content.title = "🧩 Puzzle Time!"
-            content.body = "Solve a puzzle to unlock \(appName)"
-            content.sound = .default
-            content.categoryIdentifier = "PUZZLE_UNLOCK"
-            
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.5, repeats: false)
-            let request = UNNotificationRequest(
-                identifier: "puzzle_unlock_\(Date().timeIntervalSince1970)",
-                content: content,
-                trigger: trigger
-            )
-            
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error = error {
-                    print("❌ Failed to send puzzle notification: \(error)")
-                } else {
-                    print("✅ Puzzle notification sent from main app")
-                }
-            }
-        }
+        // Notification sending is now handled by TapNotificationScreen
+        // This ensures the notification is sent AFTER the tap notification screen is shown
+        // The flow is:
+        // 1. Shield Action sets flags and opens SE7EN app
+        // 2. ContentView shows TapNotificationScreen
+        // 3. TapNotificationScreen sends the notification after a delay
+        // 4. User taps notification -> puzzle view appears
     }
     
     private func handleAppDidEnterBackground() {
@@ -307,6 +290,20 @@ struct SE7ENApp: App {
         
         guard url.scheme == "se7en" else { return }
         
+        // Handle tap notification screen (from shield action)
+        if url.host == "tapnotification" {
+            print("📱 URL: Tap notification screen requested")
+            
+            // Post notification to show tap notification screen
+            // ContentView will handle this via checkForTapNotificationScreen()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                NotificationCenter.default.post(
+                    name: UIApplication.didBecomeActiveNotification,
+                    object: nil
+                )
+            }
+        }
+        
         // Handle puzzle mode
         if url.host == "puzzle" {
             print("🧩 URL: Puzzle mode requested")
@@ -320,8 +317,8 @@ struct SE7ENApp: App {
             NotificationCenter.default.post(
                 name: UIApplication.didBecomeActiveNotification,
                 object: nil
-                                )
-                            }
+            )
+        }
         
         // Handle unlock confirmation
         if url.host == "unlocked" {
@@ -337,4 +334,5 @@ struct SE7ENApp: App {
 
 extension Notification.Name {
     static let showPuzzleMode = Notification.Name("showPuzzleMode")
+    static let puzzleNotificationTapped = Notification.Name("puzzleNotificationTapped")
 }

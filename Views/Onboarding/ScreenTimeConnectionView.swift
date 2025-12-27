@@ -295,10 +295,7 @@ struct ScreenTimeConnectionView: View {
         isRequesting = true
         
         Task {
-            // Request notification permission first
-            _ = await NotificationService.shared.requestNotificationPermission()
-            
-            // Then request Screen Time authorization
+            // Request Screen Time authorization
             await screenTimeService.requestAuthorization()
             
             await MainActor.run {

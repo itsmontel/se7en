@@ -1,6 +1,7 @@
 import SwiftUI
 import FamilyControls
 import ManagedSettings
+import UserNotifications
 
 // MARK: - Blocked Apps Manager
 
@@ -225,6 +226,7 @@ struct BlockingView: View {
     @State private var refreshTimer: Timer?
     @State private var pulseAnimation = false
     @State private var showingRemoveAllConfirmation = false
+    @State private var showNotificationPrompt = false
     
     let unblockDurationOptions = [5, 10, 15, 30, 60]
     
@@ -284,6 +286,9 @@ struct BlockingView: View {
                                     blockedAppsManager.updateBlockedApps(tempSelection)
                                     showingAppPicker = false
                                     HapticsManager.shared.success()
+                                    
+                                    // Check if user has notifications enabled after blocking apps
+                                    checkNotificationStatusAfterBlocking()
                                 }
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.blue)
@@ -292,6 +297,29 @@ struct BlockingView: View {
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+            }
+            .alert("Enable Notifications", isPresented: $showNotificationPrompt) {
+                Button("Enable") {
+                    Task {
+                        let granted = await NotificationService.shared.requestNotificationPermission()
+                        if !granted {
+                            // If denied, open settings
+                            if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                                await MainActor.run {
+                                    UIApplication.shared.open(settingsUrl)
+                                }
+                            }
+                        } else {
+                            await MainActor.run {
+                                UserDefaults.standard.set(false, forKey: "skippedNotificationPermission")
+                                HapticFeedback.success.trigger()
+                            }
+                        }
+                    }
+                }
+                Button("Not Now", role: .cancel) {}
+            } message: {
+                Text("You've blocked apps! To unlock them later, you'll need to solve puzzles. Enable notifications so you can receive puzzle alerts.")
             }
             .fullScreenCover(isPresented: $showingPuzzle) {
                 UnblockPuzzleView(
@@ -326,9 +354,9 @@ struct BlockingView: View {
                 }
             } message: {
                 if appState.currentStreak > 0 {
-                    Text("If you have no blocked apps by the end of the day, your \(appState.currentStreak)-day streak will be lost.")
+                    Text("If you have no blocked apps by the end of the day, your \(appState.currentStreak)-day streak will be lost. Are you sure you want to remove all blocked apps?")
                 } else {
-                    Text("This will unblock all selected apps.")
+                    Text("This will immediately unblock all selected apps. You can always add them back later if needed.")
                 }
             }
         }
@@ -721,12 +749,8 @@ struct BlockingView: View {
                 
                 // Clear all button
                 Button(action: {
-                    // Show confirmation if user has a streak
-                    if appState.currentStreak > 0 {
-                        showingRemoveAllConfirmation = true
-                    } else {
-                        removeAllBlocks()
-                    }
+                    // Always show confirmation dialog
+                    showingRemoveAllConfirmation = true
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "xmark.circle")
@@ -790,6 +814,25 @@ struct BlockingView: View {
                 .fill(Color.cardBackground)
                 .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 4)
         )
+    }
+    
+    // MARK: - Notification Check
+    
+    private func checkNotificationStatusAfterBlocking() {
+        // Only check if user has apps blocked and previously skipped notifications
+        guard blockedAppsManager.blockedCount > 0 else { return }
+        
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                // Show prompt if notifications are not authorized
+                if settings.authorizationStatus != .authorized {
+                    // Small delay to let the picker sheet dismiss first
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showNotificationPrompt = true
+                    }
+                }
+            }
+        }
     }
 }
 

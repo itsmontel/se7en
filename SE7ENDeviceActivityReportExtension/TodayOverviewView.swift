@@ -57,7 +57,7 @@ struct TodayOverviewView: View {
                 petType: currentPetType,
                 healthState: petHealthState,
                 colorScheme: colorScheme,
-                height: 340
+                height: 240
             )
             .id("\(currentPetType.rawValue)-\(petHealthState.rawValue)-\(colorScheme == .dark ? "dark" : "light")")
             .frame(maxWidth: .infinity)

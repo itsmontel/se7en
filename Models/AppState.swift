@@ -11,6 +11,7 @@ extension Notification.Name {
     static let screenTimeDataUpdated = Notification.Name("screenTimeDataUpdated")
     static let appBlocked = Notification.Name("appBlocked")
     static let appUnblocked = Notification.Name("appUnblocked")
+    static let petChanged = Notification.Name("petChanged")
 }
 
 // MARK: - Performance Optimization Data Structures
@@ -1385,6 +1386,10 @@ class AppState: ObservableObject {
     func setUserPet(_ pet: Pet) {
         userPet = pet
         saveUserPreferences()
+        
+        // Post notification to refresh all views showing the pet
+        NotificationCenter.default.post(name: .petChanged, object: nil)
+        print("🐾 Pet changed to \(pet.type.rawValue), notification posted")
     }
     
     func setUserName(_ name: String) {

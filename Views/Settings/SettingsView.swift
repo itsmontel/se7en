@@ -9,6 +9,8 @@ struct SettingsView: View {
     @State private var showingPetSelection = false
     @State private var showingRenamePet = false
     @State private var newPetName = ""
+    @State private var showNotificationAlert = false
+    @State private var notificationPermissionStatus: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -54,17 +56,67 @@ struct SettingsView: View {
                             
                             // Preferences
                             SettingsGroup(title: "Preferences") {
-                                SettingToggle(
-                                    isOn: $notificationsEnabled,
-                                    icon: "bell.fill",
-                                    color: .red,
-                                    title: "Notifications",
-                                    subtitle: "Get reminded about limits"
-                                )
-                                .onChange(of: notificationsEnabled) { newValue in
+                                // Notification row - make it look like a clear button
+                                Button(action: {
                                     HapticsManager.shared.light()
-                                    NotificationService.shared.setNotificationsEnabled(newValue)
+                                    checkAndRequestNotifications()
+                                }) {
+                                    HStack(spacing: 14) {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.red.opacity(0.15))
+                                                .frame(width: 44, height: 44)
+                                            
+                                            Image(systemName: "bell.fill")
+                                                .font(.system(size: 20, weight: .semibold))
+                                                .foregroundColor(.red)
+                                        }
+                                        
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text("Notifications")
+                                                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                                .foregroundColor(.textPrimary)
+                                            
+                                            if notificationPermissionStatus {
+                                                Text("Enabled")
+                                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                                    .foregroundColor(.green)
+                                            } else {
+                                                HStack(spacing: 4) {
+                                                    Text("Tap to enable")
+                                                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                                                        .foregroundColor(.orange)
+                                                    Image(systemName: "arrow.right.circle.fill")
+                                                        .font(.system(size: 14, weight: .semibold))
+                                                        .foregroundColor(.orange)
+                                                }
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        if notificationPermissionStatus {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(.green)
+                                                .font(.system(size: 22))
+                                        } else {
+                                            Image(systemName: "chevron.right")
+                                                .foregroundColor(.orange)
+                                                .font(.system(size: 16, weight: .semibold))
+                                        }
+                                    }
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(notificationPermissionStatus ? Color.clear : Color.orange.opacity(0.08))
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(notificationPermissionStatus ? Color.clear : Color.orange.opacity(0.3), lineWidth: 1.5)
+                                    )
                                 }
+                                .buttonStyle(.plain)
                                 
                                 SettingToggle(
                                     isOn: $hapticsEnabled,
@@ -211,6 +263,60 @@ struct SettingsView: View {
             .sheet(isPresented: $showingRenamePet) {
                 RenamePetSheet(isPresented: $showingRenamePet, petName: $newPetName)
                     .environmentObject(appState)
+            }
+            .alert("Enable Notifications", isPresented: $showNotificationAlert) {
+                Button("Open Settings") {
+                    if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(settingsUrl)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Notifications are essential for SE7EN to work properly. Please enable them in Settings to receive puzzle alerts and unlock your blocked apps.")
+            }
+            .onAppear {
+                checkNotificationStatus()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                checkNotificationStatus()
+            }
+        }
+    }
+    
+    private func checkNotificationStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                notificationPermissionStatus = settings.authorizationStatus == .authorized
+            }
+        }
+    }
+    
+    private func checkAndRequestNotifications() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                switch settings.authorizationStatus {
+                case .notDetermined:
+                    // First time - request permission
+                    Task {
+                        let granted = await NotificationService.shared.requestNotificationPermission()
+                        await MainActor.run {
+                            notificationPermissionStatus = granted
+                            if granted {
+                                HapticFeedback.success.trigger()
+                                UserDefaults.standard.set(false, forKey: "skippedNotificationPermission")
+                            }
+                        }
+                    }
+                case .denied:
+                    // Already denied - show alert to open settings
+                    showNotificationAlert = true
+                case .authorized, .provisional, .ephemeral:
+                    // Already authorized
+                    notificationPermissionStatus = true
+                    HapticFeedback.success.trigger()
+                @unknown default:
+                    break
+                }
             }
         }
     }

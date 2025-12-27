@@ -52,6 +52,7 @@ struct CoachInsight: Identifiable {
 struct GoalsView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedWeekOffset: Int = 0 // 0 = current week, -1 = last week, etc.
+    @State private var reportRefreshTrigger = UUID() // Force report refresh when pet changes
     
     // Calculate the start of the selected week (Monday)
     private var weekStart: Date {
@@ -182,6 +183,11 @@ struct GoalsView: View {
                             appState.refreshDailyHistory()
                         }
                     }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .petChanged)) { _ in
+                    // Refresh report when pet is changed
+                    reportRefreshTrigger = UUID()
+                    print("🐾 GoalsView: Pet changed, refreshing report")
                 }
             }
             .navigationTitle("")
