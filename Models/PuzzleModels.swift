@@ -40,39 +40,29 @@ struct SudokuPuzzle {
     let initialGrid: [[Int?]]
     
     static func generate() -> SudokuPuzzle {
-        // Generate a valid 6x6 Sudoku solution
+        // Generate a valid 6x6 Sudoku solution using backtracking
         // 6x6 Sudoku uses 2x3 boxes (2 rows, 3 columns per box)
-        var solution = [[Int]]()
+        var solution = Array(repeating: Array(repeating: 0, count: 6), count: 6)
         
-        // Pre-defined valid solutions for 6x6 Sudoku
-        let validSolutions = [
-            [[1, 2, 3, 4, 5, 6], [4, 5, 6, 1, 2, 3], [2, 3, 1, 5, 6, 4], [5, 6, 4, 2, 3, 1], [3, 1, 2, 6, 4, 5], [6, 4, 5, 3, 1, 2]],
-            [[2, 3, 4, 5, 6, 1], [5, 6, 1, 2, 3, 4], [3, 4, 2, 6, 1, 5], [6, 1, 5, 3, 4, 2], [4, 2, 3, 1, 5, 6], [1, 5, 6, 4, 2, 3]],
-            [[3, 4, 5, 6, 1, 2], [6, 1, 2, 3, 4, 5], [4, 5, 3, 1, 2, 6], [1, 2, 6, 4, 5, 3], [5, 3, 4, 2, 6, 1], [2, 6, 1, 5, 3, 4]],
-            [[4, 5, 6, 1, 2, 3], [1, 2, 3, 4, 5, 6], [5, 6, 4, 2, 3, 1], [2, 3, 1, 5, 6, 4], [6, 4, 5, 3, 1, 2], [3, 1, 2, 6, 4, 5]],
-            [[5, 6, 1, 2, 3, 4], [2, 3, 4, 5, 6, 1], [6, 1, 5, 3, 4, 2], [3, 4, 2, 6, 1, 5], [1, 5, 6, 4, 2, 3], [4, 2, 3, 1, 5, 6]],
-            [[6, 1, 2, 3, 4, 5], [3, 4, 5, 6, 1, 2], [1, 2, 6, 4, 5, 3], [4, 5, 3, 1, 2, 6], [2, 6, 1, 5, 3, 4], [5, 3, 4, 2, 6, 1]],
-            [[1, 3, 5, 2, 4, 6], [2, 4, 6, 1, 3, 5], [3, 5, 1, 4, 6, 2], [4, 6, 2, 3, 5, 1], [5, 1, 3, 6, 2, 4], [6, 2, 4, 5, 1, 3]],
-            [[1, 4, 2, 5, 3, 6], [3, 6, 5, 1, 4, 2], [2, 1, 4, 6, 5, 3], [5, 3, 6, 2, 1, 4], [4, 2, 1, 3, 6, 5], [6, 5, 3, 4, 2, 1]],
-            [[2, 5, 3, 6, 4, 1], [4, 1, 6, 2, 5, 3], [3, 2, 5, 1, 6, 4], [6, 4, 1, 3, 2, 5], [5, 3, 2, 4, 1, 6], [1, 6, 4, 5, 3, 2]],
-            [[3, 6, 4, 1, 5, 2], [5, 2, 1, 3, 6, 4], [4, 3, 6, 2, 1, 5], [1, 5, 2, 4, 3, 6], [6, 4, 3, 5, 2, 1], [2, 1, 5, 6, 4, 3]],
-            [[4, 1, 5, 2, 6, 3], [6, 3, 2, 4, 1, 5], [5, 4, 1, 3, 2, 6], [2, 6, 3, 5, 4, 1], [1, 5, 4, 6, 3, 2], [3, 2, 6, 1, 5, 4]],
-            [[5, 2, 6, 3, 1, 4], [1, 4, 3, 5, 2, 6], [6, 5, 2, 4, 3, 1], [3, 1, 4, 6, 5, 2], [2, 6, 5, 1, 4, 3], [4, 3, 1, 2, 6, 5]],
-            [[6, 3, 1, 4, 2, 5], [2, 5, 4, 6, 3, 1], [1, 6, 3, 5, 4, 2], [4, 2, 5, 1, 6, 3], [3, 1, 6, 2, 5, 4], [5, 4, 2, 3, 1, 6]],
-            [[1, 5, 4, 3, 6, 2], [3, 2, 6, 1, 5, 4], [4, 1, 5, 6, 2, 3], [6, 3, 2, 4, 1, 5], [5, 4, 1, 2, 3, 6], [2, 6, 3, 5, 4, 1]],
-            [[2, 6, 5, 4, 1, 3], [4, 3, 1, 2, 6, 5], [5, 2, 6, 1, 3, 4], [1, 4, 3, 5, 2, 6], [6, 5, 2, 3, 4, 1], [3, 1, 4, 6, 5, 2]],
-            [[3, 1, 6, 5, 2, 4], [5, 4, 2, 3, 1, 6], [6, 3, 1, 2, 4, 5], [2, 5, 4, 6, 3, 1], [1, 6, 3, 4, 5, 2], [4, 2, 5, 1, 6, 3]],
-            [[4, 2, 1, 6, 3, 5], [6, 5, 3, 4, 2, 1], [1, 4, 2, 3, 5, 6], [3, 6, 5, 1, 4, 2], [2, 1, 4, 5, 6, 3], [5, 3, 6, 2, 1, 4]],
-            [[5, 3, 2, 1, 4, 6], [1, 6, 4, 5, 3, 2], [2, 5, 3, 4, 6, 1], [4, 1, 6, 2, 5, 3], [3, 2, 5, 6, 1, 4], [6, 4, 1, 3, 2, 5]],
-            [[6, 4, 3, 2, 5, 1], [2, 1, 5, 6, 4, 3], [3, 6, 4, 5, 1, 2], [5, 2, 1, 3, 6, 4], [4, 3, 6, 1, 2, 5], [1, 5, 2, 4, 3, 6]],
-            [[1, 6, 5, 4, 2, 3], [4, 3, 2, 1, 6, 5], [5, 1, 6, 3, 4, 2], [2, 4, 3, 6, 1, 5], [6, 5, 1, 2, 3, 4], [3, 2, 4, 5, 6, 1]]
-        ]
+        // Generate a valid solution using backtracking
+        _ = fillGrid(&solution)
         
-        solution = validSolutions.randomElement()!
+        // Validate the solution before using it
+        if !isValidSolution(solution) {
+            // Fallback to a known valid solution if generation fails
+            solution = [
+                [1, 2, 3, 4, 5, 6],
+                [4, 5, 6, 1, 2, 3],
+                [2, 3, 1, 5, 6, 4],
+                [5, 6, 4, 2, 3, 1],
+                [3, 1, 2, 6, 4, 5],
+                [6, 4, 5, 3, 1, 2]
+            ]
+        }
         
-        // Create puzzle by removing some numbers (keep 26-28 cells filled for 6x6)
+        // Create puzzle by removing some numbers (remove 8-12 cells for 6x6)
         var puzzle = solution.map { $0.map { Optional($0) } }
-        let cellsToRemove = Int.random(in: 8...10)
+        let cellsToRemove = Int.random(in: 8...12)
         var removed = 0
         
         while removed < cellsToRemove {
@@ -85,6 +75,111 @@ struct SudokuPuzzle {
         }
         
         return SudokuPuzzle(solution: solution, initialGrid: puzzle)
+    }
+    
+    // MARK: - Grid Generation with Backtracking
+    
+    private static func fillGrid(_ grid: inout [[Int]]) -> Bool {
+        // Find next empty cell
+        for row in 0..<6 {
+            for col in 0..<6 {
+                if grid[row][col] == 0 {
+                    // Try numbers 1-6 in random order
+                    var numbers = [1, 2, 3, 4, 5, 6]
+                    numbers.shuffle()
+                    
+                    for num in numbers {
+                        if isValidPlacement(grid, row: row, col: col, num: num) {
+                            grid[row][col] = num
+                            
+                            if fillGrid(&grid) {
+                                return true
+                            }
+                            
+                            // Backtrack
+                            grid[row][col] = 0
+                        }
+                    }
+                    return false
+                }
+            }
+        }
+        return true // Grid is complete
+    }
+    
+    private static func isValidPlacement(_ grid: [[Int]], row: Int, col: Int, num: Int) -> Bool {
+        // Check row
+        for c in 0..<6 {
+            if grid[row][c] == num {
+                return false
+            }
+        }
+        
+        // Check column
+        for r in 0..<6 {
+            if grid[r][col] == num {
+                return false
+            }
+        }
+        
+        // Check 2x3 box (6x6 Sudoku uses 2 rows x 3 columns boxes)
+        let boxRow = (row / 2) * 2
+        let boxCol = (col / 3) * 3
+        for r in boxRow..<boxRow + 2 {
+            for c in boxCol..<boxCol + 3 {
+                if grid[r][c] == num {
+                    return false
+                }
+            }
+        }
+        
+        return true
+    }
+    
+    // MARK: - Solution Validation
+    
+    private static func isValidSolution(_ grid: [[Int]]) -> Bool {
+        // Check all rows have unique 1-6
+        for row in 0..<6 {
+            var seen = Set<Int>()
+            for col in 0..<6 {
+                let num = grid[row][col]
+                if num < 1 || num > 6 || seen.contains(num) {
+                    return false
+                }
+                seen.insert(num)
+            }
+        }
+        
+        // Check all columns have unique 1-6
+        for col in 0..<6 {
+            var seen = Set<Int>()
+            for row in 0..<6 {
+                let num = grid[row][col]
+                if num < 1 || num > 6 || seen.contains(num) {
+                    return false
+                }
+                seen.insert(num)
+            }
+        }
+        
+        // Check all 2x3 boxes have unique 1-6
+        for boxRow in stride(from: 0, to: 6, by: 2) {
+            for boxCol in stride(from: 0, to: 6, by: 3) {
+                var seen = Set<Int>()
+                for r in boxRow..<boxRow + 2 {
+                    for c in boxCol..<boxCol + 3 {
+                        let num = grid[r][c]
+                        if num < 1 || num > 6 || seen.contains(num) {
+                            return false
+                        }
+                        seen.insert(num)
+                    }
+                }
+            }
+        }
+        
+        return true
     }
     
     func isValidMove(_ number: Int, at row: Int, col: Int, in grid: [[Int?]]) -> Bool {

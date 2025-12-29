@@ -466,8 +466,6 @@ class CoreDataManager: ObservableObject {
         let userProfile = getOrCreateUserProfile()
         let calendar = Calendar.current
         let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-        let startOfYesterday = calendar.startOfDay(for: yesterday)
-        let endOfYesterday = calendar.date(byAdding: .day, value: 1, to: startOfYesterday) ?? yesterday
         
         // NEW LOGIC: Check if user had blocked apps at end of yesterday
         let appGroupID = "group.com.se7en.app"
@@ -477,26 +475,63 @@ class CoreDataManager: ObservableObject {
             return
         }
         
+        // Force synchronize to get latest data
+        sharedDefaults.synchronize()
+        
         // Get yesterday's blocked apps status (stored at end of day)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let yesterdayKey = dateFormatter.string(from: yesterday)
         let dailyBlockedStatus = sharedDefaults.dictionary(forKey: "daily_blocked_status") as? [String: Bool] ?? [:]
         
-        let hadBlockedAppsYesterday = dailyBlockedStatus[yesterdayKey] ?? false
+        // Check if we already processed today's streak update (prevent double-counting)
+        let todayKey = dateFormatter.string(from: Date())
+        let lastStreakUpdateDate = sharedDefaults.string(forKey: "last_streak_update_date")
         
-        // For users with existing streaks, assume they had blocked apps if no data exists
-        let maintainedStreak: Bool
-        if dailyBlockedStatus.isEmpty && userProfile.currentStreak > 0 {
-            // Existing user with streak - don't break it
-            maintainedStreak = true
-        } else {
-            maintainedStreak = hadBlockedAppsYesterday
+        if lastStreakUpdateDate == todayKey {
+            // Already processed streak for today, skip
+            print("📊 Streak already processed for \(todayKey), skipping")
+            return
         }
+        
+        // Determine if streak should be maintained
+        let maintainedStreak: Bool
+        
+        // Check if yesterday's status exists in the dictionary
+        if let hadBlockedAppsYesterday = dailyBlockedStatus[yesterdayKey] {
+            // We have explicit data for yesterday
+            maintainedStreak = hadBlockedAppsYesterday
+            print("📊 Streak check: Found yesterday's status (\(yesterdayKey)): \(hadBlockedAppsYesterday)")
+        } else {
+            // No data for yesterday - check current blocked apps state as fallback
+            // This handles the case where user didn't open the app yesterday but has apps blocked
+            let currentBlockedCount = sharedDefaults.integer(forKey: "blocked_apps_count")
+            
+            if currentBlockedCount > 0 {
+                // User currently has blocked apps - assume they had them yesterday too
+                // (This is a graceful fallback for when status wasn't recorded)
+                maintainedStreak = true
+                print("📊 Streak check: No data for \(yesterdayKey), but currently has \(currentBlockedCount) blocked apps - maintaining streak")
+                
+                // Also backfill yesterday's status so we have the data
+                var updatedStatus = dailyBlockedStatus
+                updatedStatus[yesterdayKey] = true
+                sharedDefaults.set(updatedStatus, forKey: "daily_blocked_status")
+            } else if userProfile.currentStreak > 0 && dailyBlockedStatus.isEmpty {
+                // Existing user with streak but no history data at all - don't break it
+                maintainedStreak = true
+                print("📊 Streak check: No history data, preserving existing streak of \(userProfile.currentStreak)")
+            } else {
+                // No blocked apps currently and no data for yesterday
+                maintainedStreak = false
+                print("📊 Streak check: No data for \(yesterdayKey) and no blocked apps currently")
+            }
+        }
+        
+        let previousStreak = Int(userProfile.currentStreak)
         
         if maintainedStreak {
             // User had blocked apps yesterday - increment streak
-            let previousStreak = Int(userProfile.currentStreak)
             userProfile.currentStreak += 1
             if userProfile.currentStreak > userProfile.longestStreak {
                 userProfile.longestStreak = userProfile.currentStreak
@@ -510,8 +545,24 @@ class CoreDataManager: ObservableObject {
             userProfile.currentStreak = 0
         }
         
+        // Mark that we've processed today's streak update
+        sharedDefaults.set(todayKey, forKey: "last_streak_update_date")
+        sharedDefaults.synchronize()
+        
         userProfile.updatedAt = Date()
         save()
+        
+        // Post notification if streak changed
+        let newStreak = Int(userProfile.currentStreak)
+        if newStreak != previousStreak {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: Notification.Name("streakUpdated"),
+                    object: nil,
+                    userInfo: ["newStreak": newStreak, "previousStreak": previousStreak]
+                )
+            }
+        }
     }
     
     /// Mark the blocked apps status for today (called when blocked apps change)
@@ -540,8 +591,65 @@ class CoreDataManager: ObservableObject {
         }
         
         sharedDefaults.set(dailyBlockedStatus, forKey: "daily_blocked_status")
+        sharedDefaults.synchronize()
         
         print("📊 Marked blocked apps status for \(todayKey): \(hasBlockedApps)")
+    }
+    
+    /// Force initialize streak for users who have blocked apps but streak is 0
+    /// This handles the case where users have been using the app but streak wasn't tracked
+    func initializeStreakIfNeeded() {
+        let appGroupID = "group.com.se7en.app"
+        guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
+        
+        sharedDefaults.synchronize()
+        
+        let userProfile = getOrCreateUserProfile()
+        
+        // Only initialize if streak is 0 and user has blocked apps
+        guard userProfile.currentStreak == 0 else { return }
+        
+        let blockedCount = sharedDefaults.integer(forKey: "blocked_apps_count")
+        guard blockedCount > 0 else { return }
+        
+        // Check daily blocked status history
+        let dailyBlockedStatus = sharedDefaults.dictionary(forKey: "daily_blocked_status") as? [String: Bool] ?? [:]
+        
+        // Count consecutive days with blocked apps (including today)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let calendar = Calendar.current
+        
+        var consecutiveDays = 0
+        var checkDate = Date()
+        
+        // Check up to 30 days back
+        for _ in 0..<30 {
+            let dateKey = dateFormatter.string(from: checkDate)
+            
+            // Check if this day had blocked apps
+            if let hadBlocked = dailyBlockedStatus[dateKey], hadBlocked {
+                consecutiveDays += 1
+            } else if dateKey == dateFormatter.string(from: Date()) && blockedCount > 0 {
+                // Today - use current blocked count
+                consecutiveDays += 1
+            } else {
+                // No data or no blocked apps - stop counting
+                break
+            }
+            
+            // Move to previous day
+            checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate) ?? checkDate
+        }
+        
+        if consecutiveDays > 0 {
+            userProfile.currentStreak = Int32(consecutiveDays)
+            if userProfile.currentStreak > userProfile.longestStreak {
+                userProfile.longestStreak = userProfile.currentStreak
+            }
+            save()
+            print("🔥 Initialized streak to \(consecutiveDays) days based on blocked apps history")
+        }
     }
     
     /// Mark that the app was opened (for tracking app usage)

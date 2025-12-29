@@ -101,7 +101,38 @@ class BlockedAppsManager: ObservableObject {
         // Save blocked apps count for report extension
         defaults.set(blockedCount, forKey: "blocked_apps_count")
         
+        // ✅ CRITICAL: Also update daily blocked status for streak tracking
+        // This ensures the status is saved even if user doesn't trigger updateBlockedApps
+        let hasBlockedApps = blockedCount > 0
+        updateDailyBlockedStatus(hasBlockedApps: hasBlockedApps, defaults: defaults)
+        
         defaults.synchronize()
+    }
+    
+    /// Update daily blocked status for streak tracking
+    private func updateDailyBlockedStatus(hasBlockedApps: Bool, defaults: UserDefaults) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayKey = dateFormatter.string(from: Date())
+        
+        // Load existing daily blocked status
+        var dailyBlockedStatus = defaults.dictionary(forKey: "daily_blocked_status") as? [String: Bool] ?? [:]
+        
+        // Update today's status
+        dailyBlockedStatus[todayKey] = hasBlockedApps
+        
+        // Keep only last 14 days
+        let calendar = Calendar.current
+        let twoWeeksAgo = calendar.date(byAdding: .day, value: -14, to: Date()) ?? Date()
+        let cutoffKey = dateFormatter.string(from: twoWeeksAgo)
+        
+        dailyBlockedStatus = dailyBlockedStatus.filter { key, _ in
+            key >= cutoffKey
+        }
+        
+        defaults.set(dailyBlockedStatus, forKey: "daily_blocked_status")
+        
+        print("📊 BlockedAppsManager: Updated daily blocked status for \(todayKey): \(hasBlockedApps)")
     }
     
     // MARK: - Blocking Logic

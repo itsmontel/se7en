@@ -68,17 +68,17 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     // MARK: - Create Tap Notification Configuration
     
     private func createTapNotificationConfiguration() -> ShieldConfiguration {
-        // White background for the "Tap Notification" screen
-        let backgroundColor = UIColor.white
+        // Yellow background matching app theme: #FFFAE6 (RGB: 255, 250, 230)
+        let backgroundColor = UIColor(red: 1.0, green: 0.98, blue: 0.9, alpha: 1.0)
         
-        // Load SE7EN logo
-        let se7enLogo = UIImage(named: "se7en1024")
+        // Load SE7EN logo - try multiple approaches
+        let se7enLogo = loadSE7ENLogo()
         
         // Get app name being unlocked
         let appName = getAppNameBeingUnlocked()
         
         return ShieldConfiguration(
-            backgroundBlurStyle: nil,
+            backgroundBlurStyle: .systemUltraThinMaterial,
             backgroundColor: backgroundColor,
             icon: se7enLogo,
             title: ShieldConfiguration.Label(
@@ -87,11 +87,11 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             ),
             subtitle: ShieldConfiguration.Label(
                 text: "A notification has been sent to unlock \(appName)",
-                color: UIColor(red: 0.5, green: 0.5, blue: 0.55, alpha: 1.0)
+                color: UIColor(red: 0.4, green: 0.4, blue: 0.45, alpha: 1.0)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: "Didn't get notification? Tap here",
-                color: UIColor(red: 0.4, green: 0.4, blue: 0.45, alpha: 1.0)
+                text: "Didn't get notification? Enable notifications in Settings",
+                color: UIColor(red: 0.3, green: 0.3, blue: 0.35, alpha: 1.0)
             ),
             primaryButtonBackgroundColor: UIColor.clear,
             secondaryButtonLabel: ShieldConfiguration.Label(
@@ -99,6 +99,26 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor.secondaryLabel
             )
         )
+    }
+    
+    // MARK: - Load SE7EN Logo
+    
+    private func loadSE7ENLogo() -> UIImage? {
+        // Load se7en1024 from extension's asset catalog and apply rounded corners
+        guard let originalImage = UIImage(named: "se7en1024") else { return nil }
+        
+        // Apply rounded corners like an app icon (22.37% corner radius ratio for iOS icons)
+        let size = originalImage.size
+        let cornerRadius = min(size.width, size.height) * 0.2237
+        
+        UIGraphicsBeginImageContextWithOptions(size, false, originalImage.scale)
+        let rect = CGRect(origin: .zero, size: size)
+        UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius).addClip()
+        originalImage.draw(in: rect)
+        let roundedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return roundedImage
     }
     
     // MARK: - Create Normal Shield Configuration

@@ -521,6 +521,8 @@ struct SettingToggle: View {
 struct PetSelectionSheet: View {
     @EnvironmentObject var appState: AppState
     @Binding var isPresented: Bool
+    @State private var showPetChangeAlert = false
+    @State private var selectedPetType: PetType?
     
     var body: some View {
         NavigationView {
@@ -538,13 +540,15 @@ struct PetSelectionSheet: View {
                         VStack(spacing: 16) {
                             ForEach(PetType.allCases, id: \.self) { petType in
                                 Button(action: {
-                                    if let currentPet = appState.userPet {
-                                        appState.setUserPet(Pet(type: petType, name: currentPet.name, healthState: currentPet.healthState))
+                                    // Only show alert if changing to a different pet
+                                    if appState.userPet?.type != petType {
+                                        selectedPetType = petType
+                                        showPetChangeAlert = true
                                     } else {
-                                        appState.setUserPet(Pet(type: petType, name: petType.rawValue, healthState: .fullHealth))
+                                        // Same pet selected, just close
+                                        isPresented = false
                                     }
                                     HapticFeedback.medium.trigger()
-                                    isPresented = false
                                 }) {
                                     HStack(spacing: 16) {
                                         Image("\(petType.folderName.lowercased())fullhealth")
@@ -593,6 +597,21 @@ struct PetSelectionSheet: View {
                             .foregroundColor(.gray)
                     }
                 }
+            }
+            .alert("Pet Changed! 🐾", isPresented: $showPetChangeAlert) {
+                Button("Got it", role: .cancel) {
+                    // Apply the pet change after user acknowledges
+                    if let petType = selectedPetType {
+                        if let currentPet = appState.userPet {
+                            appState.setUserPet(Pet(type: petType, name: currentPet.name, healthState: currentPet.healthState))
+                        } else {
+                            appState.setUserPet(Pet(type: petType, name: petType.rawValue, healthState: .fullHealth))
+                        }
+                    }
+                    isPresented = false
+                }
+            } message: {
+                Text("Your pet has been changed! The new pet will appear in the dashboard report view within about a minute, or you can close and reopen the app to see it immediately.\n\nThe pet change is saved and will update automatically.")
             }
         }
     }

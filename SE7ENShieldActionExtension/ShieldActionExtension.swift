@@ -24,8 +24,8 @@ class ShieldActionExtension: ShieldActionDelegate {
             
             // Check if we're already showing the "tap notification" shield
             if defaults.bool(forKey: "showTapNotificationShield") {
-                // User tapped while on tap notification screen - this shouldn't happen
-                // but if it does, just close the shield
+                // User tapped "Didn't get notification? Enable notifications in Settings"
+                // Just close the shield - user will manually go to Settings if needed
                 defaults.set(false, forKey: "showTapNotificationShield")
                 defaults.synchronize()
                 completionHandler(.close)
@@ -78,6 +78,7 @@ class ShieldActionExtension: ShieldActionDelegate {
         switch action {
         case .primaryButtonPressed:
             if defaults.bool(forKey: "showTapNotificationShield") {
+                // User tapped "Didn't get notification?" - just close shield
                 defaults.set(false, forKey: "showTapNotificationShield")
                 defaults.synchronize()
                 completionHandler(.close)
@@ -123,6 +124,7 @@ class ShieldActionExtension: ShieldActionDelegate {
         switch action {
         case .primaryButtonPressed:
             if defaults.bool(forKey: "showTapNotificationShield") {
+                // User tapped "Didn't get notification?" - just close shield
                 defaults.set(false, forKey: "showTapNotificationShield")
                 defaults.synchronize()
                 completionHandler(.close)

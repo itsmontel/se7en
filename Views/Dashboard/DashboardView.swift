@@ -927,14 +927,20 @@ struct DashboardView: View {
             devices: .init([.iPhone, .iPad])
         )
         
-        DeviceActivityReport(.todayOverview, filter: filter)
-            .frame(maxWidth: .infinity, alignment: .top)
-            .frame(minHeight: 1200) // Adjusted for smaller pet size
-            .background(Color.appBackground)
-            .cornerRadius(12)
-            .padding(.horizontal, 24) // Narrower width for better scrolling and UI
-            .id(reportRefreshTrigger) // Force refresh when trigger changes
-            .allowsHitTesting(false) // Allow scroll gestures to pass through to parent ScrollView
+        VStack(spacing: 0) {
+            DeviceActivityReport(.todayOverview, filter: filter)
+                .frame(maxWidth: .infinity, alignment: .top)
+            
+            // Flexible spacer that expands to fill remaining space
+            // This ensures content starts from top and grows downward
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: 1200) // Minimum height for scroll area
+        .background(Color.appBackground)
+        .cornerRadius(12)
+        .padding(.horizontal, 24) // Narrower width for better scrolling and UI
+        .id(reportRefreshTrigger) // Force refresh when trigger changes
+        .allowsHitTesting(false) // Allow scroll gestures to pass through to parent ScrollView
             .onAppear {
                 print("📊 DashboardView: DeviceActivityReport view appeared - extension should be invoked")
                 print("📊 DashboardView: Filter date range: \(startOfDay) to \(endOfDay)")

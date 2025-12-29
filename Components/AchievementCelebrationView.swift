@@ -367,3 +367,98 @@ struct AchievementCelebrationView: View {
     }
 }
 
+// MARK: - Confetti Particle
+struct ConfettiParticle: Identifiable {
+    let id = UUID()
+    var x: Double
+    var y: Double
+    let color: Color
+    let delay: Double
+    var rotation: Double = Double.random(in: 0...360)
+    var rotationSpeed: Double = Double.random(in: 3...10)
+    var xVelocity: Double = Double.random(in: -0.4...0.4)
+}
+
+// MARK: - Sparkle
+struct Sparkle: Identifiable {
+    let id = UUID()
+    let x: Double
+    let y: Double
+    let delay: Double
+}
+
+// MARK: - Confetti View
+struct ConfettiView: View {
+    let particles: [ConfettiParticle]
+    @State private var animatedParticles: [ConfettiParticle] = []
+    @State private var timer: Timer?
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ForEach(animatedParticles) { particle in
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(particle.color)
+                    .frame(width: 10, height: 10)
+                    .position(
+                        x: geometry.size.width * particle.x,
+                        y: geometry.size.height * particle.y
+                    )
+                    .rotationEffect(.degrees(particle.rotation))
+            }
+        }
+        .onAppear {
+            animatedParticles = particles
+            animateConfetti()
+        }
+        .onDisappear {
+            timer?.invalidate()
+        }
+    }
+    
+    private func animateConfetti() {
+        // Animate particles falling with physics
+        withAnimation(.linear(duration: 4.0).delay(0)) {
+            for index in animatedParticles.indices {
+                animatedParticles[index].y = 1.2
+                animatedParticles[index].x += animatedParticles[index].xVelocity
+            }
+        }
+        
+        // Continuous rotation
+        timer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { _ in
+            for index in animatedParticles.indices {
+                animatedParticles[index].rotation += animatedParticles[index].rotationSpeed
+            }
+        }
+    }
+}
+
+// MARK: - Sparkle View
+struct SparkleView: View {
+    let sparkle: Sparkle
+    @State private var opacity: Double = 0
+    @State private var scale: CGFloat = 0
+    
+    var body: some View {
+        GeometryReader { geometry in
+            Image(systemName: "sparkle")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.yellow)
+                .opacity(opacity)
+                .scaleEffect(scale)
+                .position(
+                    x: geometry.size.width * sparkle.x,
+                    y: geometry.size.height * sparkle.y
+                )
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + sparkle.delay) {
+                withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) {
+                    opacity = 1.0
+                    scale = 1.0
+                }
+            }
+        }
+    }
+}
+

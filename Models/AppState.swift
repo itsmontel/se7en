@@ -12,6 +12,7 @@ extension Notification.Name {
     static let appBlocked = Notification.Name("appBlocked")
     static let appUnblocked = Notification.Name("appUnblocked")
     static let petChanged = Notification.Name("petChanged")
+    static let streakUpdated = Notification.Name("streakUpdated")
 }
 
 // MARK: - Performance Optimization Data Structures
@@ -138,6 +139,9 @@ class AppState: ObservableObject {
         preloadScreenTimeFromSharedContainer()
         loadUserPreferences()
         checkOnboardingStatus()
+        
+        // Initialize streak if user has blocked apps but streak is 0
+        coreDataManager.initializeStreakIfNeeded()
     }
     
     // MARK: - Performance Optimization Variables
@@ -176,6 +180,38 @@ class AppState: ObservableObject {
                 self?.performLightweightUpdate()
             }
             .store(in: &cancellables)
+        
+        // Listen for streak updates from CoreDataManager
+        NotificationCenter.default.publisher(for: .streakUpdated)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                self?.handleStreakUpdate(notification)
+            }
+            .store(in: &cancellables)
+    }
+    
+    /// Handle streak update notification from CoreDataManager
+    private func handleStreakUpdate(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let newStreak = userInfo["newStreak"] as? Int else {
+            return
+        }
+        
+        let oldStreak = currentStreak
+        currentStreak = newStreak
+        
+        // Update longest streak if needed
+        if newStreak > longestStreak {
+            longestStreak = newStreak
+        }
+        
+        // Show celebration for milestone streaks
+        if newStreak > oldStreak && StreakCelebrationView.isMilestoneStreak(newStreak) {
+            newStreakValue = newStreak
+            shouldShowStreakCelebration = true
+            notificationService.sendStreakMilestoneNotification(streak: newStreak)
+            print("🎉 Milestone streak celebration triggered for \(newStreak) days!")
+        }
     }
     
     // 🚀 OPTIMIZED: Throttled refresh that prevents excessive calls
@@ -867,11 +903,14 @@ class AppState: ObservableObject {
         previousStreak = currentStreak
         currentStreak = Int(userProfile.currentStreak)
         
-        // Check if streak increased (for celebration)
+        // Check if streak increased AND it's a milestone (for celebration)
         if currentStreak > previousStreak {
-            newStreakValue = currentStreak
-            shouldShowStreakCelebration = true
-            notificationService.sendStreakMilestoneNotification(streak: currentStreak)
+            // Only show celebration popup for milestone streaks: 7, 14, 30, 50, 100, then every 100
+            if StreakCelebrationView.isMilestoneStreak(currentStreak) {
+                newStreakValue = currentStreak
+                shouldShowStreakCelebration = true
+                notificationService.sendStreakMilestoneNotification(streak: currentStreak)
+            }
         }
         
         loadUserProfile()
@@ -1395,5 +1434,15 @@ class AppState: ObservableObject {
     func setUserName(_ name: String) {
         userName = name
         saveUserPreferences()
+    }
+    
+    // MARK: - Debug/Testing Methods
+    
+    /// Manually trigger streak celebration for testing/preview
+    /// This method is available in all builds for preview purposes
+    func triggerStreakCelebration(forStreak streak: Int) {
+        newStreakValue = streak
+        shouldShowStreakCelebration = true
+        print("🎉 Manually triggered streak celebration for \(streak) days")
     }
 }
