@@ -229,8 +229,11 @@ struct TodayOverviewView: View {
                     .foregroundColor(.secondary)
                     .padding(.top, 8)
             }
+            
+            // Push all content to the top when there's less content
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.vertical, 16)
         .background(appBackground)
         .cornerRadius(16)

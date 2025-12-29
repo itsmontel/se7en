@@ -927,15 +927,15 @@ struct DashboardView: View {
             devices: .init([.iPhone, .iPad])
         )
         
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             DeviceActivityReport(.todayOverview, filter: filter)
-                .frame(maxWidth: .infinity, alignment: .top)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             
             // Flexible spacer that expands to fill remaining space
             // This ensures content starts from top and grows downward
             Spacer(minLength: 0)
         }
-        .frame(minHeight: 1200) // Minimum height for scroll area
+        .frame(maxWidth: .infinity, minHeight: 1200, alignment: .top) // Minimum height for scroll area, aligned to top
         .background(Color.appBackground)
         .cornerRadius(12)
         .padding(.horizontal, 24) // Narrower width for better scrolling and UI
