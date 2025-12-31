@@ -22,21 +22,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             // Get app name
             let appName = getAppName(for: tokenHash, defaults: defaults)
             
-            // Check if we're already showing the "tap notification" shield
-            if defaults.bool(forKey: "showTapNotificationShield") {
-                // User tapped "Didn't get notification? Enable notifications in Settings"
-                // Just close the shield - user will manually go to Settings if needed
-                defaults.set(false, forKey: "showTapNotificationShield")
-                defaults.synchronize()
-                completionHandler(.close)
-                return
-            }
-            
-            // ✅ Step 1: Set flag to show "Tap Notification" shield UI
-            defaults.set(true, forKey: "showTapNotificationShield")
-            defaults.set(appName, forKey: "tapNotificationAppName")
-            
-            // ✅ Step 2: Store puzzle data for when user opens SE7EN
+            // Store puzzle data for when user opens SE7EN
             defaults.set(true, forKey: "puzzleMode")
             defaults.set(tokenHash, forKey: "puzzleTokenHash")
             defaults.set(true, forKey: "needsPuzzle_\(tokenHash)")
@@ -47,17 +33,15 @@ class ShieldActionExtension: ShieldActionDelegate {
             
             defaults.synchronize()
             
-            // ✅ Step 3: Send notification immediately
+            // Send notification immediately
             sendPuzzleNotification(appName: appName)
             
-            // ✅ Step 4: Return .defer to refresh shield (will now show tap notification UI)
-            completionHandler(.defer)
+            // Close the shield - user will tap the notification to open SE7EN
+            // Note: .defer doesn't refresh ShieldConfiguration, so we close instead
+            completionHandler(.close)
             
         case .secondaryButtonPressed:
-            // "Stay Focused" or dismiss tap notification screen
-            // Clear the tap notification flag if set
-            defaults.set(false, forKey: "showTapNotificationShield")
-            defaults.synchronize()
+            // "Stay Focused" - just close the shield
             completionHandler(.close)
             
         @unknown default:
@@ -77,18 +61,8 @@ class ShieldActionExtension: ShieldActionDelegate {
         
         switch action {
         case .primaryButtonPressed:
-            if defaults.bool(forKey: "showTapNotificationShield") {
-                // User tapped "Didn't get notification?" - just close shield
-                defaults.set(false, forKey: "showTapNotificationShield")
-                defaults.synchronize()
-                completionHandler(.close)
-                return
-            }
-            
             let appName = "Website"
             
-            defaults.set(true, forKey: "showTapNotificationShield")
-            defaults.set(appName, forKey: "tapNotificationAppName")
             defaults.set(true, forKey: "puzzleMode")
             defaults.set(tokenHash, forKey: "puzzleTokenHash")
             defaults.set(true, forKey: "needsPuzzle_\(tokenHash)")
@@ -99,11 +73,10 @@ class ShieldActionExtension: ShieldActionDelegate {
             defaults.synchronize()
             
             sendPuzzleNotification(appName: appName)
-            completionHandler(.defer)
+            completionHandler(.close)
             
         case .secondaryButtonPressed:
-            defaults.set(false, forKey: "showTapNotificationShield")
-            defaults.synchronize()
+            // "Stay Focused" - just close the shield
             completionHandler(.close)
             
         @unknown default:
@@ -123,18 +96,8 @@ class ShieldActionExtension: ShieldActionDelegate {
         
         switch action {
         case .primaryButtonPressed:
-            if defaults.bool(forKey: "showTapNotificationShield") {
-                // User tapped "Didn't get notification?" - just close shield
-                defaults.set(false, forKey: "showTapNotificationShield")
-                defaults.synchronize()
-                completionHandler(.close)
-                return
-            }
-            
             let appName = "Category"
             
-            defaults.set(true, forKey: "showTapNotificationShield")
-            defaults.set(appName, forKey: "tapNotificationAppName")
             defaults.set(true, forKey: "puzzleMode")
             defaults.set(tokenHash, forKey: "puzzleTokenHash")
             defaults.set(true, forKey: "needsPuzzle_\(tokenHash)")
@@ -145,11 +108,10 @@ class ShieldActionExtension: ShieldActionDelegate {
             defaults.synchronize()
             
             sendPuzzleNotification(appName: appName)
-            completionHandler(.defer)
+            completionHandler(.close)
             
         case .secondaryButtonPressed:
-            defaults.set(false, forKey: "showTapNotificationShield")
-            defaults.synchronize()
+            // "Stay Focused" - just close the shield
             completionHandler(.close)
             
         @unknown default:

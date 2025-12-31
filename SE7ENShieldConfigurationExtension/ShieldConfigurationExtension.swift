@@ -2,8 +2,6 @@ import ManagedSettings
 import ManagedSettingsUI
 import UIKit
 import FamilyControls
-import AVFoundation
-import AVKit
 
 class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     
@@ -16,12 +14,6 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     // MARK: - Application Shield Configuration
     
     override func configuration(shielding application: Application) -> ShieldConfiguration {
-        // Check if we should show the "Tap Notification" screen
-        if shouldShowTapNotificationScreen() {
-            return createTapNotificationConfiguration()
-        }
-        
-        // Normal shield configuration
         let tokenHash = String(application.hashValue)
         let appName = getAppNameFromStoredLimits(tokenHash: tokenHash) ?? 
                      application.localizedDisplayName ?? 
@@ -31,97 +23,21 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     }
     
     override func configuration(shielding application: Application, in category: ActivityCategory) -> ShieldConfiguration {
-        if shouldShowTapNotificationScreen() {
-            return createTapNotificationConfiguration()
-        }
-        
         let appName = application.localizedDisplayName ?? category.localizedDisplayName ?? "This app"
         return createShieldConfiguration(appName: appName)
     }
     
     override func configuration(shielding webDomain: WebDomain) -> ShieldConfiguration {
-        if shouldShowTapNotificationScreen() {
-            return createTapNotificationConfiguration()
-        }
-        
         let domainName = webDomain.domain ?? "This website"
         return createShieldConfiguration(appName: domainName)
     }
     
     override func configuration(shielding webDomain: WebDomain, in category: ActivityCategory) -> ShieldConfiguration {
-        if shouldShowTapNotificationScreen() {
-            return createTapNotificationConfiguration()
-        }
-        
         let domainName = webDomain.domain ?? category.localizedDisplayName ?? "This website"
         return createShieldConfiguration(appName: domainName)
     }
     
-    // MARK: - Check for Tap Notification Screen
-    
-    private func shouldShowTapNotificationScreen() -> Bool {
-        guard let defaults = UserDefaults(suiteName: appGroupID) else { return false }
-        defaults.synchronize()
-        return defaults.bool(forKey: "showTapNotificationShield")
-    }
-    
-    // MARK: - Create Tap Notification Configuration
-    
-    private func createTapNotificationConfiguration() -> ShieldConfiguration {
-        // Yellow background matching app theme: #FFFAE6 (RGB: 255, 250, 230)
-        let backgroundColor = UIColor(red: 1.0, green: 0.98, blue: 0.9, alpha: 1.0)
-        
-        // Load SE7EN logo - try multiple approaches
-        let se7enLogo = loadSE7ENLogo()
-        
-        // Get app name being unlocked
-        let appName = getAppNameBeingUnlocked()
-        
-        return ShieldConfiguration(
-            backgroundBlurStyle: .systemUltraThinMaterial,
-            backgroundColor: backgroundColor,
-            icon: se7enLogo,
-            title: ShieldConfiguration.Label(
-                text: "⬆️ Tap the notification",
-                color: UIColor(red: 0.15, green: 0.15, blue: 0.2, alpha: 1.0)
-            ),
-            subtitle: ShieldConfiguration.Label(
-                text: "A notification has been sent to unlock \(appName)",
-                color: UIColor(red: 0.4, green: 0.4, blue: 0.45, alpha: 1.0)
-            ),
-            primaryButtonLabel: ShieldConfiguration.Label(
-                text: "Didn't get notification? Enable notifications in Settings",
-                color: UIColor(red: 0.3, green: 0.3, blue: 0.35, alpha: 1.0)
-            ),
-            primaryButtonBackgroundColor: UIColor.clear,
-            secondaryButtonLabel: ShieldConfiguration.Label(
-                text: "Cancel",
-                color: UIColor.secondaryLabel
-            )
-        )
-    }
-    
-    // MARK: - Load SE7EN Logo
-    
-    private func loadSE7ENLogo() -> UIImage? {
-        // Load se7en1024 from extension's asset catalog and apply rounded corners
-        guard let originalImage = UIImage(named: "se7en1024") else { return nil }
-        
-        // Apply rounded corners like an app icon (22.37% corner radius ratio for iOS icons)
-        let size = originalImage.size
-        let cornerRadius = min(size.width, size.height) * 0.2237
-        
-        UIGraphicsBeginImageContextWithOptions(size, false, originalImage.scale)
-        let rect = CGRect(origin: .zero, size: size)
-        UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius).addClip()
-        originalImage.draw(in: rect)
-        let roundedImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        
-        return roundedImage
-    }
-    
-    // MARK: - Create Normal Shield Configuration
+    // MARK: - Create Shield Configuration
     
     private func createShieldConfiguration(appName: String) -> ShieldConfiguration {
         // Get user's first name from shared UserDefaults
@@ -169,13 +85,6 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor.secondaryLabel
             )
         )
-    }
-    
-    // MARK: - Get App Name Being Unlocked
-    
-    private func getAppNameBeingUnlocked() -> String {
-        guard let defaults = UserDefaults(suiteName: appGroupID) else { return "App" }
-        return defaults.string(forKey: "tapNotificationAppName") ?? "App"
     }
     
     // MARK: - Get Unblock Duration
