@@ -2,18 +2,18 @@
 
 ## Overview
 
-Your SE7EN app now uses Apple's **FamilyControls framework** to properly connect to the user's real installed iPhone apps. This is the official, App Store-approved method for monitoring and limiting app usage.
+Your VirtuPet app now uses Apple's **FamilyControls framework** to properly connect to the user's real installed iPhone apps. This is the official, App Store-approved method for monitoring and limiting app usage.
 
 ## How It Works
 
 ### 1. **FamilyActivityPicker**
 - When users tap "Add App" on the homepage, they see a native iOS picker
 - This picker shows ALL apps actually installed on their iPhone
-- Users can select which apps they want SE7EN to monitor
+- Users can select which apps they want VirtuPet to monitor
 - This is the same system used by Apple's Screen Time
 
 ### 2. **App Categorization**
-After selecting apps with FamilyActivityPicker, SE7EN automatically categorizes them:
+After selecting apps with FamilyActivityPicker, VirtuPet automatically categorizes them:
 
 - **Social**: Instagram, Facebook, TikTok, Twitter, Snapchat, etc.
 - **Entertainment**: YouTube, Netflix, Spotify, Twitch, etc.
@@ -95,7 +95,7 @@ After selecting apps with FamilyActivityPicker, SE7EN automatically categorizes 
 ### ✅ Privacy-First
 - No sensitive data leaves the device
 - Apple handles all app discovery
-- SE7EN only sees what users explicitly share
+- VirtuPet only sees what users explicitly share
 
 ### ✅ Works with Screen Time API
 - Same tokens used for monitoring usage
@@ -107,12 +107,12 @@ After selecting apps with FamilyActivityPicker, SE7EN automatically categorizes 
 1. User taps "Add App" on homepage
 2. FamilyActivityPicker appears (native iOS sheet)
 3. User selects apps they want to monitor
-4. SE7EN categorizes the selected apps
+4. VirtuPet categorizes the selected apps
 5. User picks a category to browse
 6. User selects a specific app
 7. User sets a daily time limit
 8. App is added to monitoring list
-9. SE7EN starts tracking usage and health score updates
+9. VirtuPet starts tracking usage and health score updates
 
 ## Future Enhancements
 
@@ -152,7 +152,7 @@ When users exceed limits:
 Make sure you have:
 ```xml
 <key>NSFamilyControlsUsageDescription</key>
-<string>SE7EN needs Screen Time access to monitor your app usage and help you maintain healthy digital habits.</string>
+<string>VirtuPet needs Screen Time access to monitor your app usage and help you maintain healthy digital habits.</string>
 ```
 
 ### Entitlements

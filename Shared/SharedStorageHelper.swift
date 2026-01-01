@@ -12,7 +12,7 @@ import ManagedSettings
 final class SharedStorageHelper {
     static let shared = SharedStorageHelper()
     
-    private let appGroupID = "group.com.se7en.app"
+    private let appGroupID = "group.com.virtupet.screentime"
     
     private var sharedDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupID)
@@ -107,6 +107,8 @@ struct StoredAppLimitData: Codable {
     let createdAt: Date
     let selectionData: Data?
 }
+
+
 
 
 

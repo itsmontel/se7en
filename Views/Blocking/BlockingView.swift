@@ -10,7 +10,7 @@ import UserNotifications
 class BlockedAppsManager: ObservableObject {
     static let shared = BlockedAppsManager()
     
-    private let appGroupID = "group.com.se7en.app"
+    private let appGroupID = "group.com.virtupet.screentime"
     private let store = ManagedSettingsStore()
     
     @Published var blockedSelection: FamilyActivitySelection = FamilyActivitySelection()
@@ -272,10 +272,12 @@ struct BlockingView: View {
                         // Status Card (Hero section)
                         statusCard
                             .padding(.top, 8)
+                            .tutorialHighlight("tutorial_focus_mode")
                         
                         // Quick Actions
                         if blockedAppsManager.blockedCount > 0 && !blockedAppsManager.isCurrentlyUnblocked {
                             puzzleButton
+                                .tutorialHighlight("tutorial_puzzle_button")
                         }
                         
                         // Blocked Apps Section

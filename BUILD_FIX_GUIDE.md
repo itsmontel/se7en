@@ -12,13 +12,13 @@ In Xcode: Product → Clean Build Folder (Shift + Cmd + K)
 ### 2. **Delete Derived Data**
 ```bash
 # In Terminal:
-rm -rf ~/Library/Developer/Xcode/DerivedData/Seven-*
+rm -rf ~/Library/Developer/Xcode/DerivedData/VirtuPet-*
 ```
 
 Or in Xcode:
 - Xcode → Settings → Locations
 - Click arrow next to Derived Data path
-- Delete the `Seven-*` folder
+- Delete the `VirtuPet-*` folder
 
 ### 3. **Restart Xcode**
 - Quit Xcode completely
@@ -48,8 +48,8 @@ Or in Xcode:
 
 ### 8. **Build from Command Line**
 ```bash
-cd "/Users/anthonymaxson/Downloads/SE7EN App"
-xcodebuild -project Seven.xcodeproj -scheme Seven clean build
+cd "/Users/anthonymaxson/Downloads/VirtuPet App"
+xcodebuild -project VirtuPet.xcodeproj -scheme VirtuPet clean build
 ```
 
 This will show exactly where it's hanging.

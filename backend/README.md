@@ -1,6 +1,6 @@
-# SE7EN Waitlist Backend API
+# VirtuPet Waitlist Backend API
 
-Backend API for managing the SE7EN app waitlist, designed to run on Railway.
+Backend API for managing the VirtuPet app waitlist, designed to run on Railway.
 
 ## 🚀 Quick Start
 
@@ -46,7 +46,7 @@ Add an email to the waitlist.
 ```json
 {
   "success": true,
-  "message": "Thanks! We'll notify you when SE7EN is available.",
+  "message": "Thanks! We'll notify you when VirtuPet is available.",
   "data": {
     "id": 1,
     "email": "user@example.com",
@@ -128,7 +128,7 @@ Railway will automatically:
 
 1. In Railway, click on your service
 2. Go to "Settings" → "Networking"
-3. Generate a public domain (e.g., `se7en-api.up.railway.app`)
+3. Generate a public domain (e.g., `virtupet-api.up.railway.app`)
 4. Copy this URL - you'll need it for your frontend
 
 ## 🔗 Connecting Frontend

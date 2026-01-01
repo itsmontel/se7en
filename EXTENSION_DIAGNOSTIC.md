@@ -8,8 +8,8 @@ I've added detailed logging to track EXACTLY what's happening in the report exte
 
 #### **1. Extension Initialization:**
 ```
-🎬 SE7ENDeviceActivityReportExtension: INITIALIZED
-🏗️ SE7ENDeviceActivityReportExtension: Building scenes...
+🎬 VirtuPetDeviceActivityReportExtension: INITIALIZED
+🏗️ VirtuPetDeviceActivityReportExtension: Building scenes...
 ```
 - If you DON'T see these → Extension not loading at all
 
@@ -59,13 +59,13 @@ I've added detailed logging to track EXACTLY what's happening in the report exte
 3. This ensures you see extension logs
 
 ### **Step 3: Use Apps**
-1. Close SE7EN completely
+1. Close VirtuPet completely
 2. Use Instagram/Safari/YouTube for 2-3 minutes
 3. **Important**: Actually interact with the apps, don't just open them
 
-### **Step 4: Reopen SE7EN**
+### **Step 4: Reopen VirtuPet**
 1. Wait 1-2 minutes after using apps
-2. Reopen SE7EN
+2. Reopen VirtuPet
 3. **Watch console carefully**
 
 ## 🎯 WHAT THE LOGS WILL TELL US
@@ -82,8 +82,8 @@ I've added detailed logging to track EXACTLY what's happening in the report exte
 
 ### **Scenario 2: Extension Initialized But Never Invoked**
 ```
-🎬 SE7ENDeviceActivityReportExtension: INITIALIZED
-🏗️ SE7ENDeviceActivityReportExtension: Building scenes...
+🎬 VirtuPetDeviceActivityReportExtension: INITIALIZED
+🏗️ VirtuPetDeviceActivityReportExtension: Building scenes...
 (But no 🚀 TodayOverviewReport.makeConfiguration log)
 ```
 **Problem**: Extension loaded but DeviceActivityReport view not triggering it
@@ -124,21 +124,21 @@ I've added detailed logging to track EXACTLY what's happening in the report exte
 
 ### **1. Verify Extension in Scheme**
 - Product > Scheme > Edit Scheme
-- Build tab: SE7ENDeviceActivityReportExtension should be checked
+- Build tab: VirtuPetDeviceActivityReportExtension should be checked
 - Run tab: Should be in "Executables"
 
 ### **2. Check Signing**
-- Select SE7ENDeviceActivityReportExtension target
+- Select VirtuPetDeviceActivityReportExtension target
 - Signing & Capabilities tab
 - Verify no errors/warnings
 
 ### **3. Verify on Device**
 Settings > General > VPN & Device Management > Developer App
-- SE7EN should show all extensions
+- VirtuPet should show all extensions
 
 ### **4. Check Screen Time Permission**
 Settings > Screen Time > App & Website Activity
-- SE7EN must be listed and ENABLED
+- VirtuPet must be listed and ENABLED
 
 ## 💡 MOST LIKELY ISSUES
 
@@ -150,7 +150,7 @@ The Screen Time API has a known limitation: it doesn't collect usage data for ap
 **Solution**: 
 1. Force quit ALL apps
 2. Restart device
-3. Set up monitoring in SE7EN
+3. Set up monitoring in VirtuPet
 4. THEN use apps fresh
 
 ### **Issue #2: Category-Only Selection**
@@ -170,8 +170,8 @@ The "crossed icon" you mentioned suggests the extension might not be installing.
 ## 📊 EXPECTED LOGS (When Working)
 
 ```
-🎬 SE7ENDeviceActivityReportExtension: INITIALIZED
-🏗️ SE7ENDeviceActivityReportExtension: Building scenes...
+🎬 VirtuPetDeviceActivityReportExtension: INITIALIZED
+🏗️ VirtuPetDeviceActivityReportExtension: Building scenes...
 🚀 TodayOverviewReport.makeConfiguration: EXTENSION INVOKED!
    📦 Processing deviceActivityData...
    📈 Segment 1: duration=180s

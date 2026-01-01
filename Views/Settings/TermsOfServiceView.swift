@@ -33,7 +33,7 @@ struct TermsOfServiceView: View {
                     title: "Acceptance of Terms",
                     icon: "checkmark.seal",
                     content: [
-                        "By using SE7EN, you agree to these Terms of Service",
+                        "By using VirtuPet, you agree to these Terms of Service",
                         "You must be 18 years or older to use this service",
                         "These terms are legally binding and enforceable",
                         "Continued use indicates ongoing acceptance"
@@ -41,12 +41,12 @@ struct TermsOfServiceView: View {
                 )
                 
                 TermsSectionView(
-                    title: "How SE7EN Works",
+                    title: "How VirtuPet Works",
                     icon: "app.badge",
                     content: [
                         "Select apps to block using the multi-select picker",
                         "Selected apps are immediately blocked with a shield",
-                        "To unblock: Solve a puzzle in SE7EN",
+                        "To unblock: Solve a puzzle in VirtuPet",
                         "Apps stay unblocked for your chosen duration (5-60 min)",
                         "After the unblock period, apps automatically re-block",
                         "Remove apps from the blocked list anytime to unblock permanently"
@@ -57,7 +57,7 @@ struct TermsOfServiceView: View {
                     title: "App Blocking & Puzzles",
                     icon: "eye.circle",
                     content: [
-                        "SE7EN requires Screen Time permissions to function",
+                        "VirtuPet requires Screen Time permissions to function",
                         "Only apps you explicitly select are blocked",
                         "Blocked apps display iOS Screen Time shields",
                         "Solving puzzles grants temporary unblock access",
@@ -94,7 +94,7 @@ struct TermsOfServiceView: View {
                     title: "Service Availability",
                     icon: "antenna.radiowaves.left.and.right",
                     content: [
-                        "SE7EN requires internet connection for full functionality",
+                        "VirtuPet requires internet connection for full functionality",
                         "We strive for 99.9% uptime but don't guarantee continuous service",
                         "Scheduled maintenance will be announced in advance",
                         "Service interruptions may temporarily affect blocking"
@@ -105,7 +105,7 @@ struct TermsOfServiceView: View {
                     title: "Limitation of Liability",
                     icon: "shield.lefthalf.filled",
                     content: [
-                        "SE7EN is provided 'as is' without warranties",
+                        "VirtuPet is provided 'as is' without warranties",
                         "We're not liable for indirect or consequential damages",
                         "We're not responsible for data loss or blocking errors",
                         "Some jurisdictions don't allow these limitations"
@@ -116,7 +116,7 @@ struct TermsOfServiceView: View {
                     title: "Account Termination",
                     icon: "person.crop.circle.badge.xmark",
                     content: [
-                        "You may stop using SE7EN at any time",
+                        "You may stop using VirtuPet at any time",
                         "We may suspend accounts for terms violations",
                         "Account data is deleted within 30 days of termination",
                         "You can reinstall and start fresh anytime"

@@ -1,4 +1,4 @@
-# 🚀 How to Deploy SE7EN Website to Netlify
+# 🚀 How to Deploy VirtuPet Website to Netlify
 
 ## Method 1: Drag & Drop (Easiest - 2 minutes)
 
@@ -30,7 +30,7 @@
 ### Step 4: Set Custom Domain (Optional)
 1. Go to **Site Settings** → **Domain Management**
 2. Click **"Add custom domain"**
-3. Enter your domain (e.g., `se7enapp.com`)
+3. Enter your domain (e.g., `virtupetapp.com`)
 4. Follow Netlify's DNS instructions
 
 ---
@@ -38,20 +38,20 @@
 ## Method 2: GitHub Integration (Best for Updates)
 
 ### Step 1: Push to GitHub
-1. Create a new repository on GitHub (e.g., `se7en-website`)
+1. Create a new repository on GitHub (e.g., `virtupet-website`)
 2. In your terminal, navigate to your website folder:
    ```bash
-   cd "/Users/anthonymaxson/Downloads/SE7EN App/website"
+   cd "/Users/anthonymaxson/Downloads/VirtuPet App/website"
    ```
 3. Initialize git (if not already):
    ```bash
    git init
    git add .
-   git commit -m "Initial commit - SE7EN website"
+   git commit -m "Initial commit - VirtuPet website"
    ```
 4. Connect to GitHub:
    ```bash
-   git remote add origin https://github.com/YOUR_USERNAME/se7en-website.git
+   git remote add origin https://github.com/YOUR_USERNAME/virtupet-website.git
    git push -u origin main
    ```
 
@@ -59,7 +59,7 @@
 1. Go to [netlify.com](https://netlify.com) and log in
 2. Click **"Add new site"** → **"Import an existing project"**
 3. Choose **"GitHub"** and authorize Netlify
-4. Select your `se7en-website` repository
+4. Select your `virtupet-website` repository
 5. Configure build settings:
    - **Base directory:** `website` (if repo is at root) or leave blank if website folder is the repo
    - **Build command:** (leave empty - it's a static site)

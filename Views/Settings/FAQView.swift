@@ -5,9 +5,9 @@ struct FAQView: View {
     @State private var expandedIndex: Int? = nil
     
     let faqs = [
-        FAQ(question: "What is SE7EN?", answer: "SE7EN is your personal screen time companion that helps you break free from 'brain rot'. By caring for your digital pet, you build healthier habits. When you scroll less, your pet thrives! Block distracting apps, and when you need a break, solve a puzzle to temporarily unblock them."),
+        FAQ(question: "What is VirtuPet?", answer: "VirtuPet is your personal screen time companion that helps you break free from 'brain rot'. By caring for your digital pet, you build healthier habits. When you scroll less, your pet thrives! Block distracting apps, and when you need a break, solve a puzzle to temporarily unblock them."),
         
-        FAQ(question: "How does App Blocking work?", answer: "Select the apps you want to block using the multi-select picker on the Limits page. Once selected, these apps are immediately blocked with a shield. To unblock them temporarily, solve a puzzle in SE7EN. The apps stay unblocked for your chosen duration (5-60 minutes), then automatically re-block."),
+        FAQ(question: "How does App Blocking work?", answer: "Select the apps you want to block using the multi-select picker on the Limits page. Once selected, these apps are immediately blocked with a shield. To unblock them temporarily, solve a puzzle in VirtuPet. The apps stay unblocked for your chosen duration (5-60 minutes), then automatically re-block."),
         
         FAQ(question: "How do I unblock apps?", answer: "When you need access to blocked apps, tap 'Solve Puzzle to Unblock' on the Limits page or from the shield screen. Complete a puzzle (Sudoku, Memory Game, Pattern Sequence, or Jigsaw Puzzle), and your blocked apps will be unblocked for your chosen duration. Once time's up, they automatically re-block. You can also permanently unblock apps by removing them from your blocked list in Settings."),
         
@@ -17,9 +17,9 @@ struct FAQView: View {
         
         FAQ(question: "Can I add or remove blocked apps anytime?", answer: "Yes! Go to the Limits page and tap 'Edit' to modify your blocked apps list. You can add apps, categories, or remove them anytime. Changes take effect immediately. Removing an app from the blocked list permanently unblocks it."),
         
-        FAQ(question: "What types of puzzles are there?", answer: "SE7EN includes four puzzle types:\n\n• Sudoku - Fill in the grid with numbers 1-6\n• Memory Game - Match pairs of cards\n• Pattern Sequence - Remember and repeat the pattern\n• Jigsaw Puzzle - Complete the puzzle by placing pieces correctly\n\nA random puzzle is selected each time you request to unblock apps."),
+        FAQ(question: "What types of puzzles are there?", answer: "VirtuPet includes four puzzle types:\n\n• Sudoku - Fill in the grid with numbers 1-6\n• Memory Game - Match pairs of cards\n• Pattern Sequence - Remember and repeat the pattern\n• Jigsaw Puzzle - Complete the puzzle by placing pieces correctly\n\nA random puzzle is selected each time you request to unblock apps."),
         
-        FAQ(question: "Is my data private?", answer: "Absolutely. SE7EN uses Apple's Screen Time API, which means all your usage data stays on your device. We never see your browsing history or personal app data. Your privacy is our priority.")
+        FAQ(question: "Is my data private?", answer: "Absolutely. VirtuPet uses Apple's Screen Time API, which means all your usage data stays on your device. We never see your browsing history or personal app data. Your privacy is our priority.")
     ]
     
     var body: some View {
@@ -52,7 +52,7 @@ struct FAQView: View {
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundColor(.textPrimary)
                     
-                    Text("Everything you need to know about SE7EN")
+                    Text("Everything you need to know about VirtuPet")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.textSecondary)
                         .multilineTextAlignment(.center)

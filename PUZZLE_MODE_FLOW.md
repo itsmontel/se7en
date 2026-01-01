@@ -3,10 +3,10 @@
 ## Overview
 
 When a user hits their app limit and taps the blocked app, they see a custom shield with a "Solve Puzzle" button. Tapping this button:
-1. Opens SE7EN app in **puzzle mode** (fullscreen puzzle, no main UI)
+1. Opens VirtuPet app in **puzzle mode** (fullscreen puzzle, no main UI)
 2. User solves the puzzle
 3. App is unblocked and **automatically opens**
-4. SE7EN app goes to background
+4. VirtuPet app goes to background
 
 ## Flow Diagram
 
@@ -19,9 +19,9 @@ User taps "Solve Puzzle for 15 More Minutes"
     ↓
 ShieldActionExtension:
   - Sets puzzle flags in shared container
-  - Opens SE7EN via URL scheme: se7en://puzzle?tokenHash=...&appName=YouTube
+  - Opens VirtuPet via URL scheme: virtupet://puzzle?tokenHash=...&appName=YouTube
     ↓
-SE7EN app opens in Puzzle Mode:
+VirtuPet app opens in Puzzle Mode:
   - ContentView detects puzzleMode flag
   - Shows PuzzleModeView (fullscreen, no tabs/UI)
   - User sees "Daily Limit Reached" → taps "Solve Puzzle"
@@ -32,7 +32,7 @@ Puzzle completes:
   - Grants 15-minute extension
   - Unblocks the app
   - Opens YouTube automatically via URL scheme
-  - SE7EN goes to background
+  - VirtuPet goes to background
     ↓
 User is now in YouTube with 15 more minutes!
 ```
@@ -51,16 +51,16 @@ User is now in YouTube with 15 more minutes!
    - Shows `PuzzleModeView` when in puzzle mode
    - Handles opening blocked app after puzzle completion
 
-2. **`SE7ENShieldActionExtension/SE7ENShieldActionExtension.swift`**
-   - Opens SE7EN via URL scheme instead of deferring
+2. **`VirtuPetShieldActionExtension/VirtuPetShieldActionExtension.swift`**
+   - Opens VirtuPet via URL scheme instead of deferring
    - Sets puzzle flags in shared container
 
 3. **`SevenApp.swift`**
-   - Handles `se7en://puzzle` URL scheme
+   - Handles `virtupet://puzzle` URL scheme
    - Sets puzzle mode flags
 
 4. **`Info.plist`**
-   - Added `CFBundleURLTypes` with `se7en://` scheme
+   - Added `CFBundleURLTypes` with `virtupet://` scheme
 
 ## Key Implementation Details
 
@@ -85,7 +85,7 @@ If no URL scheme is available, the app is still unblocked and the user can tap i
 
 ### URL Scheme Format
 ```
-se7en://puzzle?tokenHash=<hash>&appName=<encoded_name>
+virtupet://puzzle?tokenHash=<hash>&appName=<encoded_name>
 ```
 
 ## User Experience
@@ -93,14 +93,14 @@ se7en://puzzle?tokenHash=<hash>&appName=<encoded_name>
 **Before:**
 1. User taps blocked app
 2. iOS shows default "Restricted" screen
-3. User needs to manually open SE7EN
-4. Solve puzzle in SE7EN
+3. User needs to manually open VirtuPet
+4. Solve puzzle in VirtuPet
 5. Manually go back to blocked app
 
 **After:**
 1. User taps blocked app
 2. Custom shield appears with "Solve Puzzle" button
-3. User taps button → Puzzle appears immediately (SE7EN opens but only shows puzzle)
+3. User taps button → Puzzle appears immediately (VirtuPet opens but only shows puzzle)
 4. User solves puzzle
 5. Blocked app opens automatically
 6. User continues using the app with 15 more minutes
@@ -110,17 +110,18 @@ se7en://puzzle?tokenHash=<hash>&appName=<encoded_name>
 1. Set a very short limit (1-2 minutes) for an app
 2. Use the app until limit is reached
 3. Try to open the app → Custom shield should appear
-4. Tap "Solve Puzzle" → SE7EN should open showing only the puzzle
+4. Tap "Solve Puzzle" → VirtuPet should open showing only the puzzle
 5. Solve the puzzle → Blocked app should open automatically
 6. Verify the app is unblocked and usable
 
 ## Notes
 
-- SE7EN app briefly opens but only shows the puzzle UI (no tabs, no main UI)
-- After puzzle completion, SE7EN automatically goes to background
+- VirtuPet app briefly opens but only shows the puzzle UI (no tabs, no main UI)
+- After puzzle completion, VirtuPet automatically goes to background
 - The blocked app opens via URL scheme (if available)
 - If URL scheme isn't available, app is still unblocked (user can tap it)
 - Extension grants 15 minutes of additional usage time
+
 
 
 

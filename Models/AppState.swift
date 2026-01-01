@@ -69,7 +69,7 @@ class AppState: ObservableObject {
     
     /// Preload screen time from shared container (called on app launch and foreground)
     func preloadScreenTimeFromSharedContainer() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         // CRITICAL: Force synchronize to read fresh data from disk
@@ -299,7 +299,7 @@ class AppState: ObservableObject {
     
     /// Check for pending puzzles from shield action and show them
     func checkForPendingPuzzles() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
         
         // ✅ First check: Direct puzzleMode flag (set by shield action)
@@ -382,7 +382,7 @@ class AppState: ObservableObject {
         
         // Save pet info to shared container for report extensions (critical for "This Week" view)
         if let pet = userPet {
-            let appGroupID = "group.com.se7en.app"
+            let appGroupID = "group.com.virtupet.screentime"
             if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
                 sharedDefaults.set(pet.type.rawValue, forKey: "user_pet_type")
                 sharedDefaults.set(pet.name, forKey: "user_pet_name")
@@ -410,7 +410,7 @@ class AppState: ObservableObject {
         
         // Save pet info to shared container for report extensions
         if let pet = userPet {
-            let appGroupID = "group.com.se7en.app"
+            let appGroupID = "group.com.virtupet.screentime"
             guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
             sharedDefaults.set(pet.type.rawValue, forKey: "user_pet_type")
             sharedDefaults.set(pet.name, forKey: "user_pet_name")
@@ -589,7 +589,7 @@ class AppState: ObservableObject {
         let appName = goal.appName ?? ""
         guard !tokenHash.isEmpty else { return 0 }
         
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return 0 }
         
         sharedDefaults.synchronize()
@@ -674,7 +674,7 @@ class AppState: ObservableObject {
     
     /// ✅ NEW: Apply pending name updates from extension
     private func applyPendingGoalNameUpdates() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return
         }
@@ -781,10 +781,11 @@ class AppState: ObservableObject {
         // Update local state
         unlockedAchievements.append(achievementId)
         
-        // Trigger celebration
+        // Trigger celebration (now using subtle banner instead of big popup)
         if let achievement = achievements.first(where: { $0.id == achievementId }) {
             newAchievement = achievement
-            shouldShowAchievementCelebration = true
+            // Use the new banner manager for subtle notification
+            AchievementBannerManager.shared.showAchievement(achievement)
             notificationService.sendAchievementUnlockedNotification(achievementTitle: achievement.title)
             print("🏆 Achievement Unlocked: \(achievement.title)")
         }
@@ -1176,7 +1177,7 @@ class AppState: ObservableObject {
         
         // ⚠️ CRITICAL: If shared container is empty, trigger a refresh from report extension
         // This ensures we have the latest data before calculating health
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         if let sharedDefaults = UserDefaults(suiteName: appGroupID), !isRefreshingPetHealth {
             sharedDefaults.synchronize()
             let totalUsage = sharedDefaults.integer(forKey: "total_usage")
@@ -1242,7 +1243,7 @@ class AppState: ObservableObject {
     
     /// Save daily pet health snapshot for weekly stats
     private func saveDailyHealthSnapshot(healthPercentage: Int, mood: PetHealthState) {
-            let appGroupID = "group.com.se7en.app"
+            let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         // Get today's date key
@@ -1276,7 +1277,7 @@ class AppState: ObservableObject {
     /// Calculate pet health based on daily screen time
     func calculatePetHealthPercentage() -> Int {
         // ALWAYS sync from shared container first to get latest data
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         var freshTotalMinutes = 0
         
         // Source 1: UserDefaults total_usage
@@ -1373,7 +1374,7 @@ class AppState: ObservableObject {
     /// This is the same source the dashboard uses for total screen time display
     /// Handles both individual apps AND category-based selections by summing all usage
     private func getTotalScreenTimeFromSharedContainer() -> Int {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             print("⚠️ Pet health: Failed to access shared container, falling back to monitored apps")

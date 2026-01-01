@@ -14,7 +14,7 @@ final class DeviceActivityReportService {
         CoreDataManager.shared
     }
     
-    private let appGroupID = "group.com.se7en.app"
+    private let appGroupID = "group.com.virtupet.screentime"
     
     // ✅ PERFORMANCE: Throttle updates to prevent excessive saves
     private var lastUpdateTime: [String: Date] = [:]

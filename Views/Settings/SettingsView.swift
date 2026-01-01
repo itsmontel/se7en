@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
+    @ObservedObject var tutorialManager = TutorialManager.shared
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
     @AppStorage("weeklySummaryEnabled") private var weeklySummaryEnabled = true
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
@@ -156,6 +157,18 @@ struct SettingsView: View {
                                     )
                                 }
                                 
+                                Button(action: {
+                                    HapticsManager.shared.light()
+                                    tutorialManager.start()
+                                }) {
+                                    SettingRowContent(
+                                        icon: "book.fill",
+                                        color: .purple,
+                                        title: "Tutorial",
+                                        subtitle: "View app walkthrough"
+                                    )
+                                }
+                                
                                 NavigationLink(destination: SupportView()) {
                                     SettingRowContent(
                                         icon: "envelope.fill",
@@ -231,7 +244,7 @@ struct SettingsView: View {
                                     .cornerRadius(10)
                                     .opacity(0.0) // Hidden placeholder if no icon
                                 
-                                Text("SE7EN")
+                                Text("VirtuPet")
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
                                     .foregroundColor(.textPrimary)
                                 
@@ -272,7 +285,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Notifications are essential for SE7EN to work properly. Please enable them in Settings to receive puzzle alerts and unlock your blocked apps.")
+                Text("Notifications are essential for VirtuPet to work properly. Please enable them in Settings to receive puzzle alerts and unlock your blocked apps.")
             }
             .onAppear {
                 checkNotificationStatus()

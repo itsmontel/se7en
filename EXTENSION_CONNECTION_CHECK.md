@@ -12,7 +12,7 @@
 <key>NSExtensionPointIdentifier</key>
 <string>com.apple.deviceactivityui.report-extension</string>
 <key>NSExtensionPrincipalClass</key>
-<string>$(PRODUCT_MODULE_NAME).SE7ENDeviceActivityReportExtension</string>
+<string>$(PRODUCT_MODULE_NAME).VirtuPetDeviceActivityReportExtension</string>
 ```
 - ✅ **CORRECT** - Extension point identifier matches DeviceActivityReport
 - ✅ **CORRECT** - Principal class points to `@main` struct
@@ -20,7 +20,7 @@
 ### **3. Extension Entry Point** ✅
 ```swift
 @main
-struct SE7ENDeviceActivityReportExtension: DeviceActivityReportExtension {
+struct VirtuPetDeviceActivityReportExtension: DeviceActivityReportExtension {
     var body: some DeviceActivityReportScene {
         TodayOverviewReport { summary in
             TodayOverviewView(summary: summary)
@@ -66,8 +66,8 @@ I've added comprehensive logging. When you run the app, you should see:
 
 ### **If Extension Loads:**
 ```
-🎬 SE7ENDeviceActivityReportExtension: INITIALIZED
-🏗️ SE7ENDeviceActivityReportExtension: Building scenes...
+🎬 VirtuPetDeviceActivityReportExtension: INITIALIZED
+🏗️ VirtuPetDeviceActivityReportExtension: Building scenes...
 ```
 
 ### **If Extension Is Invoked:**

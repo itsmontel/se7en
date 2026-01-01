@@ -90,7 +90,7 @@ This is your complete guide to the Seven Credit Accountability App prototype. Ch
 ## 📂 Project Structure
 
 ```
-SE7EN App/
+VirtuPet App/
 │
 ├── 📱 Core Files
 │   ├── SevenApp.swift              # App entry point

@@ -140,7 +140,7 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
 
     res.status(201).json({ 
       success: true, 
-      message: 'Thanks! We\'ll notify you when SE7EN is available.',
+      message: 'Thanks! We\'ll notify you when VirtuPet is available.',
       data: {
         id: result.rows[0].id,
         email: result.rows[0].email,

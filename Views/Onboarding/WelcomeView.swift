@@ -37,7 +37,7 @@ struct WelcomeView: View {
                     .opacity(petAnimation ? 1.0 : 0.0)
                     
                     VStack(spacing: 16) {
-                        Text("Welcome to Se7en")
+                        Text("Welcome to VirtuPet")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)

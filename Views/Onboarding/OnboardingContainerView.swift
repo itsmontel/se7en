@@ -9,7 +9,7 @@ enum PetOnboardingStep {
     case didYouKnow
     case screenTimeInput
     case lifetimeCalculation
-    case whyChooseSE7EN
+    case whyChooseVirtuPet
     case notificationPermission
     case screenTimeConnection
     case appSelection
@@ -41,10 +41,10 @@ struct OnboardingContainerView: View {
                 currentStep = .didYouKnow
             case .lifetimeCalculation:
                 currentStep = .screenTimeInput
-            case .whyChooseSE7EN:
+            case .whyChooseVirtuPet:
                 currentStep = .lifetimeCalculation
             case .notificationPermission:
-                currentStep = .whyChooseSE7EN
+                currentStep = .whyChooseVirtuPet
             case .screenTimeConnection:
                 currentStep = .notificationPermission
             case .appSelection:
@@ -139,15 +139,15 @@ struct OnboardingContainerView: View {
                     LifetimeCalculationView(
                         onContinue: {
                             withAnimation(.easeOut(duration: 0.15)) {
-                                currentStep = .whyChooseSE7EN
+                                currentStep = .whyChooseVirtuPet
                             }
                             HapticFeedback.light.trigger()
                         },
                         onBack: goBack
                     )
                     
-                case .whyChooseSE7EN:
-                    WhyChooseSE7ENView(
+                case .whyChooseVirtuPet:
+                    WhyChooseVirtuPetView(
                         onContinue: {
                             withAnimation(.easeOut(duration: 0.15)) {
                                 currentStep = .notificationPermission
@@ -355,7 +355,7 @@ struct NotificationPermissionView: View {
                 onContinue()
             }
         } message: {
-            Text("Notifications are essential for SE7EN to work properly. You'll need them to unlock blocked apps by solving puzzles.\n\nYou can enable notifications later in Settings.")
+            Text("Notifications are essential for VirtuPet to work properly. You'll need them to unlock blocked apps by solving puzzles.\n\nYou can enable notifications later in Settings.")
         }
     }
     

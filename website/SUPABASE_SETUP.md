@@ -18,7 +18,7 @@ Supabase is a great alternative to Railway - it's easier to set up and perfect f
 2. Sign up or log in (free account)
 3. Click **"New Project"**
 4. Fill in:
-   - **Name:** `se7en-waitlist` (or any name)
+   - **Name:** `virtupet-waitlist` (or any name)
    - **Database Password:** Create a strong password (save it!)
    - **Region:** Choose closest to you
 5. Click **"Create new project"**

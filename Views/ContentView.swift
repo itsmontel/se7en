@@ -63,14 +63,14 @@ struct ContentView: View {
     
     /// Clear the shield "tap notification" flag so shield dismisses
     private func clearShieldTapNotificationFlag() {
-        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
+        guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return }
         defaults.set(false, forKey: "showTapNotificationShield")
         defaults.synchronize()
     }
     
     /// Load puzzle data from UserDefaults
     private func loadPuzzleData() {
-        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
+        guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return }
         
         if let tokenHash = defaults.string(forKey: "puzzleTokenHash") {
             puzzleTokenHash = tokenHash
@@ -80,7 +80,7 @@ struct ContentView: View {
     }
     
     private func checkPuzzleMode() {
-        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
+        guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return }
         
         // Don't check if already showing puzzle
         guard !showPuzzleMode else { return }
@@ -141,7 +141,7 @@ struct ContentView: View {
     
     /// Clear puzzle mode flags from shared container
     private func clearPuzzleFlags() {
-        guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return }
+        guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return }
         
         defaults.set(false, forKey: "puzzleMode")
         defaults.set(false, forKey: "shouldOpenPuzzle")
@@ -434,46 +434,107 @@ struct FullscreenPuzzleView: View {
 
 // MARK: - Tap Notification Screen
 // This screen appears after user taps "Solve Puzzle" on shield
-// It shows the SE7EN logo and triggers a notification
+// It shows the VirtuPet logo and triggers a notification
 
 struct MainTabView: View {
+    @EnvironmentObject var appState: AppState
+    @ObservedObject var tutorialManager = TutorialManager.shared
+    @ObservedObject var achievementBannerManager = AchievementBannerManager.shared
+    @AppStorage("hasCompletedAppTutorial") private var hasCompletedAppTutorial = false
     @State private var selectedTab = 0
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            DashboardView()
-                .tabItem {
-                    Label("Home", systemImage: "house.fill")
+        ZStack {
+            TabView(selection: $selectedTab) {
+                DashboardView()
+                    .tabItem {
+                        Label("Home", systemImage: "house.fill")
+                    }
+                    .tag(0)
+                
+                BlockingView()
+                    .tabItem {
+                        Label("Limits", systemImage: "hand.raised.fill")
+                    }
+                    .tag(1)
+                    .tutorialHighlight("tutorial_tab_limits")
+                
+                GoalsView()
+                    .tabItem {
+                        Label("Stats", systemImage: "chart.bar.fill")
+                    }
+                    .tag(2)
+                    .tutorialHighlight("tutorial_tab_stats")
+                
+                AchievementsView()
+                    .tabItem {
+                        Label("Achievements", systemImage: "trophy.fill")
+                    }
+                    .tag(3)
+                    .tutorialHighlight("tutorial_tab_achievements")
+                
+                SettingsView()
+                    .tabItem {
+                        Label("Settings", systemImage: "gearshape.fill")
+                    }
+                    .tag(4)
+                    .tutorialHighlight("tutorial_tab_settings")
+            }
+            .tint(.primary)
+            .onChange(of: selectedTab) { _ in
+                HapticsManager.shared.selection()
+            }
+            // Sync tab with tutorial step
+            .onChange(of: tutorialManager.currentStep) { newStep in
+                if tutorialManager.isActive {
+                    let targetTab = newStep.tabIndex
+                    if selectedTab != targetTab {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            selectedTab = targetTab
+                        }
+                    }
                 }
-                .tag(0)
-            
-            BlockingView()
-                .tabItem {
-                    Label("Limits", systemImage: "hand.raised.fill")
+            }
+            // Navigate to achievements when banner is tapped
+            .onChange(of: achievementBannerManager.shouldNavigateToAchievements) { shouldNavigate in
+                if shouldNavigate {
+                    withAnimation {
+                        selectedTab = 3 // Achievements tab
+                    }
                 }
-                .tag(1)
-            
-            GoalsView()
-                .tabItem {
-                    Label("Stats", systemImage: "chart.bar.fill")
-                }
-                .tag(2)
-            
-            AchievementsView()
-                .tabItem {
-                    Label("Achievements", systemImage: "trophy.fill")
-                }
-                .tag(3)
-            
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
-                }
-                .tag(4)
+            }
         }
-        .tint(.primary)
-        .onChange(of: selectedTab) { _ in
-            HapticsManager.shared.selection()
+        // Achievement banner overlay (subtle top banner)
+        .achievementBanner {
+            achievementBannerManager.navigateToAchievements()
+        }
+        // Tutorial overlay - ONLY use overlayPreferenceValue to avoid duplicates
+        .overlayPreferenceValue(TutorialHighlightKey.self) { anchors in
+            if tutorialManager.isActive {
+                // Semi-transparent background
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                
+                TutorialOverlay(highlightAnchors: anchors)
+                    .environmentObject(appState)
+            }
+        }
+        .onAppear {
+            // Check if tutorial should be shown
+            checkAndStartTutorial()
+        }
+    }
+    
+    private func checkAndStartTutorial() {
+        // Only show tutorial if:
+        // 1. User has completed onboarding
+        // 2. Tutorial hasn't been completed yet
+        if appState.hasCompletedOnboarding && !hasCompletedAppTutorial && !tutorialManager.isActive {
+            // Small delay to ensure the main view is fully loaded
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                tutorialManager.start()
+            }
         }
     }
 }

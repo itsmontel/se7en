@@ -1,6 +1,6 @@
-# SE7EN Website
+# VirtuPet Website
 
-This is the official website for the SE7EN mobile app - a credit-based accountability system for reducing screen time addiction.
+This is the official website for the VirtuPet mobile app - a credit-based accountability system for reducing screen time addiction.
 
 ## 📁 Files Included
 
@@ -8,7 +8,7 @@ This is the official website for the SE7EN mobile app - a credit-based accountab
 - `privacy.html` - Privacy Policy
 - `terms.html` - Terms & Conditions
 - `faq.html` - Frequently Asked Questions
-- `styles.css` - Complete styling with SE7EN brand colors
+- `styles.css` - Complete styling with VirtuPet brand colors
 - `assets/` - Folder for images and badges (to be added)
 
 ## 🎨 Design Features
@@ -28,9 +28,9 @@ To complete the website, add these assets to the `assets/` folder:
    
 2. **app-screenshot.png** - Main app screenshot for hero section
    - Recommended size: 1170x2532px (iPhone mockup)
-   - Should show the SE7EN dashboard with credit ring
+   - Should show the VirtuPet dashboard with credit ring
    
-3. **se7en-logo.png** (optional) - Logo for enhanced branding
+3. **virtupet-logo.png** (optional) - Logo for enhanced branding
 
 ## 🚀 Deployment
 
@@ -59,9 +59,9 @@ Upload all files to your web server via FTP/SFTP
 ### Update Contact Information
 
 Search for and replace these placeholder email addresses:
-- `support@se7enapp.com`
-- `privacy@se7enapp.com`
-- `legal@se7enapp.com`
+- `support@virtupetapp.com`
+- `privacy@virtupetapp.com`
+- `legal@virtupetapp.com`
 
 ### Update Company Address
 
@@ -86,9 +86,9 @@ When your app is live, replace `#` in the App Store badge links with your actual
 
 1. **Add Meta Tags** to each page's `<head>`:
 ```html
-<meta name="description" content="SE7EN - Take back control of your screen time with our credit-based accountability system">
+<meta name="description" content="VirtuPet - Take back control of your screen time with our credit-based accountability system">
 <meta name="keywords" content="screen time, digital wellness, app usage tracker, productivity">
-<meta property="og:title" content="SE7EN - Take Back Control">
+<meta property="og:title" content="VirtuPet - Take Back Control">
 <meta property="og:description" content="Your screen is stealing your life. Let's take it back.">
 <meta property="og:image" content="https://yoursite.com/assets/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -139,7 +139,7 @@ Complete terms covering:
 
 ### FAQ
 Detailed answers for:
-- General questions about SE7EN
+- General questions about VirtuPet
 - Pricing and billing
 - Features and usage
 - Privacy and security
@@ -160,10 +160,10 @@ Your website is ready to go live! 🚀
 ## 📞 Support
 
 For questions about the website:
-- Email: support@se7enapp.com
+- Email: support@virtupetapp.com
 - Or update this README with your actual contact method
 
 ---
 
-**Built with ❤️ for SE7EN** | Designed for iOS | Powered by Accountability
+**Built with ❤️ for VirtuPet** | Designed for iOS | Powered by Accountability
 

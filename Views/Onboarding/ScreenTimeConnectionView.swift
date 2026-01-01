@@ -58,7 +58,7 @@ struct ScreenTimeConnectionView: View {
                 // BrainRot style icons
                 VStack(spacing: 32) {
                     HStack(spacing: 16) {
-                        // Se7en app icon representation
+                        // VirtuPet app icon representation
                         ZStack {
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color.blue.opacity(0.1))
@@ -83,7 +83,7 @@ struct ScreenTimeConnectionView: View {
                     }
                     
                     VStack(spacing: 16) {
-                        Text("Connect Se7en\nto Screen Time")
+                        Text("Connect VirtuPet\nto Screen Time")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)

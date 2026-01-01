@@ -61,7 +61,7 @@ async function handleWaitlist(event) {
                 throw error;
             }
         } else {
-            showMessage('Thanks! We\'ll notify you when SE7EN is available.', 'success');
+            showMessage('Thanks! We\'ll notify you when VirtuPet is available.', 'success');
             emailInput.value = '';
         }
     } catch (error) {
@@ -117,7 +117,7 @@ async function handlePopupWaitlist(event) {
                 throw error;
             }
         } else {
-            showPopupMessage('Thanks! We\'ll notify you when SE7EN is available.', 'success');
+            showPopupMessage('Thanks! We\'ll notify you when VirtuPet is available.', 'success');
             markWaitlistJoined();
             emailInput.value = '';
             buttonText.textContent = 'Joined!';

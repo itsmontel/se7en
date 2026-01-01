@@ -12,7 +12,7 @@ Your monitoring is **correctly configured** but has **no data yet** because:
 ## 📱 HOW TO GET DATA SHOWING
 
 ### **STEP 1: Actually Use Apps (5-10 minutes)**
-Close SE7EN and use other apps for 5-10 minutes:
+Close VirtuPet and use other apps for 5-10 minutes:
 - Instagram, Safari, YouTube, etc.
 - Switch between different apps
 - Use them actively (not just open in background)
@@ -25,10 +25,10 @@ Monitoring should fire events every 10 minutes
 ```
 Wait at least 10 minutes after using apps.
 
-### **STEP 3: Reopen SE7EN**
+### **STEP 3: Reopen VirtuPet**
 After 10+ minutes of app usage:
 1. Close all apps
-2. Reopen SE7EN
+2. Reopen VirtuPet
 3. The DeviceActivityReport will trigger
 4. Check console for: `📊 TodayOverviewReport: totalDuration=XXXs`
 
@@ -61,7 +61,7 @@ This means NO apps were used or monitoring hasn't fired yet.
 ✅ Started global monitoring for DeviceActivityReport extensions
 ✅ Started frequent monitoring for All Categories Tracking
 ✅ Categories: 13 (all categories selected)
-✅ Events configured: update.com.se7en.allcategories, limit.com.se7en.allcategories
+✅ Events configured: update.com.virtupet.allcategories, limit.com.virtupet.allcategories
 ✅ Monitoring should fire events every 10 minutes
 ```
 
@@ -72,12 +72,12 @@ This means NO apps were used or monitoring hasn't fired yet.
 ### **Day 1 (Today):**
 1. ✅ Monitoring is now active
 2. Use phone normally for rest of day
-3. Check SE7EN periodically (every 30 mins)
+3. Check VirtuPet periodically (every 30 mins)
 4. Look for data appearing
 
 ### **Day 2 (Tomorrow):**
-- Wake up → Open SE7EN → Should show "0 minutes" (fresh day)
-- Use apps → Wait 10 mins → Reopen SE7EN → Should show usage
+- Wake up → Open VirtuPet → Should show "0 minutes" (fresh day)
+- Use apps → Wait 10 mins → Reopen VirtuPet → Should show usage
 - Throughout day → Data accumulates in real-time
 
 ## 🐛 IF STILL NOT WORKING TOMORROW
@@ -96,11 +96,11 @@ This means NO apps were used or monitoring hasn't fired yet.
 3. **Authorization issues:**
    - `Authorization status: false`
    - Go to Settings > Screen Time > App & Website Activity
-   - Ensure SE7EN is enabled
+   - Ensure VirtuPet is enabled
 
 ## 💡 WHY YOUR PHONE'S SCREEN TIME SHOWS 3+ HOURS
 
-The system's Screen Time is tracking usage **before you installed SE7EN**. Your app can only see data **from the moment monitoring started** (which was just now in your logs).
+The system's Screen Time is tracking usage **before you installed VirtuPet**. Your app can only see data **from the moment monitoring started** (which was just now in your logs).
 
 This is a fundamental limitation of the Screen Time API - **no retroactive data access**.
 
@@ -108,7 +108,7 @@ This is a fundamental limitation of the Screen Time API - **no retroactive data 
 
 - **Right now**: 0 minutes (no data yet)
 - **After 10 mins of app use**: First monitor event fires
-- **After reopening SE7EN**: Report extension processes data
+- **After reopening VirtuPet**: Report extension processes data
 - **After 30+ mins of varied app use**: Meaningful data appears
 
 Be patient - the system needs real usage data to report!

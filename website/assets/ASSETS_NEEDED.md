@@ -1,4 +1,4 @@
-# Assets Required for SE7EN Website
+# Assets Required for VirtuPet Website
 
 ## 📥 Download These Assets
 
@@ -12,15 +12,15 @@
 ### 2. App Screenshot (Required)
 - **File name**: `app-screenshot.png`
 - **Recommended size**: 1170x2532px (iPhone 14 Pro size)
-- **Content**: SE7EN app dashboard showing:
+- **Content**: VirtuPet app dashboard showing:
   - Credit ring with number
   - App usage list
   - Clean, attractive UI
 - **Format**: PNG with transparent or matching background
 - **Tip**: Use an iPhone mockup frame for professional look
 
-### 3. SE7EN Logo (Optional)
-- **File name**: `se7en-logo.png`
+### 3. VirtuPet Logo (Optional)
+- **File name**: `virtupet-logo.png`
 - **Recommended size**: 512x512px or larger
 - **Format**: PNG with transparency
 - **Usage**: Can replace text logo in navbar
@@ -34,7 +34,7 @@
 ### 5. Open Graph Image (Recommended for Social Sharing)
 - **File name**: `og-image.png`
 - **Size**: 1200x630px
-- **Content**: SE7EN branding + tagline
+- **Content**: VirtuPet branding + tagline
 - **Format**: PNG or JPG
 - **Usage**: Social media previews (Facebook, Twitter, LinkedIn)
 
@@ -54,13 +54,13 @@
 ## 📱 Where to Get Screenshots
 
 ### Option 1: iPhone Simulator
-1. Run SE7EN app in Xcode simulator
+1. Run VirtuPet app in Xcode simulator
 2. Navigate to best screens (dashboard, credit ring)
 3. Cmd + S to save screenshot
 4. Use mockup tool to add device frame
 
 ### Option 2: Actual Device
-1. Install SE7EN on iPhone
+1. Install VirtuPet on iPhone
 2. Take screenshots (Power + Volume Up)
 3. AirDrop to Mac
 4. Add mockup frame if desired
@@ -77,7 +77,7 @@ Once you have the assets:
 
 - [ ] Download App Store badge → save as `app-store-badge.svg`
 - [ ] Create app screenshot → save as `app-screenshot.png`
-- [ ] (Optional) Create logo → save as `se7en-logo.png`
+- [ ] (Optional) Create logo → save as `virtupet-logo.png`
 - [ ] (Optional) Create favicon → save as `favicon.ico`
 - [ ] (Optional) Create OG image → save as `og-image.png`
 - [ ] Place all files in this `assets/` folder
@@ -93,5 +93,5 @@ Once you have the assets:
 
 ## 🚀 Ready to Launch
 
-After adding these assets, your SE7EN website will be complete and ready to deploy!
+After adding these assets, your VirtuPet website will be complete and ready to deploy!
 

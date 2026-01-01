@@ -6,7 +6,7 @@
 }
 
 :root {
-    /* SE7EN Brand Colors */
+    /* VirtuPet Brand Colors */
     --indigo: #4F46E5;
     --sky-blue: #0EA5E9;
     --emerald: #10B981;
@@ -25,7 +25,7 @@
     --warning: var(--amber);
     --error: var(--rose);
     
-    /* Typography - Matching SE7EN App */
+    /* Typography - Matching VirtuPet App */
     --font-display: 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     --font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }

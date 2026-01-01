@@ -10,8 +10,8 @@ When an app hits its limit, iOS shows a shield screen. By default, this is a gen
 
 ## Files Created
 
-1. `SE7ENShieldConfigurationExtension/SE7ENShieldConfigurationExtension.swift` - Customizes shield appearance
-2. `SE7ENShieldActionExtension/SE7ENShieldActionExtension.swift` - Handles button taps
+1. `VirtuPetShieldConfigurationExtension/VirtuPetShieldConfigurationExtension.swift` - Customizes shield appearance
+2. `VirtuPetShieldActionExtension/VirtuPetShieldActionExtension.swift` - Handles button taps
 3. `Shared/SharedStorageHelper.swift` - Shared utilities for puzzle tracking
 
 ## Setup Steps in Xcode
@@ -20,12 +20,12 @@ When an app hits its limit, iOS shows a shield screen. By default, this is a gen
 
 1. In Xcode: **File → New → Target**
 2. Select **"Shield Configuration Extension"**
-3. Name it: `SE7ENShieldConfigurationExtension`
+3. Name it: `VirtuPetShieldConfigurationExtension`
 4. Language: **Swift**
 5. Click **Finish**
 
 6. **Replace the generated file** with:
-   - `SE7ENShieldConfigurationExtension/SE7ENShieldConfigurationExtension.swift`
+   - `VirtuPetShieldConfigurationExtension/VirtuPetShieldConfigurationExtension.swift`
 
 7. **Update Info.plist** (if needed):
    - The extension should automatically have the correct `NSExtension` settings
@@ -35,18 +35,18 @@ When an app hits its limit, iOS shows a shield screen. By default, this is a gen
    - Select the extension target
    - Go to **Signing & Capabilities**
    - Add **App Groups** capability
-   - Add: `group.com.se7en.app`
+   - Add: `group.com.virtupet.app`
 
 ### 2. Create Shield Action Extension
 
 1. In Xcode: **File → New → Target**
 2. Select **"Shield Action Extension"**
-3. Name it: `SE7ENShieldActionExtension`
+3. Name it: `VirtuPetShieldActionExtension`
 4. Language: **Swift**
 5. Click **Finish**
 
 6. **Replace the generated file** with:
-   - `SE7ENShieldActionExtension/SE7ENShieldActionExtension.swift`
+   - `VirtuPetShieldActionExtension/VirtuPetShieldActionExtension.swift`
 
 7. **Update Info.plist** (if needed):
    - Ensure `NSExtensionPointIdentifier` = `com.apple.shield-action`
@@ -55,7 +55,7 @@ When an app hits its limit, iOS shows a shield screen. By default, this is a gen
    - Select the extension target
    - Go to **Signing & Capabilities**
    - Add **App Groups** capability
-   - Add: `group.com.se7en.app`
+   - Add: `group.com.virtupet.app`
 
 ### 3. Update Main App
 
@@ -91,7 +91,7 @@ The `AppState` class has a new method `checkForPendingPuzzles()` that:
 3. Try to open the app again
 4. You should see the custom shield with "Solve Puzzle" button
 5. Tap the button
-6. The SE7EN app should open and show the puzzle UI
+6. The VirtuPet app should open and show the puzzle UI
 
 ## Troubleshooting
 
@@ -113,9 +113,10 @@ The `AppState` class has a new method `checkForPendingPuzzles()` that:
 ## Notes
 
 - The extensions run in separate processes from the main app
-- They communicate via App Group shared container (`group.com.se7en.app`)
+- They communicate via App Group shared container (`group.com.virtupet.app`)
 - The shield UI is shown by iOS, not your app
 - The puzzle UI is shown in your main app after the shield action
+
 
 
 

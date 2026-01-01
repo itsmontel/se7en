@@ -1,4 +1,4 @@
-# 🔒 SE7EN Website Security Checklist
+# 🔒 VirtuPet Website Security Checklist
 
 ## ✅ Current Security Status
 

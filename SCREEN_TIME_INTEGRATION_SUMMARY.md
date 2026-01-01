@@ -2,7 +2,7 @@
 
 ## ✅ Implementation Summary
 
-I have successfully implemented the complete Screen Time API integration for SE7EN. Here's what was accomplished:
+I have successfully implemented the complete Screen Time API integration for VirtuPet. Here's what was accomplished:
 
 ### 1. Core Screen Time Service (`Services/ScreenTimeService.swift`)
 

@@ -92,7 +92,7 @@ struct PrivacyPolicyView: View {
                     title: "Children's Privacy",
                     icon: "figure.and.child.holdinghands",
                     content: [
-                        "SE7EN is designed for users 18 and older",
+                        "VirtuPet is designed for users 18 and older",
                         "We don't knowingly collect data from children under 13",
                         "Parents should supervise app usage on shared devices",
                         "Contact us if you believe a child has created an account"

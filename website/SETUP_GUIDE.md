@@ -1,8 +1,8 @@
-# SE7EN Website Setup Guide
+# VirtuPet Website Setup Guide
 
 ## 🚀 Quick Start
 
-Your SE7EN website is ready! Follow these steps to launch it.
+Your VirtuPet website is ready! Follow these steps to launch it.
 
 ## 📋 Pre-Launch Checklist
 
@@ -15,7 +15,7 @@ Navigate to the `assets/` folder and add:
   - Replace the placeholder SVG
 
 - [ ] **App Screenshot** (`app-screenshot.png`)
-  - Take a screenshot of your SE7EN app dashboard
+  - Take a screenshot of your VirtuPet app dashboard
   - Recommended size: 1170x2532px
   - Use an iPhone mockup tool for professional look
 
@@ -23,9 +23,9 @@ Navigate to the `assets/` folder and add:
 
 Search and replace these placeholders in all HTML files:
 
-- [ ] `support@se7enapp.com` → Your actual support email
-- [ ] `privacy@se7enapp.com` → Your actual privacy contact email
-- [ ] `legal@se7enapp.com` → Your actual legal contact email
+- [ ] `support@virtupetapp.com` → Your actual support email
+- [ ] `privacy@virtupetapp.com` → Your actual privacy contact email
+- [ ] `legal@virtupetapp.com` → Your actual legal contact email
 - [ ] `[Your Address]` → Your actual business address (in `privacy.html` and `terms.html`)
 - [ ] `[Your Jurisdiction]` → Your legal jurisdiction (in `terms.html`, e.g., "the State of California")
 
@@ -44,7 +44,7 @@ Repeat for all App Store badge links in the HTML files.
 ### Option 1: Python (Built-in on Mac)
 
 ```bash
-cd "/Users/anthonymaxson/Downloads/SE7EN App/website"
+cd "/Users/anthonymaxson/Downloads/VirtuPet App/website"
 python3 -m http.server 8000
 ```
 
@@ -53,7 +53,7 @@ Then open: http://localhost:8000
 ### Option 2: PHP (Built-in on Mac)
 
 ```bash
-cd "/Users/anthonymaxson/Downloads/SE7EN App/website"
+cd "/Users/anthonymaxson/Downloads/VirtuPet App/website"
 php -S localhost:8000
 ```
 
@@ -76,13 +76,13 @@ Double-click `index.html` (works but without server features)
 **Perfect for**: Portfolio, documentation, static websites
 
 1. Create a GitHub account (if you don't have one)
-2. Create a new repository (e.g., "se7en-website")
+2. Create a new repository (e.g., "virtupet-website")
 3. Upload all website files
 4. Go to repository Settings > Pages
 5. Select "main" branch as source
 6. Click Save
 
-**Your site will be live at**: `https://yourusername.github.io/se7en-website/`
+**Your site will be live at**: `https://yourusername.github.io/virtupet-website/`
 
 **Custom domain**: You can add a custom domain in GitHub Pages settings
 
@@ -151,14 +151,14 @@ Edit `styles.css` and modify these CSS variables:
 
 ### Add Your Logo
 
-1. Save logo as `assets/se7en-logo.png`
+1. Save logo as `assets/virtupet-logo.png`
 2. In `index.html`, replace:
 ```html
-<div class="logo">SE7EN</div>
+<div class="logo">VirtuPet</div>
 ```
 with:
 ```html
-<img src="assets/se7en-logo.png" alt="SE7EN" class="logo">
+<img src="assets/virtupet-logo.png" alt="VirtuPet" class="logo">
 ```
 
 ### Add Favicon
@@ -176,21 +176,21 @@ with:
 Add to `<head>` in `index.html`:
 
 ```html
-<meta name="description" content="SE7EN - Take back control of your screen time with our credit-based accountability system">
-<meta name="keywords" content="screen time, digital wellness, app usage tracker, productivity, se7en">
-<meta name="author" content="SE7EN">
+<meta name="description" content="VirtuPet - Take back control of your screen time with our credit-based accountability system">
+<meta name="keywords" content="screen time, digital wellness, app usage tracker, productivity, virtupet">
+<meta name="author" content="VirtuPet">
 
 <!-- Open Graph (Facebook, LinkedIn) -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://yoursite.com/">
-<meta property="og:title" content="SE7EN - Take Back Control">
+<meta property="og:title" content="VirtuPet - Take Back Control">
 <meta property="og:description" content="Your screen is stealing your life. Let's take it back.">
 <meta property="og:image" content="https://yoursite.com/assets/og-image.png">
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:url" content="https://yoursite.com/">
-<meta name="twitter:title" content="SE7EN - Take Back Control">
+<meta name="twitter:title" content="VirtuPet - Take Back Control">
 <meta name="twitter:description" content="Your screen is stealing your life. Let's take it back.">
 <meta name="twitter:image" content="https://yoursite.com/assets/og-image.png">
 ```
@@ -287,7 +287,7 @@ Test on these devices/browsers:
 
 ## 🎉 You're Ready to Launch!
 
-Once you've completed the checklist, your SE7EN website is ready to go live!
+Once you've completed the checklist, your VirtuPet website is ready to go live!
 
 ## 📞 Need Help?
 
@@ -298,5 +298,5 @@ If you run into issues:
 
 ---
 
-**Good luck with your SE7EN app launch! 🚀**
+**Good luck with your VirtuPet app launch! 🚀**
 

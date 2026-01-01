@@ -222,7 +222,7 @@ struct DashboardView: View {
     // MARK: - Shared Container Reading
     
     private func readUsageFromSharedContainer() -> Int {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         var totalUsage = 0
         
         // Try UserDefaults
@@ -252,7 +252,7 @@ struct DashboardView: View {
     }
     
     private func readAppsCountFromSharedContainer() -> Int {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return 0
@@ -263,7 +263,7 @@ struct DashboardView: View {
     
     /// Read last updated timestamp from the shared container for debugging
     private func readSharedLastUpdated() -> String {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return "n/a"
         }
@@ -278,7 +278,7 @@ struct DashboardView: View {
     
     /// FALLBACK: Write usage data to shared container if extension doesn't work
     private func writeUsageToSharedContainer(minutes: Int, apps: Int) {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             print("❌ Failed to access shared container for fallback write")
             return
@@ -356,7 +356,7 @@ struct DashboardView: View {
     
     /// ✅ PERFORMANCE: Optimized version without synchronize() - UserDefaults auto-syncs
     private func readTopAppsFromSharedContainerOptimized() -> [MonitoredApp]? {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             print("❌ Failed to access shared container for top apps")
@@ -542,23 +542,61 @@ struct DashboardView: View {
         }
     }
     
+    @ObservedObject private var tutorialManager = TutorialManager.shared
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.appBackground
                     .ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 0) {
-                        headerSection
-                        petNameSection
-                            .padding(.bottom, 8)
-                        screenTimeSection
-                        topDistractionsSection
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            headerSection
+                            petNameSection
+                                .padding(.bottom, 8)
+                                .tutorialHighlight("tutorial_pet_section")
+                                .id("petSection")
+                            screenTimeSection
+                                .tutorialHighlight("tutorial_screen_time")
+                                .id("screenTimeSection")
+                            topDistractionsSection
+                                .tutorialHighlight("tutorial_top_distractions")
+                                .id("topDistractionsSection")
+                        }
+                        .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity, alignment: .center)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 32) // ensure scrollable area
                     }
-                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity, alignment: .center)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 32) // ensure scrollable area
+                    .onChange(of: tutorialManager.scrollToSection) { section in
+                        if let section = section {
+                            withAnimation(.easeInOut(duration: 0.5)) {
+                                scrollProxy.scrollTo("\(section)Section", anchor: .center)
+                            }
+                        }
+                    }
+                    // Also scroll when tutorial step changes to top distractions
+                    .onChange(of: tutorialManager.currentStep) { step in
+                        if tutorialManager.isActive {
+                            switch step {
+                            case .petHero:
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    scrollProxy.scrollTo("petSection", anchor: .top)
+                                }
+                            case .screenTimeDisplay:
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    scrollProxy.scrollTo("screenTimeSection", anchor: .center)
+                                }
+                            case .topDistractions:
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    scrollProxy.scrollTo("topDistractionsSection", anchor: .center)
+                                }
+                            default:
+                                break
+                            }
+                        }
+                    }
                 }
                 
                 // Overlays
@@ -573,17 +611,8 @@ struct DashboardView: View {
                     )
                 }
                 
-                // Achievement Celebration Overlay
-                if appState.shouldShowAchievementCelebration {
-                    if let achievement = appState.newAchievement {
-                        AchievementCelebrationView(
-                            achievement: achievement,
-                            onDismiss: {
-                                appState.shouldShowAchievementCelebration = false
-                            }
-                        )
-                    }
-                }
+                // Achievement Banner (subtle top notification instead of big popup)
+                // The banner is now handled by AchievementBannerManager at the MainTabView level
                 
                 if showingSuccessToast {
                     SuccessToast(
@@ -800,6 +829,10 @@ struct DashboardView: View {
     private func performOptimizedOnAppear() {
         guard !isInitializing else { return }
         
+        // 🔄 ALWAYS refresh the DeviceActivityReport on appear
+        reportRefreshTrigger = UUID()
+        print("🔄 DashboardView: View appeared, refreshing DeviceActivityReport")
+        
         // 🚀 FAST PATH: If we already have recent data, skip expensive operations
         let now = Date()
         let hasRecentData = now.timeIntervalSince(lastScreenTimeRefresh) < minScreenTimeRefreshInterval
@@ -891,7 +924,11 @@ struct DashboardView: View {
     private func performOptimizedForegroundRefresh() {
         let now = Date()
         
-        // 🚀 THROTTLE: Only refresh if it's been more than 10 seconds
+        // 🔄 ALWAYS refresh the DeviceActivityReport on foreground
+        reportRefreshTrigger = UUID()
+        print("🔄 DashboardView: App foregrounded, refreshing DeviceActivityReport")
+        
+        // 🚀 THROTTLE: Only refresh other data if it's been more than 10 seconds
         guard now.timeIntervalSince(lastScreenTimeRefresh) >= 10.0 else {
             return
         }

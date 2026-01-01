@@ -1,6 +1,6 @@
-# Seven - The Credit Accountability App
+# VirtuPet: Screen Time Control
 
-Seven is a behavior-accountability app that helps users reduce screen addiction and stay disciplined with daily app usage limits using a unique credit-anchored system.
+VirtuPet is a gamified screen time management app that helps users reduce phone addiction by taking care of a virtual pet. The healthier your screen time habits, the happier your pet!
 
 ## 🎯 Concept
 
@@ -150,7 +150,7 @@ Seven relies on powerful behavioral principles:
 ### Installation
 
 1. Clone the repository
-2. Open `SevenApp.xcodeproj` in Xcode
+2. Open `VirtuPet.xcodeproj` in Xcode
 3. Build and run on simulator or device
 
 ### Note on Screen Time API
@@ -163,8 +163,8 @@ This prototype uses mock data. In production, you'll need to:
 ## 📋 Project Structure
 
 ```
-SE7EN App/
-├── SevenApp.swift              # App entry point
+VirtuPet App/
+├── VirtuPetApp.swift           # App entry point
 ├── Models/
 │   ├── AppState.swift          # Global app state
 │   └── Models.swift            # Data models
@@ -224,10 +224,10 @@ This is a prototype/concept app. All rights reserved.
 ## 👥 Support
 
 For questions or support:
-- Email: support@sevenapp.com
+- Email: support@virtupet.app
 - FAQ: Available in-app
-- Terms: https://example.com/terms
-- Privacy: https://example.com/privacy
+- Terms: https://virtupet.app/terms
+- Privacy: https://virtupet.app/privacy
 
 ---
 

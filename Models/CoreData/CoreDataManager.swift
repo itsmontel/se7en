@@ -6,7 +6,7 @@ class CoreDataManager: ObservableObject {
     static let shared = CoreDataManager()
     
     lazy var persistentContainer: NSPersistentContainer = {
-        let container = NSPersistentContainer(name: "SE7ENDataModel")
+        let container = NSPersistentContainer(name: "VirtuPetDataModel")
         
         // Configure for automatic migration
         let storeDescription = container.persistentStoreDescriptions.first
@@ -340,7 +340,7 @@ class CoreDataManager: ObservableObject {
         }
         
         let baseLimit = Int(goal.dailyLimitMinutes)
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         // ✅ CRITICAL: Check if One Session mode is active - return BASE limit only
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
@@ -468,7 +468,7 @@ class CoreDataManager: ObservableObject {
         let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) ?? Date()
         
         // NEW LOGIC: Check if user had blocked apps at end of yesterday
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             userProfile.updatedAt = Date()
             save()
@@ -568,7 +568,7 @@ class CoreDataManager: ObservableObject {
     /// Mark the blocked apps status for today (called when blocked apps change)
     /// This method only uses UserDefaults, so it can be called from any context
     nonisolated func markBlockedAppsStatus(hasBlockedApps: Bool) {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         let dateFormatter = DateFormatter()
@@ -599,7 +599,7 @@ class CoreDataManager: ObservableObject {
     /// Force initialize streak for users who have blocked apps but streak is 0
     /// This handles the case where users have been using the app but streak wasn't tracked
     func initializeStreakIfNeeded() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         sharedDefaults.synchronize()
@@ -656,7 +656,7 @@ class CoreDataManager: ObservableObject {
     /// This method only uses UserDefaults, so it can be called from any context
     nonisolated func markAppOpened() {
         // This can be used for analytics or tracking when the app is opened
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         sharedDefaults.set(Date(), forKey: "last_app_opened")
@@ -759,7 +759,7 @@ class CoreDataManager: ObservableObject {
     
     func getDailyHistory(for weeklyPlan: WeeklyPlan) -> [DailyHistory] {
         // Read from shared container for daily screen time and puzzles solved
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return []
         }

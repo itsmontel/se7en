@@ -8,7 +8,7 @@
 - No additional dependencies required!
 
 ### Step 1: Open in Xcode
-1. Navigate to `/Users/anthonymaxson/Downloads/SE7EN App/`
+1. Navigate to `/Users/anthonymaxson/Downloads/VirtuPet App/`
 2. Double-click `SevenApp.swift` to open in Xcode
 3. Wait for Xcode to index the project
 

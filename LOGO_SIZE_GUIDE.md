@@ -1,6 +1,6 @@
-# Logo Size Guide for SE7EN App
+# Logo Size Guide for VirtuPet App
 
-This document outlines all the logo sizes you need to create for your SE7EN app.
+This document outlines all the logo sizes you need to create for your VirtuPet app.
 
 ## 📱 1. App Icon (Required)
 
@@ -49,7 +49,7 @@ The logo shown when the app is launching. Can be the same as your app icon or a 
 
 ## 🎨 3. In-App Logo Asset (For UI Use)
 
-**Location**: `Assets.xcassets/se7enlogo.imageset/` ✅ (Already created)
+**Location**: `Assets.xcassets/virtupetlogo.imageset/` ✅ (Already created)
 
 For using the logo anywhere in your app UI (headers, settings, etc.).
 
@@ -121,8 +121,8 @@ These are used for your App Store page and marketing materials.
 
 ## ✅ Current Status
 
-- ✅ **App Icon**: All sizes set up (using same Se7enLogo.png for now)
-- ✅ **In-App Logo**: `se7enlogo.imageset` created
+- ✅ **App Icon**: All sizes set up (using same VirtuPetLogo.png for now)
+- ✅ **In-App Logo**: `virtupetlogo.imageset` created
 - ⚠️ **Launch Icon**: Referenced in Info.plist but not created yet
 
 ---

@@ -1,19 +1,19 @@
 # Requesting Family Controls Entitlement
 
 ## App Bundle Identifier
-`com.se7en.app.screentime`
+`com.virtupet.app.screentime`
 
 ## Quick Steps
 
 1. Go to: https://developer.apple.com/account/resources/identifiers/list
-2. Find or create identifier: `com.se7en.app.screentime`
+2. Find or create identifier: `com.virtupet.app.screentime`
 3. Enable "Family Controls" capability
 4. Submit justification (see below)
 
 ## Justification Text (Copy & Paste)
 
 ```
-Our app (Se7en) helps users manage their screen time and app usage habits through Apple's Screen Time API. The app allows users to set daily limits for specific apps, monitor their usage, and provides accountability features through a credit system and pet companion. 
+Our app (VirtuPet) helps users manage their screen time and app usage habits through Apple's Screen Time API. The app allows users to set daily limits for specific apps, monitor their usage, and provides accountability features through a credit system and pet companion. 
 
 We need the Family Controls entitlement to:
 - Monitor app usage using DeviceActivity framework

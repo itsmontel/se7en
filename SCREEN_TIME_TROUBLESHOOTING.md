@@ -28,7 +28,7 @@
 
 1. **Go to Settings > Screen Time**
 2. **Tap "App & Website Activity"**
-3. **Ensure your SE7EN app is listed and ENABLED**
+3. **Ensure your VirtuPet app is listed and ENABLED**
 4. **If not listed, the app lacks proper Screen Time permission**
 
 ### **Verify Authorization Status**
@@ -45,7 +45,7 @@ If it shows `notDetermined` or `denied`, authorization failed.
 
 ### **Test the Fix**
 1. Use some apps for 5-10 minutes
-2. Reopen SE7EN app
+2. Reopen VirtuPet app
 3. Check console for:
    ```
    📊 TodayOverviewReport: totalDuration=XXXs uniqueApps=X

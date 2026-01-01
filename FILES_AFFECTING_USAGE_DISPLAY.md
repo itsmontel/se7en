@@ -3,7 +3,7 @@
 ## 🎯 Critical Files (Core Data Flow)
 
 ### 1. **Report Extension** (Processes Screen Time Data)
-- **`SE7ENDeviceActivityReportExtension/TodayOverviewReport.swift`**
+- **`VirtuPetDeviceActivityReportExtension/TodayOverviewReport.swift`**
   - **Purpose**: Processes DeviceActivity data and calculates usage
   - **Key Functions**:
     - `makeConfiguration()` - Receives data from iOS Screen Time API
@@ -11,18 +11,18 @@
     - `saveSummaryToSharedContainer()` - Saves to shared UserDefaults
   - **What to check**: Extension being invoked, data received, shared container writes
 
-- **`SE7ENDeviceActivityReportExtension/TotalActivityReport.swift`**
+- **`VirtuPetDeviceActivityReportExtension/TotalActivityReport.swift`**
   - **Purpose**: Alternative report context for total activity
   - **Key Functions**: Same as TodayOverviewReport
   - **What to check**: Same as above
 
-- **`SE7ENDeviceActivityReportExtension/SE7ENDeviceActivityReportExtension.swift`**
+- **`VirtuPetDeviceActivityReportExtension/VirtuPetDeviceActivityReportExtension.swift`**
   - **Purpose**: Main extension entry point
   - **Key**: Registers report scenes (`TodayOverviewReport`, `TotalActivityReport`)
   - **What to check**: Extension initializes, scenes registered correctly
 
 ### 2. **Monitor Extension** (Triggers Events)
-- **`SE7ENDeviceActivityMonitorExtension/SE7ENDeviceActivityMonitorExtension.swift`**
+- **`VirtuPetDeviceActivityMonitorExtension/VirtuPetDeviceActivityMonitorExtension.swift`**
   - **Purpose**: Handles threshold events (warning/limit reached)
   - **Key Functions**: `handleUpdate()`, `handleWarning()`, `handleLimit()`
   - **What to check**: Events firing, shared container updates
@@ -80,13 +80,13 @@
   - **What to check**: Usage records created/updated correctly
 
 ### 8. **Usage Summary** (Data Model)
-- **`SE7ENDeviceActivityReportExtension/UsageSummary.swift`**
+- **`VirtuPetDeviceActivityReportExtension/UsageSummary.swift`**
   - **Purpose**: Data structure for report summary
   - **What to check**: Structure matches what's saved/read
 
 ### 9. **Report Views** (UI)
-- **`SE7ENDeviceActivityReportExtension/TodayOverviewView.swift`**
-- **`SE7ENDeviceActivityReportExtension/TotalActivityView.swift`**
+- **`VirtuPetDeviceActivityReportExtension/TodayOverviewView.swift`**
+- **`VirtuPetDeviceActivityReportExtension/TotalActivityView.swift`**
   - **Purpose**: SwiftUI views for displaying report data
   - **What to check**: Views render correctly
 
@@ -95,21 +95,21 @@
 ## ⚙️ Configuration Files
 
 ### 10. **Entitlements** (Permissions)
-- **`SE7ENDeviceActivityReportExtension/SE7ENDeviceActivityReportExtension.entitlements`**
+- **`VirtuPetDeviceActivityReportExtension/VirtuPetDeviceActivityReportExtension.entitlements`**
   - **Must have**: 
     - `com.apple.developer.family-controls` = YES
-    - `com.apple.security.application-groups` = `["group.com.se7en.app"]`
+    - `com.apple.security.application-groups` = `["group.com.virtupet.app"]`
 
-- **`SE7ENDeviceActivityMonitorExtension/SE7ENDeviceActivityMonitorExtension.entitlements`**
+- **`VirtuPetDeviceActivityMonitorExtension/VirtuPetDeviceActivityMonitorExtension.entitlements`**
   - **Must have**: Same as above
 
 - **`Seven.entitlements`** (Main app)
   - **Must have**: Same as above
 
 ### 11. **Info.plist Files**
-- **`SE7ENDeviceActivityReportExtension/Info.plist`**
+- **`VirtuPetDeviceActivityReportExtension/Info.plist`**
   - **Must have**: Extension point configured correctly
-- **`SE7ENDeviceActivityMonitorExtension/Info.plist`**
+- **`VirtuPetDeviceActivityMonitorExtension/Info.plist`**
   - **Must have**: Extension point configured correctly
 
 ### 12. **Project Configuration**
@@ -177,7 +177,7 @@ iOS Screen Time API
     ↓
 DeviceActivityReport Extension (TodayOverviewReport.swift)
     ↓ (processes data)
-Shared UserDefaults (group.com.se7en.app)
+Shared UserDefaults (group.com.virtupet.app)
     ↓
 DashboardView.swift (reads shared container)
     ↓

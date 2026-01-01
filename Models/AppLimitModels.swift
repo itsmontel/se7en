@@ -4,7 +4,7 @@ import ManagedSettings
 
 // MARK: - Shared Constants
 enum AppGroupConstants {
-    static let groupIdentifier = "group.com.se7en.app"
+    static let groupIdentifier = "group.com.virtupet.screentime"
     static let limitsKey = "app_limits_v2"
     static let usageKey = "app_usage_tracking"
 }

@@ -372,7 +372,7 @@ final class ScreenTimeService: ObservableObject {
     // MARK: - Simple Monitoring Setup
     
     private func saveSelectionToSharedContainer(selection: FamilyActivitySelection, tokenHash: String) {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             print("❌ Failed to save selection to shared container")
             return
@@ -391,7 +391,7 @@ final class ScreenTimeService: ObservableObject {
     /// ✅ CRITICAL: Save ONLY individual app selections (NO CATEGORIES!)
     /// Limits page is ONLY for individual apps, categories are for Dashboard only
     func saveAllMonitoredSelectionsToSharedContainer() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             print("❌ Failed to access shared container")
             return
@@ -518,7 +518,7 @@ final class ScreenTimeService: ObservableObject {
     // MARK: - Shared Container Initialization
     
     private func initializeSharedContainerUsage(tokenHash: String) {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             return
         }
@@ -777,7 +777,7 @@ final class ScreenTimeService: ObservableObject {
             selection = foundSelection
         } else {
             // Try 2: Load from shared container
-            let appGroupID = "group.com.se7en.app"
+            let appGroupID = "group.com.virtupet.screentime"
             if let sharedDefaults = UserDefaults(suiteName: appGroupID),
                let selectionData = sharedDefaults.data(forKey: "selection_\(bundleID)"),
                let decodedSelection = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: selectionData) {
@@ -838,7 +838,7 @@ final class ScreenTimeService: ObservableObject {
         }
         
         // ✅ FALLBACK 3: Try loading from shared container and finding token
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
             // Try all stored selections in shared container
             let allKeys = sharedDefaults.dictionaryRepresentation().keys
@@ -1003,7 +1003,7 @@ final class ScreenTimeService: ObservableObject {
     }
     
     private func performOptimizedUsageSync() async {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         // 🚀 FAST CHECK: Only proceed if data actually changed
@@ -1155,7 +1155,7 @@ final class ScreenTimeService: ObservableObject {
     /// Initialize the shared container with selection info so pet health can read data
     /// This is called after user selects apps in onboarding, before DeviceActivityReport runs
     func initializeSharedContainerForSelection(_ selection: FamilyActivitySelection) async {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         await MainActor.run {
             guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
@@ -1432,7 +1432,7 @@ final class ScreenTimeService: ObservableObject {
         print("📊 Getting category-based usage for \(selection.categoryTokens.count) categories...")
         
         // Try to read from shared container first (from DeviceActivityReport extension)
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         // Access UserDefaults on main thread to avoid CFPrefsPlistSource errors
         return await MainActor.run {
@@ -1476,7 +1476,7 @@ final class ScreenTimeService: ObservableObject {
     /// Uses the EXACT same logic as DashboardView: reads from shared container "total_usage" key first
     /// This matches how the dashboard gets its screen time data
     func getTotalScreenTimeTodaySync() -> Int {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             print("❌ getTotalScreenTimeTodaySync: Failed to access shared container")
@@ -1621,7 +1621,7 @@ final class ScreenTimeService: ObservableObject {
     /// Initialize the shared container with config flags after app selection
     /// This indicates screen time is configured even before DeviceActivityReport runs
     private func initializeSharedContainerForScreenTime(selection: FamilyActivitySelection) {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
             print("❌ Failed to access shared container for initialization")
             return
@@ -1794,7 +1794,7 @@ final class ScreenTimeService: ObservableObject {
     /// Grant temporary extension after puzzle completion
     /// ✅ FIXED VERSION: Properly unblocks apps using stored selections
     func grantTemporaryExtensionFixed(for bundleID: String, minutes: Int) {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         // Check global unlock mode
         let unlockMode: UnlockMode
@@ -1935,7 +1935,7 @@ final class ScreenTimeService: ObservableObject {
     
     /// Check for One-Session Mode apps and re-block them when app goes to background
     func checkAndReBlockOneSessionApps() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         // Get all keys that start with "oneSessionActive_"
@@ -1971,7 +1971,7 @@ final class ScreenTimeService: ObservableObject {
     
     /// Check if app has active extension
     func hasActiveExtension(for bundleID: String) -> Bool {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         // Check in UserDefaults first
         if let extensionEndTime = UserDefaults.standard.object(forKey: "extension_end_\(bundleID)") as? Date {
@@ -2024,7 +2024,7 @@ final class ScreenTimeService: ObservableObject {
     
     /// Get the effective limit for an app (accounts for extension mode)
     func getEffectiveDailyLimit(for bundleID: String) -> Int {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         // Get base limit from CoreData
         let goals = coreDataManager.getActiveAppGoals()
@@ -2050,7 +2050,7 @@ final class ScreenTimeService: ObservableObject {
     
     /// Get usage minutes that accounts for extension reset
     func getEffectiveUsageMinutes(for bundleID: String) -> Int {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         // ✅ If there's an active extension, use current usage (not reset)
         if hasActiveExtension(for: bundleID) {
@@ -2064,7 +2064,7 @@ final class ScreenTimeService: ObservableObject {
     
     /// Check if app is in one-session mode
     func isOneSessionActive(for bundleID: String) -> Bool {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return false }
         return sharedDefaults.bool(forKey: "oneSessionActive_\(bundleID)")
     }
@@ -2323,7 +2323,7 @@ final class ScreenTimeService: ObservableObject {
     
     /// Process pending events from the Monitor Extension (via shared container)
     private func processPendingMonitorEvents() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID),
               let events = sharedDefaults.array(forKey: "pendingEvents") as? [[String: String]],
               !events.isEmpty else {
@@ -2429,7 +2429,7 @@ final class ScreenTimeService: ObservableObject {
         // Rebuild block list excluding the unblocked app
         var newBlocked: Set<ApplicationToken> = []
         let limits = LimitStorageManager.shared.loadLimits()
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         
         for limit in limits where limit.isActive {
             guard let selection = limit.getSelection(),
@@ -2465,7 +2465,7 @@ final class ScreenTimeService: ObservableObject {
     
     /// Improved re-blocking that uses stored selections
     func checkAndReBlockOneSessionAppsImproved() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         let modeString = sharedDefaults.string(forKey: "globalUnlockMode") ?? "Extra Time"
@@ -2514,7 +2514,7 @@ final class ScreenTimeService: ObservableObject {
     
     /// Setup monitoring for stale one-session apps
     func setupOneSessionMonitoring() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         let modeString = sharedDefaults.string(forKey: "globalUnlockMode") ?? "Extra Time"
@@ -2547,7 +2547,7 @@ final class ScreenTimeService: ObservableObject {
     
     /// Force check all limits and apply shields (call on app foreground)
     func forceCheckAndApplyShields() {
-        let appGroupID = "group.com.se7en.app"
+        let appGroupID = "group.com.virtupet.screentime"
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else { return }
         
         print("🔍 Force checking all limits...")

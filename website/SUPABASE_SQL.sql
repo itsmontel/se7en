@@ -1,5 +1,5 @@
 -- ============================================
--- SE7EN WAITLIST TABLE WITH SOURCE TRACKING
+-- VirtuPet WAITLIST TABLE WITH SOURCE TRACKING
 -- ============================================
 -- Copy and paste this entire SQL into Supabase SQL Editor
 

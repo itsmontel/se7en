@@ -1,4 +1,4 @@
-# 🚀 SE7EN App - Production Readiness Checklist
+# 🚀 VirtuPet App - Production Readiness Checklist
 
 ## ✅ What's Already Complete
 
@@ -82,10 +82,10 @@
 - [ ] Handle purchase errors and edge cases
 
 **Product IDs** (already defined in code):
-- `se7en_weekly_subscription`
-- `se7en_one_credit`
-- `se7en_three_credits`
-- `se7en_seven_credits`
+- `virtupet_weekly_subscription`
+- `virtupet_one_credit`
+- `virtupet_three_credits`
+- `virtupet_seven_credits`
 
 ### 4. Fix Code Issues 🔧
 **Location:** `Services/ScreenTimeService.swift` line 57
@@ -202,7 +202,7 @@ private func setupAppMonitoring(for goal: AppGoal) {
 ### App Store Connect Setup:
 1. **App Information**
    - [ ] Bundle ID configured
-   - [ ] App name: "SE7EN"
+   - [ ] App name: "VirtuPet"
    - [ ] Category: Health & Fitness or Lifestyle
    - [ ] Age rating: 4+ (verify)
 

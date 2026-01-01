@@ -1,7 +1,7 @@
 {
-  "name": "se7en-waitlist-api",
+  "name": "virtupet-waitlist-api",
   "version": "1.0.0",
-  "description": "Backend API for SE7EN app waitlist",
+  "description": "Backend API for VirtuPet app waitlist",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,7 +10,7 @@
   "keywords": [
     "waitlist",
     "api",
-    "se7en"
+    "virtupet"
   ],
   "author": "",
   "license": "ISC",

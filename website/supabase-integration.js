@@ -1,5 +1,5 @@
 // ============================================
-// SUPABASE INTEGRATION FOR SE7EN WAITLIST
+// SUPABASE INTEGRATION FOR VirtuPet WAITLIST
 // ============================================
 // Replace the API_URL section in index.html with this code
 
@@ -66,7 +66,7 @@ async function addToWaitlist(email) {
         
         return {
             success: true,
-            message: 'Thanks! We\'ll notify you when SE7EN is available.',
+            message: 'Thanks! We\'ll notify you when VirtuPet is available.',
             data: data[0]
         };
     } catch (error) {

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import DeviceActivity
 import FamilyControls
 
@@ -169,6 +170,10 @@ struct GoalsView: View {
                     }
                 }
                 .onAppear {
+                    // 🔄 ALWAYS refresh the DeviceActivityReport on appear
+                    reportRefreshTrigger = UUID()
+                    print("🔄 GoalsView: View appeared, refreshing DeviceActivityReport")
+                    
                     // Load screen time data (non-blocking)
                     appState.preloadScreenTimeFromSharedContainer()
                     appState.updatePetHealth()
@@ -184,6 +189,11 @@ struct GoalsView: View {
                         }
                     }
                 }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                    // 🔄 ALWAYS refresh the DeviceActivityReport on foreground
+                    reportRefreshTrigger = UUID()
+                    print("🔄 GoalsView: App foregrounded, refreshing DeviceActivityReport")
+                }
                 .onReceive(NotificationCenter.default.publisher(for: .petChanged)) { _ in
                     // Refresh report when pet is changed
                     reportRefreshTrigger = UUID()
@@ -195,7 +205,7 @@ struct GoalsView: View {
         }
     }
     
-    private let appGroupID = "group.com.se7en.app"
+    private let appGroupID = "group.com.virtupet.screentime"
     
     private var todayScreenTime: Int {
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
@@ -278,7 +288,7 @@ struct GoalsView: View {
         if insights.isEmpty {
             return [
                 CoachInsight(
-                    title: "Welcome to SE7EN!",
+                    title: "Welcome to VirtuPet!",
                     message: "Block distracting apps and track your screen time to build healthier digital habits.",
                     icon: "hand.wave.fill",
                     type: .welcome,
@@ -664,7 +674,7 @@ struct WeeklyHealthReport: View {
     let weekStart: Date
     let appState: AppState
     
-    private let appGroupID = "group.com.se7en.app"
+    private let appGroupID = "group.com.virtupet.screentime"
     
     private var appInstallDate: Date? {
         guard let sharedDefaults = UserDefaults(suiteName: appGroupID) else {
@@ -885,7 +895,7 @@ struct WeeklyHighlightsCard: View {
     let puzzlesSolved: Int
     let streak: Int
     
-    private let appGroupID = "group.com.se7en.app"
+    private let appGroupID = "group.com.virtupet.screentime"
     
     // Cache data to avoid repeated UserDefaults reads
     @State private var cachedTodayScreenTime: Int = 0
@@ -1212,7 +1222,7 @@ struct FocusScoreCard: View {
     let appState: AppState
     let weekStart: Date
     
-    private let appGroupID = "group.com.se7en.app"
+    private let appGroupID = "group.com.virtupet.screentime"
     
     // Cache average screen time to avoid repeated reads
     @State private var cachedAvgScreenTime: Int = 0

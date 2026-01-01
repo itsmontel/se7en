@@ -324,7 +324,7 @@ struct Achievement: Identifiable {
             category: .habits,
             rarity: .common,
             isUnlocked: { _ in
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 return puzzleHistory.values.reduce(0, +) >= 1
             }
@@ -339,7 +339,7 @@ struct Achievement: Identifiable {
             category: .habits,
             rarity: .uncommon,
             isUnlocked: { _ in
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 return puzzleHistory.values.reduce(0, +) >= 10
             }
@@ -354,7 +354,7 @@ struct Achievement: Identifiable {
             category: .habits,
             rarity: .rare,
             isUnlocked: { _ in
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 return puzzleHistory.values.reduce(0, +) >= 50
             }
@@ -369,7 +369,7 @@ struct Achievement: Identifiable {
             category: .habits,
             rarity: .epic,
             isUnlocked: { _ in
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 return puzzleHistory.values.reduce(0, +) >= 100
             }
@@ -387,7 +387,7 @@ struct Achievement: Identifiable {
             isUnlocked: { appState in
                 // Must have used the app for at least 3 days
                 guard appState.longestStreak >= 3 else { return false }
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 
                 // Must have solved at least 1 puzzle before (to prove they use the feature)
@@ -415,7 +415,7 @@ struct Achievement: Identifiable {
             isUnlocked: { appState in
                 // Must have used the app for at least 14 days (to ensure 7 days of history)
                 guard appState.longestStreak >= 14 else { return false }
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 
                 // Must have solved at least 1 puzzle before
@@ -534,7 +534,7 @@ struct Achievement: Identifiable {
             category: .challenges,
             rarity: .uncommon,
             isUnlocked: { _ in
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 return puzzleHistory.values.reduce(0, +) >= 10
             }
@@ -890,7 +890,7 @@ struct Achievement: Identifiable {
             category: .precision,
             rarity: .rare,
             isUnlocked: { _ in
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -1117,7 +1117,7 @@ struct Achievement: Identifiable {
             category: .usage,
             rarity: .uncommon,
             isUnlocked: { _ in
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 return puzzleHistory.values.reduce(0, +) >= 25
             }
@@ -1143,7 +1143,7 @@ struct Achievement: Identifiable {
             category: .usage,
             rarity: .legendary,
             isUnlocked: { appState in
-                guard let defaults = UserDefaults(suiteName: "group.com.se7en.app") else { return false }
+                guard let defaults = UserDefaults(suiteName: "group.com.virtupet.screentime") else { return false }
                 guard let puzzleHistory = defaults.dictionary(forKey: "daily_puzzles_solved") as? [String: Int] else { return false }
                 
                 let dateFormatter = DateFormatter()
@@ -1789,7 +1789,7 @@ struct StoredAppLimit: Codable, Identifiable {
 final class LimitStorageManager {
     static let shared = LimitStorageManager()
     
-    private let appGroupID = "group.com.se7en.app"
+    private let appGroupID = "group.com.virtupet.screentime"
     private let limitsKey = "stored_app_limits_v2"
     private let usagePrefix = "usage_v2_"
     

@@ -1,6 +1,6 @@
 //
 //  PuzzleModeView.swift
-//  SE7EN
+//  VirtuPet
 //
 //  Fullscreen puzzle view for shield action (no main app UI visible)
 //

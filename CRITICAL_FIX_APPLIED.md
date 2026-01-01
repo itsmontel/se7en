@@ -39,7 +39,7 @@ users: .all  // ✅ Correct enum case for individual authorization
 ## 🚀 TEST IT NOW
 1. **Build and run** the app
 2. **Use some apps** for 5-10 minutes  
-3. **Reopen SE7EN** 
+3. **Reopen VirtuPet** 
 4. **Check console** for: `📊 TodayOverviewReport: totalDuration=XXXs`
 5. **Dashboard should show** real usage data
 

@@ -1,4 +1,4 @@
-# SE7EN Waitlist Backend Setup - Quick Start
+# VirtuPet Waitlist Backend Setup - Quick Start
 
 ## ✅ What's Been Created
 
@@ -65,7 +65,7 @@ If environment variables don't work, edit `website/index.html`:
 ## 📁 File Structure
 
 ```
-SE7EN App/
+VirtuPet App/
 ├── backend/
 │   ├── server.js          # Express API server
 │   ├── package.json       # Dependencies

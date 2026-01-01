@@ -1,8 +1,8 @@
-# 🌐 SE7EN Website - Complete Overview
+# 🌐 VirtuPet Website - Complete Overview
 
 ## ✅ What's Been Created
 
-A complete, production-ready website for your SE7EN app based on modern design principles and your app's branding.
+A complete, production-ready website for your VirtuPet app based on modern design principles and your app's branding.
 
 ---
 
@@ -19,7 +19,7 @@ The main homepage featuring:
 - Call-to-action section
 - Full navigation and footer
 
-**Design**: Clean, modern, gradient backgrounds, SE7EN brand colors
+**Design**: Clean, modern, gradient backgrounds, VirtuPet brand colors
 
 ---
 
@@ -69,13 +69,13 @@ Complete 22-section terms of service covering:
 Interactive FAQ with 25+ questions across 6 categories:
 
 #### General Questions (4 FAQs)
-- What is SE7EN?
+- What is VirtuPet?
 - How does the credit system work?
-- Why does SE7EN cost money?
-- Is SE7EN available for Android?
+- Why does VirtuPet cost money?
+- Is VirtuPet available for Android?
 
 #### Pricing & Billing (5 FAQs)
-- How much does SE7EN cost?
+- How much does VirtuPet cost?
 - Can I buy extra credits?
 - When will I be charged?
 - Can I get a refund?
@@ -85,7 +85,7 @@ Interactive FAQ with 25+ questions across 6 categories:
 - Which apps can I monitor?
 - How accurate is the tracking?
 - Can I change my daily limits?
-- Will SE7EN block apps?
+- Will VirtuPet block apps?
 - Do I get notifications?
 
 #### Privacy & Security (3 FAQs)
@@ -208,7 +208,7 @@ website/
 - High-contrast, readable text
 
 ### 2. Brand Consistency
-- Uses exact SE7EN app colors
+- Uses exact VirtuPet app colors
 - Matches app's design philosophy
 - Consistent typography and spacing
 - Professional, trustworthy aesthetic
@@ -291,7 +291,7 @@ website/
 ## 💡 What Makes This Special
 
 ### 1. **App-Specific Content**
-Not a generic template - every word is tailored to SE7EN's unique credit system, features, and business model.
+Not a generic template - every word is tailored to VirtuPet's unique credit system, features, and business model.
 
 ### 2. **Legal Depth**
 Professional-grade privacy policy and terms that specifically address:
@@ -353,9 +353,9 @@ Use this checklist before going live:
 - [ ] Add `og-image.png` for social sharing (1200x630px)
 
 ### Content
-- [ ] Update `support@se7enapp.com` (search all files)
-- [ ] Update `privacy@se7enapp.com` (privacy.html)
-- [ ] Update `legal@se7enapp.com` (terms.html)
+- [ ] Update `support@virtupetapp.com` (search all files)
+- [ ] Update `privacy@virtupetapp.com` (privacy.html)
+- [ ] Update `legal@virtupetapp.com` (terms.html)
 - [ ] Replace `[Your Address]` with real address
 - [ ] Replace `[Your Jurisdiction]` with actual jurisdiction
 - [ ] Update App Store links from `#` to actual URL
@@ -388,7 +388,7 @@ Use this checklist before going live:
 
 ## 🎉 Summary
 
-You now have a **complete, professional, production-ready website** for SE7EN that:
+You now have a **complete, professional, production-ready website** for VirtuPet that:
 
 ✅ Matches your app's branding perfectly  
 ✅ Explains your unique credit system clearly  
@@ -413,5 +413,5 @@ If you need help with the website:
 
 ---
 
-**Built for SE7EN** | **Designed for Success** | **Ready to Launch** ✨
+**Built for VirtuPet** | **Designed for Success** | **Ready to Launch** ✨
 

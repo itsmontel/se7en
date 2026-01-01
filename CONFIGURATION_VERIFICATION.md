@@ -5,52 +5,52 @@
 ### 1. Main App (`Seven.entitlements`)
 ```xml
 ✅ com.apple.developer.family-controls = true
-✅ com.apple.security.application-groups = ["group.com.se7en.app"]
+✅ com.apple.security.application-groups = ["group.com.virtupet.app"]
 ```
 **Status**: ✅ CORRECT
 
-### 2. Report Extension (`SE7ENDeviceActivityReportExtension.entitlements`)
+### 2. Report Extension (`VirtuPetDeviceActivityReportExtension.entitlements`)
 ```xml
 ✅ com.apple.developer.family-controls = true
-✅ com.apple.security.application-groups = ["group.com.se7en.app"]
+✅ com.apple.security.application-groups = ["group.com.virtupet.app"]
 ```
 **Status**: ✅ CORRECT
 
-### 3. Monitor Extension (`SE7ENDeviceActivityMonitorExtension.entitlements`)
+### 3. Monitor Extension (`VirtuPetDeviceActivityMonitorExtension.entitlements`)
 ```xml
 ✅ com.apple.developer.family-controls = true
-✅ com.apple.security.application-groups = ["group.com.se7en.app"]
+✅ com.apple.security.application-groups = ["group.com.virtupet.app"]
 ```
 **Status**: ✅ CORRECT
 
-**All three targets have matching App Group ID**: `group.com.se7en.app` ✅
+**All three targets have matching App Group ID**: `group.com.virtupet.app` ✅
 
 ---
 
 ## ⚠️ Info.plist Files - ONE ISSUE FOUND
 
-### 1. Report Extension (`SE7ENDeviceActivityReportExtension/Info.plist`)
+### 1. Report Extension (`VirtuPetDeviceActivityReportExtension/Info.plist`)
 ```xml
 ✅ NSExtensionPointIdentifier = "com.apple.deviceactivityui.report-extension"
-✅ NSExtensionPrincipalClass = "$(PRODUCT_MODULE_NAME).SE7ENDeviceActivityReportExtension"
+✅ NSExtensionPrincipalClass = "$(PRODUCT_MODULE_NAME).VirtuPetDeviceActivityReportExtension"
 ✅ EXExtensionPointIdentifier = "com.apple.deviceactivityui.report-extension"
 ```
 **Status**: ✅ CORRECT
 - Extension point matches DeviceActivityReport
-- Principal class matches `@main struct SE7ENDeviceActivityReportExtension`
+- Principal class matches `@main struct VirtuPetDeviceActivityReportExtension`
 
-### 2. Monitor Extension (`SE7ENDeviceActivityMonitorExtension/Info.plist`)
+### 2. Monitor Extension (`VirtuPetDeviceActivityMonitorExtension/Info.plist`)
 ```xml
 ✅ NSExtensionPointIdentifier = "com.apple.deviceactivity.monitor-extension"
-⚠️ NSExtensionPrincipalClass = "$(PRODUCT_MODULE_NAME).SE7ENDeviceActivityMonitor"
+⚠️ NSExtensionPrincipalClass = "$(PRODUCT_MODULE_NAME).VirtuPetDeviceActivityMonitor"
 ✅ EXExtensionPointIdentifier = "com.apple.deviceactivity.monitor-extension"
 ```
 **Status**: ⚠️ NEEDS VERIFICATION
 - Extension point is correct
-- Principal class references `SE7ENDeviceActivityMonitor` (class name is correct)
+- Principal class references `VirtuPetDeviceActivityMonitor` (class name is correct)
 - **Note**: For DeviceActivityMonitor with `@main`, the principal class might not be strictly required, but it's fine to have it
 
-**Actual class name**: `SE7ENDeviceActivityMonitor` ✅ (matches Info.plist)
+**Actual class name**: `VirtuPetDeviceActivityMonitor` ✅ (matches Info.plist)
 
 ---
 
@@ -60,27 +60,27 @@
 ```
 ✅ Main App (Debug): CODE_SIGN_ENTITLEMENTS = Seven.entitlements
 ✅ Main App (Release): CODE_SIGN_ENTITLEMENTS = Seven.entitlements
-✅ Report Extension (Debug): CODE_SIGN_ENTITLEMENTS = SE7ENDeviceActivityReportExtension/SE7ENDeviceActivityReportExtension.entitlements
-✅ Report Extension (Release): CODE_SIGN_ENTITLEMENTS = SE7ENDeviceActivityReportExtension/SE7ENDeviceActivityReportExtension.entitlements
-✅ Monitor Extension (Debug): CODE_SIGN_ENTITLEMENTS = SE7ENDeviceActivityMonitorExtension/SE7ENDeviceActivityMonitorExtension.entitlements
-✅ Monitor Extension (Release): CODE_SIGN_ENTITLEMENTS = SE7ENDeviceActivityMonitorExtension/SE7ENDeviceActivityMonitorExtension.entitlements
+✅ Report Extension (Debug): CODE_SIGN_ENTITLEMENTS = VirtuPetDeviceActivityReportExtension/VirtuPetDeviceActivityReportExtension.entitlements
+✅ Report Extension (Release): CODE_SIGN_ENTITLEMENTS = VirtuPetDeviceActivityReportExtension/VirtuPetDeviceActivityReportExtension.entitlements
+✅ Monitor Extension (Debug): CODE_SIGN_ENTITLEMENTS = VirtuPetDeviceActivityMonitorExtension/VirtuPetDeviceActivityMonitorExtension.entitlements
+✅ Monitor Extension (Release): CODE_SIGN_ENTITLEMENTS = VirtuPetDeviceActivityMonitorExtension/VirtuPetDeviceActivityMonitorExtension.entitlements
 ```
 **Status**: ✅ CORRECT - All targets have entitlements assigned
 
 ### Info.plist Assignment
 ```
-✅ Report Extension (Debug): INFOPLIST_FILE = SE7ENDeviceActivityReportExtension/Info.plist
-✅ Report Extension (Release): INFOPLIST_FILE = SE7ENDeviceActivityReportExtension/Info.plist
-✅ Monitor Extension (Debug): INFOPLIST_FILE = SE7ENDeviceActivityMonitorExtension/Info.plist
-✅ Monitor Extension (Release): INFOPLIST_FILE = SE7ENDeviceActivityMonitorExtension/Info.plist
+✅ Report Extension (Debug): INFOPLIST_FILE = VirtuPetDeviceActivityReportExtension/Info.plist
+✅ Report Extension (Release): INFOPLIST_FILE = VirtuPetDeviceActivityReportExtension/Info.plist
+✅ Monitor Extension (Debug): INFOPLIST_FILE = VirtuPetDeviceActivityMonitorExtension/Info.plist
+✅ Monitor Extension (Release): INFOPLIST_FILE = VirtuPetDeviceActivityMonitorExtension/Info.plist
 ```
 **Status**: ✅ CORRECT - All extensions have Info.plist assigned
 
 ### Bundle Identifiers
 ```
-✅ Main App: com.se7en.app (implied)
-✅ Report Extension: com.se7en.app.screentime.SE7ENDeviceActivityReportExtension
-✅ Monitor Extension: com.se7en.app.screentime.SE7ENDeviceActivityMonitorExtension
+✅ Main App: com.virtupet.app (implied)
+✅ Report Extension: com.virtupet.app.screentime.VirtuPetDeviceActivityReportExtension
+✅ Monitor Extension: com.virtupet.app.screentime.VirtuPetDeviceActivityMonitorExtension
 ```
 **Status**: ✅ CORRECT - Proper naming convention
 
@@ -96,12 +96,12 @@
 ## 🔍 Potential Issues to Verify
 
 ### 1. Monitor Extension Principal Class
-The Info.plist references `SE7ENDeviceActivityMonitor` which matches the actual class name. However, for DeviceActivityMonitor extensions with `@main`, the system should automatically discover the class. The principal class entry is optional but harmless.
+The Info.plist references `VirtuPetDeviceActivityMonitor` which matches the actual class name. However, for DeviceActivityMonitor extensions with `@main`, the system should automatically discover the class. The principal class entry is optional but harmless.
 
 **Recommendation**: Keep as-is (it's correct)
 
 ### 2. App Group Consistency
-All three targets use the same App Group: `group.com.se7en.app` ✅
+All three targets use the same App Group: `group.com.virtupet.app` ✅
 
 **Verification needed**: Ensure this App Group is registered in your Apple Developer account under:
 - App ID capabilities

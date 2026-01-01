@@ -1,4 +1,4 @@
-# SE7EN Website Deployment Guide
+# VirtuPet Website Deployment Guide
 
 ## 🚀 Deployment Setup
 

@@ -41,7 +41,7 @@ struct StoredAppLimit: Codable, Identifiable {
 final class LimitStorageManager {
     static let shared = LimitStorageManager()
     
-    private let appGroupID = "group.com.se7en.app"
+    private let appGroupID = "group.com.virtupet.screentime"
     private let limitsKey = "stored_app_limits_v2"
     private let usagePrefix = "usage_v2_"
     

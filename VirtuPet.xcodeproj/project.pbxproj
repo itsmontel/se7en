@@ -1,0 +1,1604 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 70;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1001 /* VirtuPetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2001 /* VirtuPetApp.swift */; };
+		1002 /* Views/ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2002 /* Views/ContentView.swift */; };
+		1003 /* Models/AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2003 /* Models/AppState.swift */; };
+		1004 /* Models/Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2004 /* Models/Models.swift */; };
+		1005 /* DesignSystem/Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2005 /* DesignSystem/Colors.swift */; };
+		1006 /* DesignSystem/Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2006 /* DesignSystem/Typography.swift */; };
+		1007 /* DesignSystem/Styling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2007 /* DesignSystem/Styling.swift */; };
+		1008 /* Extensions/View+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2008 /* Extensions/View+Extensions.swift */; };
+		1009 /* Views/Onboarding/OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2009 /* Views/Onboarding/OnboardingContainerView.swift */; };
+		1010 /* Views/Onboarding/WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2010 /* Views/Onboarding/WelcomeView.swift */; };
+		1011 /* Views/Onboarding/HowItWorksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2011 /* Views/Onboarding/HowItWorksView.swift */; };
+		1012 /* Views/Onboarding/WhyItWorksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2012 /* Views/Onboarding/WhyItWorksView.swift */; };
+		1013 /* Views/Onboarding/SetGoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2013 /* Views/Onboarding/SetGoalsView.swift */; };
+		1014 /* Views/Onboarding/PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2014 /* Views/Onboarding/PaywallView.swift */; };
+		1015 /* Views/Dashboard/DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2015 /* Views/Dashboard/DashboardView.swift */; };
+		1017 /* Views/Dashboard/DailySummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2017 /* Views/Dashboard/DailySummaryCard.swift */; };
+		1018 /* Views/Dashboard/AppUsageCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2018 /* Views/Dashboard/AppUsageCard.swift */; };
+		1019 /* Views/Goals/GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2019 /* Views/Goals/GoalsView.swift */; };
+		1023 /* Views/Settings/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2023 /* Views/Settings/SettingsView.swift */; };
+		1025 /* Components/LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2025 /* Components/LoadingView.swift */; };
+		1026 /* Components/SuccessToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2026 /* Components/SuccessToast.swift */; };
+		1027 /* Components/AnimatedNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2027 /* Components/AnimatedNumber.swift */; };
+		1028 /* Components/VirtuPetWordmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2028 /* Components/VirtuPetWordmark.swift */; };
+		1029 /* Components/StreakView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029 /* Components/StreakView.swift */; };
+		1029A /* Components/PetAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2029A /* Components/PetAnimationView.swift */; };
+		1030 /* Views/Achievements/AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2030 /* Views/Achievements/AchievementsView.swift */; };
+		1031 /* Views/Settings/FAQView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2031 /* Views/Settings/FAQView.swift */; };
+		1032 /* Views/Settings/SupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2032 /* Views/Settings/SupportView.swift */; };
+		1033 /* Views/Settings/PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2033 /* Views/Settings/PrivacyPolicyView.swift */; };
+		1034 /* Views/Settings/TermsOfServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2034 /* Views/Settings/TermsOfServiceView.swift */; };
+		1034A /* Views/Tutorial/AppTutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2034A /* Views/Tutorial/AppTutorialView.swift */; };
+		1035 /* Models/CoreData/CoreDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2035 /* Models/CoreData/CoreDataManager.swift */; };
+		1036 /* Services/ScreenTimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2036 /* Services/ScreenTimeService.swift */; };
+		1037 /* Services/NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2037 /* Services/NotificationService.swift */; };
+		1038 /* Services/DeviceActivityMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2038 /* Services/DeviceActivityMonitorExtension.swift */; };
+		1039 /* Services/StoreKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2039 /* Services/StoreKitService.swift */; };
+		1040 /* Models/CoreData/VirtuPetDataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 2040 /* Models/CoreData/VirtuPetDataModel.xcdatamodeld */; };
+		1041 /* Services/AppDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2044 /* Services/AppDiscoveryService.swift */; };
+		1042 /* Services/RealAppDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2060 /* Services/RealAppDiscoveryService.swift */; };
+		1043 /* Views/Dashboard/CategoryAppSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2061 /* Views/Dashboard/CategoryAppSelectionView.swift */; };
+		1044 /* Services/FamilyActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2063 /* Services/FamilyActivityService.swift */; };
+		1045 /* Views/Onboarding/PetSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2045 /* Views/Onboarding/PetSelectionView.swift */; };
+		1046 /* Views/Onboarding/PetPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2046 /* Views/Onboarding/PetPreviewView.swift */; };
+		1047 /* Views/Onboarding/VideoIntroductionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2062 /* Views/Onboarding/VideoIntroductionView.swift */; };
+		1048 /* Views/Onboarding/MotivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2047 /* Views/Onboarding/MotivationView.swift */; };
+		1049 /* Views/Onboarding/DidYouKnowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2048 /* Views/Onboarding/DidYouKnowView.swift */; };
+		1050 /* Views/Onboarding/ScreenTimeInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2049 /* Views/Onboarding/ScreenTimeInputView.swift */; };
+		1051 /* Views/Onboarding/LifetimeCalculationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2050 /* Views/Onboarding/LifetimeCalculationView.swift */; };
+		1052 /* Views/Onboarding/ScreenTimeConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2051 /* Views/Onboarding/ScreenTimeConnectionView.swift */; };
+		1054 /* Views/Onboarding/WhyChooseVirtuPetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2053 /* Views/Onboarding/WhyChooseVirtuPetView.swift */; };
+		1055 /* Views/Onboarding/OnboardingBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2054 /* Views/Onboarding/OnboardingBackButton.swift */; };
+		1056 /* Views/Dashboard/PetHealthCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2052 /* Views/Dashboard/PetHealthCard.swift */; };
+		1057 /* Views/Onboarding/OnboardingHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2055 /* Views/Onboarding/OnboardingHeader.swift */; };
+		1058 /* Views/Blocking/BlockingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4002 /* Views/Blocking/BlockingView.swift */; };
+		1059 /* Services/DeviceActivityReportExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2064 /* Services/DeviceActivityReportExtension.swift */; };
+		1060 /* Views/Dashboard/SelectAllAppsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2065 /* Views/Dashboard/SelectAllAppsView.swift */; };
+		1061 /* Views/Onboarding/FamilyActivityPickerWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2066 /* Views/Onboarding/FamilyActivityPickerWrapper.swift */; };
+		1078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3026 /* Assets.xcassets */; };
+		1079 /* dogintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3027 /* dogintro.mp4 */; };
+		1080 /* catintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3028 /* catintro.mp4 */; };
+		1081 /* bunnyintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3029 /* bunnyintro.mp4 */; };
+		1082 /* hamsterintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3030 /* hamsterintro.mp4 */; };
+		1083 /* horseintro.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 3031 /* horseintro.mp4 */; };
+		3035 /* Components/StreakCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3034 /* Components/StreakCelebrationView.swift */; };
+		3036 /* Components/AchievementCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3037 /* Components/AchievementCelebrationView.swift */; };
+		3038 /* Components/AchievementBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3039 /* Components/AchievementBannerView.swift */; };
+		4001 /* Views/Dashboard/ExtendLimitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4000 /* Views/Dashboard/ExtendLimitSheet.swift */; };
+		7101 /* Models/PuzzleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7002 /* Models/PuzzleModels.swift */; };
+		7102 /* Services/PuzzleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7001 /* Services/PuzzleManager.swift */; };
+		7103 /* SudokuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7003 /* SudokuView.swift */; };
+		7104 /* MemoryGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7004 /* MemoryGameView.swift */; };
+		7105 /* PatternGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7005 /* PatternGameView.swift */; };
+		7106 /* LimitReachedPuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7006 /* LimitReachedPuzzleView.swift */; };
+		7107 /* JigsawPuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7007 /* JigsawPuzzleView.swift */; };
+		8F667A202EF3524E0028D462 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */; };
+		8F667A222EF3524E0028D462 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F667A212EF3524E0028D462 /* ManagedSettingsUI.framework */; };
+		8F667A2A2EF3524E0028D462 /* VirtuPetShieldConfigurationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8F667A1E2EF3524D0028D462 /* VirtuPetShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8F667A362EF354490028D462 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */; };
+		8F667A3E2EF354490028D462 /* VirtuPetShieldActionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8F667A352EF354490028D462 /* VirtuPetShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8F9B9D342EFE24A6005E2CDF /* Animation in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9D332EFE2499005E2CDF /* Animation */; };
+		8F9B9D362EFE24A6005E2CDF /* Animation in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9D332EFE2499005E2CDF /* Animation */; };
+		8F9B9E402EFE2FC1005E2CDF /* DarkHamsterSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E0E2EFE2FBD005E2CDF /* DarkHamsterSickAnimation.mp4 */; };
+		8F9B9E412EFE2FC1005E2CDF /* DarkHorseFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E0F2EFE2FBD005E2CDF /* DarkHorseFullHealthAnimation.mp4 */; };
+		8F9B9E422EFE2FC1005E2CDF /* CatHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E102EFE2FBD005E2CDF /* CatHappyAnimation.mp4 */; };
+		8F9B9E432EFE2FC1005E2CDF /* DarkHorseContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E112EFE2FBD005E2CDF /* DarkHorseContentAnimation.mp4 */; };
+		8F9B9E442EFE2FC1005E2CDF /* BunnyFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E122EFE2FBD005E2CDF /* BunnyFullHealthAnimation.mp4 */; };
+		8F9B9E452EFE2FC1005E2CDF /* DarkHamsterContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E132EFE2FBD005E2CDF /* DarkHamsterContentAnimation.mp4 */; };
+		8F9B9E462EFE2FC1005E2CDF /* HamsterSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E142EFE2FBD005E2CDF /* HamsterSickAnimation.mp4 */; };
+		8F9B9E472EFE2FC1005E2CDF /* HorseHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E152EFE2FBD005E2CDF /* HorseHappyAnimation.mp4 */; };
+		8F9B9E482EFE2FC1005E2CDF /* DarkCatSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E162EFE2FBD005E2CDF /* DarkCatSadAnimation.mp4 */; };
+		8F9B9E492EFE2FC1005E2CDF /* HorseSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E172EFE2FBD005E2CDF /* HorseSadAnimation.mp4 */; };
+		8F9B9E4A2EFE2FC1005E2CDF /* DarkHamsterHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E182EFE2FBD005E2CDF /* DarkHamsterHappyAnimation.mp4 */; };
+		8F9B9E4B2EFE2FC1005E2CDF /* DogSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E192EFE2FBD005E2CDF /* DogSickAnimation.mp4 */; };
+		8F9B9E4C2EFE2FC1005E2CDF /* HorseFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1A2EFE2FBE005E2CDF /* HorseFullHealthAnimation.mp4 */; };
+		8F9B9E4D2EFE2FC1005E2CDF /* DarkHamsterFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1B2EFE2FBE005E2CDF /* DarkHamsterFullHealthAnimation.mp4 */; };
+		8F9B9E4E2EFE2FC1005E2CDF /* DarkCatSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1C2EFE2FBE005E2CDF /* DarkCatSickAnimation.mp4 */; };
+		8F9B9E4F2EFE2FC1005E2CDF /* DarkBunnyHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1D2EFE2FBE005E2CDF /* DarkBunnyHappyAnimation.mp4 */; };
+		8F9B9E502EFE2FC1005E2CDF /* DarkCatFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1E2EFE2FBE005E2CDF /* DarkCatFullHealthAnimation.mp4 */; };
+		8F9B9E512EFE2FC1005E2CDF /* DarkHorseSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E1F2EFE2FBE005E2CDF /* DarkHorseSadAnimation.mp4 */; };
+		8F9B9E522EFE2FC1005E2CDF /* DarkDogContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E202EFE2FBE005E2CDF /* DarkDogContentAnimation.mp4 */; };
+		8F9B9E532EFE2FC1005E2CDF /* DarkBunnyContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E212EFE2FBE005E2CDF /* DarkBunnyContentAnimation.mp4 */; };
+		8F9B9E542EFE2FC1005E2CDF /* DogFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E222EFE2FBE005E2CDF /* DogFullHealthAnimation.mp4 */; };
+		8F9B9E552EFE2FC1005E2CDF /* DarkBunnySadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E232EFE2FBE005E2CDF /* DarkBunnySadAnimation.mp4 */; };
+		8F9B9E562EFE2FC1005E2CDF /* BunnySickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E242EFE2FBF005E2CDF /* BunnySickAnimation.mp4 */; };
+		8F9B9E572EFE2FC1005E2CDF /* DarkCatHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E252EFE2FBF005E2CDF /* DarkCatHappyAnimation.mp4 */; };
+		8F9B9E582EFE2FC1005E2CDF /* HorseSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E262EFE2FBF005E2CDF /* HorseSickAnimation.mp4 */; };
+		8F9B9E592EFE2FC1005E2CDF /* BunnyContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E272EFE2FBF005E2CDF /* BunnyContentAnimation.mp4 */; };
+		8F9B9E5A2EFE2FC1005E2CDF /* DarkHorseSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E282EFE2FBF005E2CDF /* DarkHorseSickAnimation.mp4 */; };
+		8F9B9E5B2EFE2FC1005E2CDF /* CatSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E292EFE2FBF005E2CDF /* CatSadAnimation.mp4 */; };
+		8F9B9E5C2EFE2FC1005E2CDF /* CatSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2A2EFE2FBF005E2CDF /* CatSickAnimation.mp4 */; };
+		8F9B9E5D2EFE2FC1005E2CDF /* DarkBunnySickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2B2EFE2FBF005E2CDF /* DarkBunnySickAnimation.mp4 */; };
+		8F9B9E5E2EFE2FC1005E2CDF /* DarkHorseHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2C2EFE2FBF005E2CDF /* DarkHorseHappyAnimation.mp4 */; };
+		8F9B9E5F2EFE2FC1005E2CDF /* DogHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2D2EFE2FBF005E2CDF /* DogHappyAnimation.mp4 */; };
+		8F9B9E602EFE2FC1005E2CDF /* DarkBunnyFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2E2EFE2FC0005E2CDF /* DarkBunnyFullHealthAnimation.mp4 */; };
+		8F9B9E612EFE2FC1005E2CDF /* DogSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E2F2EFE2FC0005E2CDF /* DogSadAnimation.mp4 */; };
+		8F9B9E622EFE2FC1005E2CDF /* DogContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E302EFE2FC0005E2CDF /* DogContentAnimation.mp4 */; };
+		8F9B9E632EFE2FC1005E2CDF /* DarkCatContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E312EFE2FC0005E2CDF /* DarkCatContentAnimation.mp4 */; };
+		8F9B9E642EFE2FC1005E2CDF /* BunnySadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E322EFE2FC0005E2CDF /* BunnySadAnimation.mp4 */; };
+		8F9B9E652EFE2FC1005E2CDF /* DarkDogSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E332EFE2FC0005E2CDF /* DarkDogSadAnimation.mp4 */; };
+		8F9B9E662EFE2FC1005E2CDF /* CatFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E342EFE2FC0005E2CDF /* CatFullHealthAnimation.mp4 */; };
+		8F9B9E672EFE2FC1005E2CDF /* DarkHamsterSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E352EFE2FC0005E2CDF /* DarkHamsterSadAnimation.mp4 */; };
+		8F9B9E682EFE2FC1005E2CDF /* DarkDogFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E362EFE2FC0005E2CDF /* DarkDogFullHealthAnimation.mp4 */; };
+		8F9B9E692EFE2FC1005E2CDF /* HamsterFullHealthAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E372EFE2FC0005E2CDF /* HamsterFullHealthAnimation.mp4 */; };
+		8F9B9E6A2EFE2FC1005E2CDF /* BunnyHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E382EFE2FC0005E2CDF /* BunnyHappyAnimation.mp4 */; };
+		8F9B9E6B2EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E392EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 */; };
+		8F9B9E6C2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3A2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 */; };
+		8F9B9E6D2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3B2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 */; };
+		8F9B9E6E2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3C2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 */; };
+		8F9B9E6F2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3D2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 */; };
+		8F9B9E702EFE2FC1005E2CDF /* CatContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3E2EFE2FC1005E2CDF /* CatContentAnimation.mp4 */; };
+		8F9B9E712EFE2FC1005E2CDF /* HorseContentAnimation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9E3F2EFE2FC1005E2CDF /* HorseContentAnimation.mp4 */; };
+		8F9B9E9C2EFF1520005E2CDF /* Animation in Resources */ = {isa = PBXBuildFile; fileRef = 8F9B9D332EFE2499005E2CDF /* Animation */; };
+		8FB3DA092EE37903005BC03C /* VirtuPetDeviceActivityReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3D9FD2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8FB3DA3A2EE38ECD005BC03C /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */; };
+		8FB3DA422EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FB3DA372EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		9002 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9000 /* Localizable.strings */; };
+		F6468888 /* Services/HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A539999 /* Services/HapticsManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8F667A282EF3524E0028D462 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 80 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8F667A1D2EF3524D0028D462;
+			remoteInfo = VirtuPetShieldConfigurationExtension;
+		};
+		8F667A3C2EF354490028D462 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 80 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8F667A342EF354490028D462;
+			remoteInfo = VirtuPetShieldActionExtension;
+		};
+		8FB3DA072EE37903005BC03C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 80 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8FB3D9FC2EE37903005BC03C;
+			remoteInfo = VirtuPetDeviceActivityReportExtension;
+		};
+		8FB3DA402EE38ECD005BC03C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 80 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8FB3DA362EE38ECD005BC03C;
+			remoteInfo = VirtuPetDeviceActivityMonitorExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8FB3DA0A2EE37903005BC03C /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				8FB3DA092EE37903005BC03C /* VirtuPetDeviceActivityReportExtension.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FB3DA432EE38ECD005BC03C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8F667A3E2EF354490028D462 /* VirtuPetShieldActionExtension.appex in Embed Foundation Extensions */,
+				8FB3DA422EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension.appex in Embed Foundation Extensions */,
+				8F667A2A2EF3524E0028D462 /* VirtuPetShieldConfigurationExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		100 /* VirtuPet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VirtuPet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2001 /* VirtuPetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtuPetApp.swift; sourceTree = "<group>"; };
+		2002 /* Views/ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ContentView.swift; sourceTree = "<group>"; };
+		2003 /* Models/AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/AppState.swift; sourceTree = "<group>"; };
+		2004 /* Models/Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/Models.swift; sourceTree = "<group>"; };
+		2005 /* DesignSystem/Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem/Colors.swift; sourceTree = "<group>"; };
+		2006 /* DesignSystem/Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem/Typography.swift; sourceTree = "<group>"; };
+		2007 /* DesignSystem/Styling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem/Styling.swift; sourceTree = "<group>"; };
+		2008 /* Extensions/View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Extensions/View+Extensions.swift"; sourceTree = "<group>"; };
+		2009 /* Views/Onboarding/OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingContainerView.swift; sourceTree = "<group>"; };
+		2010 /* Views/Onboarding/WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WelcomeView.swift; sourceTree = "<group>"; };
+		2011 /* Views/Onboarding/HowItWorksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/HowItWorksView.swift; sourceTree = "<group>"; };
+		2012 /* Views/Onboarding/WhyItWorksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WhyItWorksView.swift; sourceTree = "<group>"; };
+		2013 /* Views/Onboarding/SetGoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/SetGoalsView.swift; sourceTree = "<group>"; };
+		2014 /* Views/Onboarding/PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PaywallView.swift; sourceTree = "<group>"; };
+		2015 /* Views/Dashboard/DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/DashboardView.swift; sourceTree = "<group>"; };
+		2017 /* Views/Dashboard/DailySummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/DailySummaryCard.swift; sourceTree = "<group>"; };
+		2018 /* Views/Dashboard/AppUsageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/AppUsageCard.swift; sourceTree = "<group>"; };
+		2019 /* Views/Goals/GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Goals/GoalsView.swift; sourceTree = "<group>"; };
+		2023 /* Views/Settings/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
+		2025 /* Components/LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/LoadingView.swift; sourceTree = "<group>"; };
+		2026 /* Components/SuccessToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/SuccessToast.swift; sourceTree = "<group>"; };
+		2027 /* Components/AnimatedNumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AnimatedNumber.swift; sourceTree = "<group>"; };
+		2028 /* Components/VirtuPetWordmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/VirtuPetWordmark.swift; sourceTree = "<group>"; };
+		2029 /* Components/StreakView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakView.swift; sourceTree = "<group>"; };
+		2029A /* Components/PetAnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/PetAnimationView.swift; sourceTree = "<group>"; };
+		2030 /* Views/Achievements/AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Achievements/AchievementsView.swift; sourceTree = "<group>"; };
+		2031 /* Views/Settings/FAQView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/FAQView.swift; sourceTree = "<group>"; };
+		2032 /* Views/Settings/SupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/SupportView.swift; sourceTree = "<group>"; };
+		2033 /* Views/Settings/PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/PrivacyPolicyView.swift; sourceTree = "<group>"; };
+		2034 /* Views/Settings/TermsOfServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Settings/TermsOfServiceView.swift; sourceTree = "<group>"; };
+		2034A /* Views/Tutorial/AppTutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Tutorial/AppTutorialView.swift; sourceTree = "<group>"; };
+		2035 /* Models/CoreData/CoreDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/CoreData/CoreDataManager.swift; sourceTree = "<group>"; };
+		2036 /* Services/ScreenTimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ScreenTimeService.swift; sourceTree = "<group>"; };
+		2037 /* Services/NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/NotificationService.swift; sourceTree = "<group>"; };
+		2038 /* Services/DeviceActivityMonitorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/DeviceActivityMonitorExtension.swift; sourceTree = "<group>"; };
+		2039 /* Services/StoreKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/StoreKitService.swift; sourceTree = "<group>"; };
+		2041 /* VirtuPetDataModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = VirtuPetDataModel.xcdatamodel; sourceTree = "<group>"; };
+		2042 /* VirtuPet.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VirtuPet.entitlements; sourceTree = "<group>"; };
+		2043 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2044 /* Services/AppDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/AppDiscoveryService.swift; sourceTree = "<group>"; };
+		2045 /* Views/Onboarding/PetSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PetSelectionView.swift; sourceTree = "<group>"; };
+		2046 /* Views/Onboarding/PetPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/PetPreviewView.swift; sourceTree = "<group>"; };
+		2047 /* Views/Onboarding/MotivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/MotivationView.swift; sourceTree = "<group>"; };
+		2048 /* Views/Onboarding/DidYouKnowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/DidYouKnowView.swift; sourceTree = "<group>"; };
+		2049 /* Views/Onboarding/ScreenTimeInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/ScreenTimeInputView.swift; sourceTree = "<group>"; };
+		2050 /* Views/Onboarding/LifetimeCalculationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/LifetimeCalculationView.swift; sourceTree = "<group>"; };
+		2051 /* Views/Onboarding/ScreenTimeConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/ScreenTimeConnectionView.swift; sourceTree = "<group>"; };
+		2052 /* Views/Dashboard/PetHealthCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/PetHealthCard.swift; sourceTree = "<group>"; };
+		2053 /* Views/Onboarding/WhyChooseVirtuPetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/WhyChooseVirtuPetView.swift; sourceTree = "<group>"; };
+		2054 /* Views/Onboarding/OnboardingBackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingBackButton.swift; sourceTree = "<group>"; };
+		2055 /* Views/Onboarding/OnboardingHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/OnboardingHeader.swift; sourceTree = "<group>"; };
+		2060 /* Services/RealAppDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/RealAppDiscoveryService.swift; sourceTree = "<group>"; };
+		2061 /* Views/Dashboard/CategoryAppSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/CategoryAppSelectionView.swift; sourceTree = "<group>"; };
+		2062 /* Views/Onboarding/VideoIntroductionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/VideoIntroductionView.swift; sourceTree = "<group>"; };
+		2063 /* Services/FamilyActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/FamilyActivityService.swift; sourceTree = "<group>"; };
+		2064 /* Services/DeviceActivityReportExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/DeviceActivityReportExtension.swift; sourceTree = "<group>"; };
+		2065 /* Views/Dashboard/SelectAllAppsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/SelectAllAppsView.swift; sourceTree = "<group>"; };
+		2066 /* Views/Onboarding/FamilyActivityPickerWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Onboarding/FamilyActivityPickerWrapper.swift; sourceTree = "<group>"; };
+		3026 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3027 /* dogintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = dogintro.mp4; sourceTree = "<group>"; };
+		3028 /* catintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = catintro.mp4; sourceTree = "<group>"; };
+		3029 /* bunnyintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = bunnyintro.mp4; sourceTree = "<group>"; };
+		3030 /* hamsterintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = hamsterintro.mp4; sourceTree = "<group>"; };
+		3031 /* horseintro.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = horseintro.mp4; sourceTree = "<group>"; };
+		3034 /* Components/StreakCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/StreakCelebrationView.swift; sourceTree = "<group>"; };
+		3037 /* Components/AchievementCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementCelebrationView.swift; sourceTree = "<group>"; };
+		3039 /* Components/AchievementBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/AchievementBannerView.swift; sourceTree = "<group>"; };
+		4000 /* Views/Dashboard/ExtendLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Dashboard/ExtendLimitSheet.swift; sourceTree = "<group>"; };
+		4002 /* Views/Blocking/BlockingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Blocking/BlockingView.swift; sourceTree = "<group>"; };
+		4A539999 /* Services/HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/HapticsManager.swift; sourceTree = "<group>"; };
+		7001 /* Services/PuzzleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/PuzzleManager.swift; sourceTree = "<group>"; };
+		7002 /* Models/PuzzleModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/PuzzleModels.swift; sourceTree = "<group>"; };
+		7003 /* SudokuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SudokuView.swift; sourceTree = "<group>"; };
+		7004 /* MemoryGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryGameView.swift; sourceTree = "<group>"; };
+		7005 /* PatternGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternGameView.swift; sourceTree = "<group>"; };
+		7006 /* LimitReachedPuzzleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimitReachedPuzzleView.swift; sourceTree = "<group>"; };
+		7007 /* JigsawPuzzleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JigsawPuzzleView.swift; sourceTree = "<group>"; };
+		8F667A1E2EF3524D0028D462 /* VirtuPetShieldConfigurationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VirtuPetShieldConfigurationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		8F667A212EF3524E0028D462 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		8F667A352EF354490028D462 /* VirtuPetShieldActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VirtuPetShieldActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F9B9D332EFE2499005E2CDF /* Animation */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Animation; sourceTree = "<group>"; };
+		8F9B9E0E2EFE2FBD005E2CDF /* DarkHamsterSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterSickAnimation.mp4; path = Animation/DarkHamsterSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E0F2EFE2FBD005E2CDF /* DarkHorseFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseFullHealthAnimation.mp4; path = Animation/DarkHorseFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E102EFE2FBD005E2CDF /* CatHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatHappyAnimation.mp4; path = Animation/CatHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E112EFE2FBD005E2CDF /* DarkHorseContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseContentAnimation.mp4; path = Animation/DarkHorseContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E122EFE2FBD005E2CDF /* BunnyFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnyFullHealthAnimation.mp4; path = Animation/BunnyFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E132EFE2FBD005E2CDF /* DarkHamsterContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterContentAnimation.mp4; path = Animation/DarkHamsterContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E142EFE2FBD005E2CDF /* HamsterSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterSickAnimation.mp4; path = Animation/HamsterSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E152EFE2FBD005E2CDF /* HorseHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseHappyAnimation.mp4; path = Animation/HorseHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E162EFE2FBD005E2CDF /* DarkCatSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatSadAnimation.mp4; path = Animation/DarkCatSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E172EFE2FBD005E2CDF /* HorseSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseSadAnimation.mp4; path = Animation/HorseSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E182EFE2FBD005E2CDF /* DarkHamsterHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterHappyAnimation.mp4; path = Animation/DarkHamsterHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E192EFE2FBD005E2CDF /* DogSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogSickAnimation.mp4; path = Animation/DogSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1A2EFE2FBE005E2CDF /* HorseFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseFullHealthAnimation.mp4; path = Animation/HorseFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1B2EFE2FBE005E2CDF /* DarkHamsterFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterFullHealthAnimation.mp4; path = Animation/DarkHamsterFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1C2EFE2FBE005E2CDF /* DarkCatSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatSickAnimation.mp4; path = Animation/DarkCatSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1D2EFE2FBE005E2CDF /* DarkBunnyHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnyHappyAnimation.mp4; path = Animation/DarkBunnyHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1E2EFE2FBE005E2CDF /* DarkCatFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatFullHealthAnimation.mp4; path = Animation/DarkCatFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E1F2EFE2FBE005E2CDF /* DarkHorseSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseSadAnimation.mp4; path = Animation/DarkHorseSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E202EFE2FBE005E2CDF /* DarkDogContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogContentAnimation.mp4; path = Animation/DarkDogContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E212EFE2FBE005E2CDF /* DarkBunnyContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnyContentAnimation.mp4; path = Animation/DarkBunnyContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E222EFE2FBE005E2CDF /* DogFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogFullHealthAnimation.mp4; path = Animation/DogFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E232EFE2FBE005E2CDF /* DarkBunnySadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnySadAnimation.mp4; path = Animation/DarkBunnySadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E242EFE2FBF005E2CDF /* BunnySickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnySickAnimation.mp4; path = Animation/BunnySickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E252EFE2FBF005E2CDF /* DarkCatHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatHappyAnimation.mp4; path = Animation/DarkCatHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E262EFE2FBF005E2CDF /* HorseSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseSickAnimation.mp4; path = Animation/HorseSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E272EFE2FBF005E2CDF /* BunnyContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnyContentAnimation.mp4; path = Animation/BunnyContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E282EFE2FBF005E2CDF /* DarkHorseSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseSickAnimation.mp4; path = Animation/DarkHorseSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E292EFE2FBF005E2CDF /* CatSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatSadAnimation.mp4; path = Animation/CatSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2A2EFE2FBF005E2CDF /* CatSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatSickAnimation.mp4; path = Animation/CatSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2B2EFE2FBF005E2CDF /* DarkBunnySickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnySickAnimation.mp4; path = Animation/DarkBunnySickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2C2EFE2FBF005E2CDF /* DarkHorseHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHorseHappyAnimation.mp4; path = Animation/DarkHorseHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2D2EFE2FBF005E2CDF /* DogHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogHappyAnimation.mp4; path = Animation/DogHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2E2EFE2FC0005E2CDF /* DarkBunnyFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkBunnyFullHealthAnimation.mp4; path = Animation/DarkBunnyFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E2F2EFE2FC0005E2CDF /* DogSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogSadAnimation.mp4; path = Animation/DogSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E302EFE2FC0005E2CDF /* DogContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DogContentAnimation.mp4; path = Animation/DogContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E312EFE2FC0005E2CDF /* DarkCatContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkCatContentAnimation.mp4; path = Animation/DarkCatContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E322EFE2FC0005E2CDF /* BunnySadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnySadAnimation.mp4; path = Animation/BunnySadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E332EFE2FC0005E2CDF /* DarkDogSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogSadAnimation.mp4; path = Animation/DarkDogSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E342EFE2FC0005E2CDF /* CatFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatFullHealthAnimation.mp4; path = Animation/CatFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E352EFE2FC0005E2CDF /* DarkHamsterSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkHamsterSadAnimation.mp4; path = Animation/DarkHamsterSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E362EFE2FC0005E2CDF /* DarkDogFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogFullHealthAnimation.mp4; path = Animation/DarkDogFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E372EFE2FC0005E2CDF /* HamsterFullHealthAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterFullHealthAnimation.mp4; path = Animation/HamsterFullHealthAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E382EFE2FC0005E2CDF /* BunnyHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = BunnyHappyAnimation.mp4; path = Animation/BunnyHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E392EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogHappyAnimation.mp4; path = Animation/DarkDogHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3A2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterSadAnimation.mp4; path = Animation/HamsterSadAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3B2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = DarkDogSickAnimation.mp4; path = Animation/DarkDogSickAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3C2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterHappyAnimation.mp4; path = Animation/HamsterHappyAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3D2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HamsterContentAnimation.mp4; path = Animation/HamsterContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3E2EFE2FC1005E2CDF /* CatContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = CatContentAnimation.mp4; path = Animation/CatContentAnimation.mp4; sourceTree = "<group>"; };
+		8F9B9E3F2EFE2FC1005E2CDF /* HorseContentAnimation.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; name = HorseContentAnimation.mp4; path = Animation/HorseContentAnimation.mp4; sourceTree = "<group>"; };
+		8FB3D9FD2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = VirtuPetDeviceActivityReportExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8FB3DA372EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = VirtuPetDeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		9001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8F667A2D2EF3524E0028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8F667A1D2EF3524D0028D462 /* VirtuPetShieldConfigurationExtension */;
+		};
+		8F667A3F2EF354490028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8F667A342EF354490028D462 /* VirtuPetShieldActionExtension */;
+		};
+		8F9B9E0D2EFE2F7F005E2CDF /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8FB3D9FC2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension */;
+		};
+		8FB3DA462EE38ECD005BC03C /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8FB3DA362EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		8F667A232EF3524E0028D462 /* VirtuPetShieldConfigurationExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8F667A2D2EF3524E0028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = VirtuPetShieldConfigurationExtension; sourceTree = "<group>"; };
+		8F667A372EF354490028D462 /* VirtuPetShieldActionExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8F667A3F2EF354490028D462 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = VirtuPetShieldActionExtension; sourceTree = "<group>"; };
+		8FB3D9FE2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8F9B9E0D2EFE2F7F005E2CDF /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = VirtuPetDeviceActivityReportExtension; sourceTree = "<group>"; };
+		8FB3DA3B2EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8FB3DA462EE38ECD005BC03C /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = VirtuPetDeviceActivityMonitorExtension; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8F667A1B2EF3524D0028D462 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F667A202EF3524E0028D462 /* ManagedSettings.framework in Frameworks */,
+				8F667A222EF3524E0028D462 /* ManagedSettingsUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8F667A322EF354490028D462 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F667A362EF354490028D462 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FB3D9FA2EE37903005BC03C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FB3DA342EE38ECD005BC03C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8FB3DA3A2EE38ECD005BC03C /* DeviceActivity.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		97 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		101 = {
+			isa = PBXGroup;
+			children = (
+				2035 /* Models/CoreData/CoreDataManager.swift */,
+				2040 /* Models/CoreData/VirtuPetDataModel.xcdatamodeld */,
+			);
+			sourceTree = "<group>";
+		};
+		102 = {
+			isa = PBXGroup;
+			children = (
+				2009 /* Views/Onboarding/OnboardingContainerView.swift */,
+				2010 /* Views/Onboarding/WelcomeView.swift */,
+				2045 /* Views/Onboarding/PetSelectionView.swift */,
+				2046 /* Views/Onboarding/PetPreviewView.swift */,
+				2062 /* Views/Onboarding/VideoIntroductionView.swift */,
+				2047 /* Views/Onboarding/MotivationView.swift */,
+				2048 /* Views/Onboarding/DidYouKnowView.swift */,
+				2049 /* Views/Onboarding/ScreenTimeInputView.swift */,
+				2050 /* Views/Onboarding/LifetimeCalculationView.swift */,
+				2051 /* Views/Onboarding/ScreenTimeConnectionView.swift */,
+				2011 /* Views/Onboarding/HowItWorksView.swift */,
+				2012 /* Views/Onboarding/WhyItWorksView.swift */,
+				2013 /* Views/Onboarding/SetGoalsView.swift */,
+				2066 /* Views/Onboarding/FamilyActivityPickerWrapper.swift */,
+				2014 /* Views/Onboarding/PaywallView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		103 = {
+			isa = PBXGroup;
+			children = (
+				2015 /* Views/Dashboard/DashboardView.swift */,
+				2061 /* Views/Dashboard/CategoryAppSelectionView.swift */,
+				2065 /* Views/Dashboard/SelectAllAppsView.swift */,
+				2052 /* Views/Dashboard/PetHealthCard.swift */,
+				2017 /* Views/Dashboard/DailySummaryCard.swift */,
+				2018 /* Views/Dashboard/AppUsageCard.swift */,
+				4000 /* Views/Dashboard/ExtendLimitSheet.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		104 = {
+			isa = PBXGroup;
+			children = (
+				2019 /* Views/Goals/GoalsView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		105 = {
+			isa = PBXGroup;
+			children = (
+			);
+			sourceTree = "<group>";
+		};
+		106 = {
+			isa = PBXGroup;
+			children = (
+			);
+			sourceTree = "<group>";
+		};
+		107 = {
+			isa = PBXGroup;
+			children = (
+				2023 /* Views/Settings/SettingsView.swift */,
+				2031 /* Views/Settings/FAQView.swift */,
+				2032 /* Views/Settings/SupportView.swift */,
+				2033 /* Views/Settings/PrivacyPolicyView.swift */,
+				2034 /* Views/Settings/TermsOfServiceView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		108 = {
+			isa = PBXGroup;
+			children = (
+				2030 /* Views/Achievements/AchievementsView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		108A /* Tutorial */ = {
+			isa = PBXGroup;
+			children = (
+				2034A /* Views/Tutorial/AppTutorialView.swift */,
+			);
+			name = Tutorial;
+			path = Views/Tutorial;
+			sourceTree = "<group>";
+		};
+		109 = {
+			isa = PBXGroup;
+			children = (
+				4002 /* Views/Blocking/BlockingView.swift */,
+				110 /* Puzzles */,
+			);
+			sourceTree = "<group>";
+		};
+		110 /* Puzzles */ = {
+			isa = PBXGroup;
+			children = (
+				7003 /* SudokuView.swift */,
+				7004 /* MemoryGameView.swift */,
+				7005 /* PatternGameView.swift */,
+				7006 /* LimitReachedPuzzleView.swift */,
+				7007 /* JigsawPuzzleView.swift */,
+			);
+			name = Puzzles;
+			path = Views/Puzzles;
+			sourceTree = "<group>";
+		};
+		199 = {
+			isa = PBXGroup;
+			children = (
+				2008 /* Extensions/View+Extensions.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		89 = {
+			isa = PBXGroup;
+			children = (
+				8F9B9E352EFE2FC0005E2CDF /* DarkHamsterSadAnimation.mp4 */,
+				8F9B9E0E2EFE2FBD005E2CDF /* DarkHamsterSickAnimation.mp4 */,
+				8F9B9E112EFE2FBD005E2CDF /* DarkHorseContentAnimation.mp4 */,
+				8F9B9E0F2EFE2FBD005E2CDF /* DarkHorseFullHealthAnimation.mp4 */,
+				8F9B9E3E2EFE2FC1005E2CDF /* CatContentAnimation.mp4 */,
+				8F9B9E342EFE2FC0005E2CDF /* CatFullHealthAnimation.mp4 */,
+				8F9B9E102EFE2FBD005E2CDF /* CatHappyAnimation.mp4 */,
+				8F9B9E272EFE2FBF005E2CDF /* BunnyContentAnimation.mp4 */,
+				8F9B9E122EFE2FBD005E2CDF /* BunnyFullHealthAnimation.mp4 */,
+				8F9B9E3B2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 */,
+				8F9B9E132EFE2FBD005E2CDF /* DarkHamsterContentAnimation.mp4 */,
+				8F9B9E3C2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 */,
+				8F9B9E3A2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 */,
+				8F9B9E142EFE2FBD005E2CDF /* HamsterSickAnimation.mp4 */,
+				8F9B9E3F2EFE2FC1005E2CDF /* HorseContentAnimation.mp4 */,
+				8F9B9E1A2EFE2FBE005E2CDF /* HorseFullHealthAnimation.mp4 */,
+				8F9B9E152EFE2FBD005E2CDF /* HorseHappyAnimation.mp4 */,
+				8F9B9E252EFE2FBF005E2CDF /* DarkCatHappyAnimation.mp4 */,
+				8F9B9E162EFE2FBD005E2CDF /* DarkCatSadAnimation.mp4 */,
+				8F9B9E172EFE2FBD005E2CDF /* HorseSadAnimation.mp4 */,
+				8F9B9E1B2EFE2FBE005E2CDF /* DarkHamsterFullHealthAnimation.mp4 */,
+				8F9B9E182EFE2FBD005E2CDF /* DarkHamsterHappyAnimation.mp4 */,
+				8F9B9E2F2EFE2FC0005E2CDF /* DogSadAnimation.mp4 */,
+				8F9B9E192EFE2FBD005E2CDF /* DogSickAnimation.mp4 */,
+				8F9B9E1C2EFE2FBE005E2CDF /* DarkCatSickAnimation.mp4 */,
+				8F9B9E2E2EFE2FC0005E2CDF /* DarkBunnyFullHealthAnimation.mp4 */,
+				8F9B9E1D2EFE2FBE005E2CDF /* DarkBunnyHappyAnimation.mp4 */,
+				8F9B9E312EFE2FC0005E2CDF /* DarkCatContentAnimation.mp4 */,
+				8F9B9E1E2EFE2FBE005E2CDF /* DarkCatFullHealthAnimation.mp4 */,
+				8F9B9E2C2EFE2FBF005E2CDF /* DarkHorseHappyAnimation.mp4 */,
+				8F9B9E1F2EFE2FBE005E2CDF /* DarkHorseSadAnimation.mp4 */,
+				8F9B9E202EFE2FBE005E2CDF /* DarkDogContentAnimation.mp4 */,
+				8F9B9E2A2EFE2FBF005E2CDF /* CatSickAnimation.mp4 */,
+				8F9B9E212EFE2FBE005E2CDF /* DarkBunnyContentAnimation.mp4 */,
+				8F9B9E302EFE2FC0005E2CDF /* DogContentAnimation.mp4 */,
+				8F9B9E222EFE2FBE005E2CDF /* DogFullHealthAnimation.mp4 */,
+				8F9B9E232EFE2FBE005E2CDF /* DarkBunnySadAnimation.mp4 */,
+				8F9B9E382EFE2FC0005E2CDF /* BunnyHappyAnimation.mp4 */,
+				8F9B9E322EFE2FC0005E2CDF /* BunnySadAnimation.mp4 */,
+				8F9B9E242EFE2FBF005E2CDF /* BunnySickAnimation.mp4 */,
+				8F9B9E262EFE2FBF005E2CDF /* HorseSickAnimation.mp4 */,
+				8F9B9E282EFE2FBF005E2CDF /* DarkHorseSickAnimation.mp4 */,
+				8F9B9E292EFE2FBF005E2CDF /* CatSadAnimation.mp4 */,
+				8F9B9E2B2EFE2FBF005E2CDF /* DarkBunnySickAnimation.mp4 */,
+				8F9B9E2D2EFE2FBF005E2CDF /* DogHappyAnimation.mp4 */,
+				8F9B9E392EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 */,
+				8F9B9E332EFE2FC0005E2CDF /* DarkDogSadAnimation.mp4 */,
+				8F9B9E362EFE2FC0005E2CDF /* DarkDogFullHealthAnimation.mp4 */,
+				8F9B9E3D2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 */,
+				8F9B9E372EFE2FC0005E2CDF /* HamsterFullHealthAnimation.mp4 */,
+				90,
+				8FB3D9FE2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension */,
+				8FB3DA3B2EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension */,
+				8F667A232EF3524E0028D462 /* VirtuPetShieldConfigurationExtension */,
+				8F667A372EF354490028D462 /* VirtuPetShieldActionExtension */,
+				8FB3DA382EE38ECD005BC03C /* Frameworks */,
+				99 /* Products */,
+				8F12620A2ED291550094DB0A /* Recovered References */,
+			);
+			sourceTree = "<group>";
+		};
+		8F12620A2ED291550094DB0A /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				2053 /* Views/Onboarding/WhyChooseVirtuPetView.swift */,
+				2054 /* Views/Onboarding/OnboardingBackButton.swift */,
+				2055 /* Views/Onboarding/OnboardingHeader.swift */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+		8FB3DA382EE38ECD005BC03C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				8FB3DA392EE38ECD005BC03C /* DeviceActivity.framework */,
+				8F667A1F2EF3524E0028D462 /* ManagedSettings.framework */,
+				8F667A212EF3524E0028D462 /* ManagedSettingsUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		90 = {
+			isa = PBXGroup;
+			children = (
+				2001 /* VirtuPetApp.swift */,
+				2042 /* VirtuPet.entitlements */,
+				2043 /* Info.plist */,
+				3026 /* Assets.xcassets */,
+				3027 /* dogintro.mp4 */,
+				3028 /* catintro.mp4 */,
+				3029 /* bunnyintro.mp4 */,
+				3030 /* hamsterintro.mp4 */,
+				3031 /* horseintro.mp4 */,
+				8F9B9D332EFE2499005E2CDF /* Animation */,
+				9000 /* Localizable.strings */,
+				91,
+				92,
+				93,
+				94,
+				199,
+				96,
+			);
+			sourceTree = "<group>";
+		};
+		91 = {
+			isa = PBXGroup;
+			children = (
+				2003 /* Models/AppState.swift */,
+				2004 /* Models/Models.swift */,
+				7002 /* Models/PuzzleModels.swift */,
+				101,
+			);
+			sourceTree = "<group>";
+		};
+		92 = {
+			isa = PBXGroup;
+			children = (
+				2002 /* Views/ContentView.swift */,
+				102,
+				103,
+				104,
+				105,
+				106,
+				107,
+				108,
+				109,
+			);
+			sourceTree = "<group>";
+		};
+		93 = {
+			isa = PBXGroup;
+			children = (
+				2025 /* Components/LoadingView.swift */,
+				2026 /* Components/SuccessToast.swift */,
+				2027 /* Components/AnimatedNumber.swift */,
+				2028 /* Components/VirtuPetWordmark.swift */,
+				2029 /* Components/StreakView.swift */,
+				2029A /* Components/PetAnimationView.swift */,
+				3034 /* Components/StreakCelebrationView.swift */,
+				3037 /* Components/AchievementCelebrationView.swift */,
+				3039 /* Components/AchievementBannerView.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		94 = {
+			isa = PBXGroup;
+			children = (
+				2005 /* DesignSystem/Colors.swift */,
+				2006 /* DesignSystem/Typography.swift */,
+				2007 /* DesignSystem/Styling.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		96 = {
+			isa = PBXGroup;
+			children = (
+				2036 /* Services/ScreenTimeService.swift */,
+				2037 /* Services/NotificationService.swift */,
+				4A539999 /* Services/HapticsManager.swift */,
+				2038 /* Services/DeviceActivityMonitorExtension.swift */,
+				2063 /* Services/FamilyActivityService.swift */,
+				2064 /* Services/DeviceActivityReportExtension.swift */,
+				2039 /* Services/StoreKitService.swift */,
+				2044 /* Services/AppDiscoveryService.swift */,
+				2060 /* Services/RealAppDiscoveryService.swift */,
+				7001 /* Services/PuzzleManager.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		99 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				100 /* VirtuPet.app */,
+				8FB3D9FD2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension.appex */,
+				8FB3DA372EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension.appex */,
+				8F667A1E2EF3524D0028D462 /* VirtuPetShieldConfigurationExtension.appex */,
+				8F667A352EF354490028D462 /* VirtuPetShieldActionExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8F667A1D2EF3524D0028D462 /* VirtuPetShieldConfigurationExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8F667A2E2EF3524E0028D462 /* Build configuration list for PBXNativeTarget "VirtuPetShieldConfigurationExtension" */;
+			buildPhases = (
+				8F667A1A2EF3524D0028D462 /* Sources */,
+				8F667A1B2EF3524D0028D462 /* Frameworks */,
+				8F667A1C2EF3524D0028D462 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8F667A232EF3524E0028D462 /* VirtuPetShieldConfigurationExtension */,
+			);
+			name = VirtuPetShieldConfigurationExtension;
+			packageProductDependencies = (
+			);
+			productName = VirtuPetShieldConfigurationExtension;
+			productReference = 8F667A1E2EF3524D0028D462 /* VirtuPetShieldConfigurationExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		8F667A342EF354490028D462 /* VirtuPetShieldActionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8F667A402EF354490028D462 /* Build configuration list for PBXNativeTarget "VirtuPetShieldActionExtension" */;
+			buildPhases = (
+				8F667A312EF354490028D462 /* Sources */,
+				8F667A322EF354490028D462 /* Frameworks */,
+				8F667A332EF354490028D462 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8F667A372EF354490028D462 /* VirtuPetShieldActionExtension */,
+			);
+			name = VirtuPetShieldActionExtension;
+			packageProductDependencies = (
+			);
+			productName = VirtuPetShieldActionExtension;
+			productReference = 8F667A352EF354490028D462 /* VirtuPetShieldActionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		8FB3D9FC2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8FB3DA0E2EE37903005BC03C /* Build configuration list for PBXNativeTarget "VirtuPetDeviceActivityReportExtension" */;
+			buildPhases = (
+				8FB3D9F92EE37903005BC03C /* Sources */,
+				8FB3D9FA2EE37903005BC03C /* Frameworks */,
+				8F9B9E0C2EFE2F7F005E2CDF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8FB3D9FE2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension */,
+			);
+			name = VirtuPetDeviceActivityReportExtension;
+			packageProductDependencies = (
+			);
+			productName = VirtuPetDeviceActivityReportExtension;
+			productReference = 8FB3D9FD2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
+		8FB3DA362EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8FB3DA472EE38ECD005BC03C /* Build configuration list for PBXNativeTarget "VirtuPetDeviceActivityMonitorExtension" */;
+			buildPhases = (
+				8FB3DA332EE38ECD005BC03C /* Sources */,
+				8FB3DA342EE38ECD005BC03C /* Frameworks */,
+				8FB3DA352EE38ECD005BC03C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8FB3DA3B2EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension */,
+			);
+			name = VirtuPetDeviceActivityMonitorExtension;
+			packageProductDependencies = (
+			);
+			productName = VirtuPetDeviceActivityMonitorExtension;
+			productReference = 8FB3DA372EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		98 /* VirtuPet */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 88 /* Build configuration list for PBXNativeTarget "VirtuPet" */;
+			buildPhases = (
+				95 /* Sources */,
+				97 /* Frameworks */,
+				200 /* Resources */,
+				8FB3DA0A2EE37903005BC03C /* Embed ExtensionKit Extensions */,
+				8FB3DA432EE38ECD005BC03C /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8FB3DA082EE37903005BC03C /* PBXTargetDependency */,
+				8FB3DA412EE38ECD005BC03C /* PBXTargetDependency */,
+				8F667A292EF3524E0028D462 /* PBXTargetDependency */,
+				8F667A3D2EF354490028D462 /* PBXTargetDependency */,
+			);
+			name = VirtuPet;
+			productName = Seven;
+			productReference = 100 /* VirtuPet.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		80 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					8F667A1D2EF3524D0028D462 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					8F667A342EF354490028D462 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					8FB3D9FC2EE37903005BC03C = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					8FB3DA362EE38ECD005BC03C = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					98 = {
+						CreatedOnToolsVersion = 15.0;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 87 /* Build configuration list for PBXProject "VirtuPet" */;
+			compatibilityVersion = "Xcode 13.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 89;
+			productRefGroup = 99 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				98 /* VirtuPet */,
+				8FB3D9FC2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension */,
+				8FB3DA362EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension */,
+				8F667A1D2EF3524D0028D462 /* VirtuPetShieldConfigurationExtension */,
+				8F667A342EF354490028D462 /* VirtuPetShieldActionExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		200 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9002 /* Localizable.strings in Resources */,
+				8F9B9D342EFE24A6005E2CDF /* Animation in Resources */,
+				1078 /* Assets.xcassets in Resources */,
+				1079 /* dogintro.mp4 in Resources */,
+				1080 /* catintro.mp4 in Resources */,
+				1081 /* bunnyintro.mp4 in Resources */,
+				1082 /* hamsterintro.mp4 in Resources */,
+				1083 /* horseintro.mp4 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8F667A1C2EF3524D0028D462 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F9B9D362EFE24A6005E2CDF /* Animation in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8F667A332EF354490028D462 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8F9B9E0C2EFE2F7F005E2CDF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F9B9E402EFE2FC1005E2CDF /* DarkHamsterSickAnimation.mp4 in Resources */,
+				8F9B9E412EFE2FC1005E2CDF /* DarkHorseFullHealthAnimation.mp4 in Resources */,
+				8F9B9E422EFE2FC1005E2CDF /* CatHappyAnimation.mp4 in Resources */,
+				8F9B9E432EFE2FC1005E2CDF /* DarkHorseContentAnimation.mp4 in Resources */,
+				8F9B9E442EFE2FC1005E2CDF /* BunnyFullHealthAnimation.mp4 in Resources */,
+				8F9B9E452EFE2FC1005E2CDF /* DarkHamsterContentAnimation.mp4 in Resources */,
+				8F9B9E462EFE2FC1005E2CDF /* HamsterSickAnimation.mp4 in Resources */,
+				8F9B9E472EFE2FC1005E2CDF /* HorseHappyAnimation.mp4 in Resources */,
+				8F9B9E482EFE2FC1005E2CDF /* DarkCatSadAnimation.mp4 in Resources */,
+				8F9B9E492EFE2FC1005E2CDF /* HorseSadAnimation.mp4 in Resources */,
+				8F9B9E4A2EFE2FC1005E2CDF /* DarkHamsterHappyAnimation.mp4 in Resources */,
+				8F9B9E4B2EFE2FC1005E2CDF /* DogSickAnimation.mp4 in Resources */,
+				8F9B9E4C2EFE2FC1005E2CDF /* HorseFullHealthAnimation.mp4 in Resources */,
+				8F9B9E4D2EFE2FC1005E2CDF /* DarkHamsterFullHealthAnimation.mp4 in Resources */,
+				8F9B9E4E2EFE2FC1005E2CDF /* DarkCatSickAnimation.mp4 in Resources */,
+				8F9B9E4F2EFE2FC1005E2CDF /* DarkBunnyHappyAnimation.mp4 in Resources */,
+				8F9B9E502EFE2FC1005E2CDF /* DarkCatFullHealthAnimation.mp4 in Resources */,
+				8F9B9E512EFE2FC1005E2CDF /* DarkHorseSadAnimation.mp4 in Resources */,
+				8F9B9E522EFE2FC1005E2CDF /* DarkDogContentAnimation.mp4 in Resources */,
+				8F9B9E532EFE2FC1005E2CDF /* DarkBunnyContentAnimation.mp4 in Resources */,
+				8F9B9E542EFE2FC1005E2CDF /* DogFullHealthAnimation.mp4 in Resources */,
+				8F9B9E552EFE2FC1005E2CDF /* DarkBunnySadAnimation.mp4 in Resources */,
+				8F9B9E562EFE2FC1005E2CDF /* BunnySickAnimation.mp4 in Resources */,
+				8F9B9E572EFE2FC1005E2CDF /* DarkCatHappyAnimation.mp4 in Resources */,
+				8F9B9E582EFE2FC1005E2CDF /* HorseSickAnimation.mp4 in Resources */,
+				8F9B9E592EFE2FC1005E2CDF /* BunnyContentAnimation.mp4 in Resources */,
+				8F9B9E5A2EFE2FC1005E2CDF /* DarkHorseSickAnimation.mp4 in Resources */,
+				8F9B9E5B2EFE2FC1005E2CDF /* CatSadAnimation.mp4 in Resources */,
+				8F9B9E5C2EFE2FC1005E2CDF /* CatSickAnimation.mp4 in Resources */,
+				8F9B9E5D2EFE2FC1005E2CDF /* DarkBunnySickAnimation.mp4 in Resources */,
+				8F9B9E5E2EFE2FC1005E2CDF /* DarkHorseHappyAnimation.mp4 in Resources */,
+				8F9B9E5F2EFE2FC1005E2CDF /* DogHappyAnimation.mp4 in Resources */,
+				8F9B9E602EFE2FC1005E2CDF /* DarkBunnyFullHealthAnimation.mp4 in Resources */,
+				8F9B9E9C2EFF1520005E2CDF /* Animation in Resources */,
+				8F9B9E612EFE2FC1005E2CDF /* DogSadAnimation.mp4 in Resources */,
+				8F9B9E622EFE2FC1005E2CDF /* DogContentAnimation.mp4 in Resources */,
+				8F9B9E632EFE2FC1005E2CDF /* DarkCatContentAnimation.mp4 in Resources */,
+				8F9B9E642EFE2FC1005E2CDF /* BunnySadAnimation.mp4 in Resources */,
+				8F9B9E652EFE2FC1005E2CDF /* DarkDogSadAnimation.mp4 in Resources */,
+				8F9B9E662EFE2FC1005E2CDF /* CatFullHealthAnimation.mp4 in Resources */,
+				8F9B9E672EFE2FC1005E2CDF /* DarkHamsterSadAnimation.mp4 in Resources */,
+				8F9B9E682EFE2FC1005E2CDF /* DarkDogFullHealthAnimation.mp4 in Resources */,
+				8F9B9E692EFE2FC1005E2CDF /* HamsterFullHealthAnimation.mp4 in Resources */,
+				8F9B9E6A2EFE2FC1005E2CDF /* BunnyHappyAnimation.mp4 in Resources */,
+				8F9B9E6B2EFE2FC1005E2CDF /* DarkDogHappyAnimation.mp4 in Resources */,
+				8F9B9E6C2EFE2FC1005E2CDF /* HamsterSadAnimation.mp4 in Resources */,
+				8F9B9E6D2EFE2FC1005E2CDF /* DarkDogSickAnimation.mp4 in Resources */,
+				8F9B9E6E2EFE2FC1005E2CDF /* HamsterHappyAnimation.mp4 in Resources */,
+				8F9B9E6F2EFE2FC1005E2CDF /* HamsterContentAnimation.mp4 in Resources */,
+				8F9B9E702EFE2FC1005E2CDF /* CatContentAnimation.mp4 in Resources */,
+				8F9B9E712EFE2FC1005E2CDF /* HorseContentAnimation.mp4 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FB3DA352EE38ECD005BC03C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8F667A1A2EF3524D0028D462 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8F667A312EF354490028D462 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FB3D9F92EE37903005BC03C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FB3DA332EE38ECD005BC03C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		95 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1001 /* VirtuPetApp.swift in Sources */,
+				1002 /* Views/ContentView.swift in Sources */,
+				1003 /* Models/AppState.swift in Sources */,
+				1004 /* Models/Models.swift in Sources */,
+				1005 /* DesignSystem/Colors.swift in Sources */,
+				1006 /* DesignSystem/Typography.swift in Sources */,
+				1007 /* DesignSystem/Styling.swift in Sources */,
+				1008 /* Extensions/View+Extensions.swift in Sources */,
+				1009 /* Views/Onboarding/OnboardingContainerView.swift in Sources */,
+				1010 /* Views/Onboarding/WelcomeView.swift in Sources */,
+				1045 /* Views/Onboarding/PetSelectionView.swift in Sources */,
+				1046 /* Views/Onboarding/PetPreviewView.swift in Sources */,
+				1047 /* Views/Onboarding/VideoIntroductionView.swift in Sources */,
+				1048 /* Views/Onboarding/MotivationView.swift in Sources */,
+				1049 /* Views/Onboarding/DidYouKnowView.swift in Sources */,
+				1050 /* Views/Onboarding/ScreenTimeInputView.swift in Sources */,
+				1051 /* Views/Onboarding/LifetimeCalculationView.swift in Sources */,
+				1052 /* Views/Onboarding/ScreenTimeConnectionView.swift in Sources */,
+				1054 /* Views/Onboarding/WhyChooseVirtuPetView.swift in Sources */,
+				1055 /* Views/Onboarding/OnboardingBackButton.swift in Sources */,
+				1057 /* Views/Onboarding/OnboardingHeader.swift in Sources */,
+				1011 /* Views/Onboarding/HowItWorksView.swift in Sources */,
+				1012 /* Views/Onboarding/WhyItWorksView.swift in Sources */,
+				1013 /* Views/Onboarding/SetGoalsView.swift in Sources */,
+				1061 /* Views/Onboarding/FamilyActivityPickerWrapper.swift in Sources */,
+				1014 /* Views/Onboarding/PaywallView.swift in Sources */,
+				1015 /* Views/Dashboard/DashboardView.swift in Sources */,
+				1056 /* Views/Dashboard/PetHealthCard.swift in Sources */,
+				1017 /* Views/Dashboard/DailySummaryCard.swift in Sources */,
+				1018 /* Views/Dashboard/AppUsageCard.swift in Sources */,
+				4001 /* Views/Dashboard/ExtendLimitSheet.swift in Sources */,
+				1019 /* Views/Goals/GoalsView.swift in Sources */,
+				1023 /* Views/Settings/SettingsView.swift in Sources */,
+				1025 /* Components/LoadingView.swift in Sources */,
+				1026 /* Components/SuccessToast.swift in Sources */,
+				1027 /* Components/AnimatedNumber.swift in Sources */,
+				1028 /* Components/VirtuPetWordmark.swift in Sources */,
+				1029 /* Components/StreakView.swift in Sources */,
+				1029A /* Components/PetAnimationView.swift in Sources */,
+				3035 /* Components/StreakCelebrationView.swift in Sources */,
+				3036 /* Components/AchievementCelebrationView.swift in Sources */,
+				3038 /* Components/AchievementBannerView.swift in Sources */,
+				1030 /* Views/Achievements/AchievementsView.swift in Sources */,
+				1058 /* Views/Blocking/BlockingView.swift in Sources */,
+				1031 /* Views/Settings/FAQView.swift in Sources */,
+				1032 /* Views/Settings/SupportView.swift in Sources */,
+				1033 /* Views/Settings/PrivacyPolicyView.swift in Sources */,
+				1034 /* Views/Settings/TermsOfServiceView.swift in Sources */,
+				1034A /* Views/Tutorial/AppTutorialView.swift in Sources */,
+				1035 /* Models/CoreData/CoreDataManager.swift in Sources */,
+				1036 /* Services/ScreenTimeService.swift in Sources */,
+				1037 /* Services/NotificationService.swift in Sources */,
+				F6468888 /* Services/HapticsManager.swift in Sources */,
+				1038 /* Services/DeviceActivityMonitorExtension.swift in Sources */,
+				1044 /* Services/FamilyActivityService.swift in Sources */,
+				1059 /* Services/DeviceActivityReportExtension.swift in Sources */,
+				1039 /* Services/StoreKitService.swift in Sources */,
+				1040 /* Models/CoreData/VirtuPetDataModel.xcdatamodeld in Sources */,
+				1041 /* Services/AppDiscoveryService.swift in Sources */,
+				1042 /* Services/RealAppDiscoveryService.swift in Sources */,
+				1043 /* Views/Dashboard/CategoryAppSelectionView.swift in Sources */,
+				1060 /* Views/Dashboard/SelectAllAppsView.swift in Sources */,
+				7101 /* Models/PuzzleModels.swift in Sources */,
+				7102 /* Services/PuzzleManager.swift in Sources */,
+				7103 /* SudokuView.swift in Sources */,
+				7104 /* MemoryGameView.swift in Sources */,
+				7105 /* PatternGameView.swift in Sources */,
+				7106 /* LimitReachedPuzzleView.swift in Sources */,
+				7107 /* JigsawPuzzleView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		8F667A292EF3524E0028D462 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8F667A1D2EF3524D0028D462 /* VirtuPetShieldConfigurationExtension */;
+			targetProxy = 8F667A282EF3524E0028D462 /* PBXContainerItemProxy */;
+		};
+		8F667A3D2EF354490028D462 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8F667A342EF354490028D462 /* VirtuPetShieldActionExtension */;
+			targetProxy = 8F667A3C2EF354490028D462 /* PBXContainerItemProxy */;
+		};
+		8FB3DA082EE37903005BC03C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8FB3D9FC2EE37903005BC03C /* VirtuPetDeviceActivityReportExtension */;
+			targetProxy = 8FB3DA072EE37903005BC03C /* PBXContainerItemProxy */;
+		};
+		8FB3DA412EE38ECD005BC03C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8FB3DA362EE38ECD005BC03C /* VirtuPetDeviceActivityMonitorExtension */;
+			targetProxy = 8FB3DA402EE38ECD005BC03C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		9000 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9001 /* en */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		81 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		82 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		83 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = VirtuPet.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		84 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = VirtuPet.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8F667A2B2EF3524E0028D462 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = VirtuPetShieldConfigurationExtension/VirtuPetShieldConfigurationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VirtuPetShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VirtuPetShieldConfigurationExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.VirtuPetShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8F667A2C2EF3524E0028D462 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = VirtuPetShieldConfigurationExtension/VirtuPetShieldConfigurationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VirtuPetShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VirtuPetShieldConfigurationExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.VirtuPetShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8F667A412EF354490028D462 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = VirtuPetShieldActionExtension/VirtuPetShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VirtuPetShieldActionExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VirtuPetShieldActionExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.VirtuPetShieldActionExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8F667A422EF354490028D462 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = VirtuPetShieldActionExtension/VirtuPetShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VirtuPetShieldActionExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VirtuPetShieldActionExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.VirtuPetShieldActionExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8FB3DA0B2EE37903005BC03C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = VirtuPetDeviceActivityReportExtension/VirtuPetDeviceActivityReportExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VirtuPetDeviceActivityReportExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VirtuPetDeviceActivityReportExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.VirtuPetDeviceActivityReportExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8FB3DA0C2EE37903005BC03C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = VirtuPetDeviceActivityReportExtension/VirtuPetDeviceActivityReportExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VirtuPetDeviceActivityReportExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VirtuPetDeviceActivityReportExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.VirtuPetDeviceActivityReportExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8FB3DA442EE38ECD005BC03C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
+				CODE_SIGN_ENTITLEMENTS = VirtuPetDeviceActivityMonitorExtension/VirtuPetDeviceActivityMonitorExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VirtuPetDeviceActivityMonitorExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VirtuPetDeviceActivityMonitorExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.VirtuPetDeviceActivityMonitorExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8FB3DA452EE38ECD005BC03C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
+				CODE_SIGN_ENTITLEMENTS = VirtuPetDeviceActivityMonitorExtension/VirtuPetDeviceActivityMonitorExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3KCUWMGF4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VirtuPetDeviceActivityMonitorExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VirtuPetDeviceActivityMonitorExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.se7en.app.screentime.VirtuPetDeviceActivityMonitorExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		87 /* Build configuration list for PBXProject "VirtuPet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				81 /* Debug */,
+				82 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		88 /* Build configuration list for PBXNativeTarget "VirtuPet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				83 /* Debug */,
+				84 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8F667A2E2EF3524E0028D462 /* Build configuration list for PBXNativeTarget "VirtuPetShieldConfigurationExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8F667A2B2EF3524E0028D462 /* Debug */,
+				8F667A2C2EF3524E0028D462 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8F667A402EF354490028D462 /* Build configuration list for PBXNativeTarget "VirtuPetShieldActionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8F667A412EF354490028D462 /* Debug */,
+				8F667A422EF354490028D462 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8FB3DA0E2EE37903005BC03C /* Build configuration list for PBXNativeTarget "VirtuPetDeviceActivityReportExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8FB3DA0B2EE37903005BC03C /* Debug */,
+				8FB3DA0C2EE37903005BC03C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8FB3DA472EE38ECD005BC03C /* Build configuration list for PBXNativeTarget "VirtuPetDeviceActivityMonitorExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8FB3DA442EE38ECD005BC03C /* Debug */,
+				8FB3DA452EE38ECD005BC03C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCVersionGroup section */
+		2040 /* Models/CoreData/VirtuPetDataModel.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				2041 /* VirtuPetDataModel.xcdatamodel */,
+			);
+			currentVersion = 2041 /* VirtuPetDataModel.xcdatamodel */;
+			path = Models/CoreData/VirtuPetDataModel.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
+	};
+	rootObject = 80 /* Project object */;
+}

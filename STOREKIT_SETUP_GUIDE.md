@@ -1,6 +1,6 @@
-# StoreKit Setup Guide for SE7EN
+# StoreKit Setup Guide for VirtuPet
 
-This guide will walk you through setting up StoreKit 2 for in-app purchases in your SE7EN app.
+This guide will walk you through setting up StoreKit 2 for in-app purchases in your VirtuPet app.
 
 ## Overview
 
@@ -11,16 +11,16 @@ Your app uses **consumable in-app purchases** for credits. Users can purchase 1-
 You need to create these 8 products in App Store Connect:
 
 ### Subscription (Required)
-- `se7en_biweekly_subscription` - Bi-weekly subscription ($6.99/£6.99 every 14 days with 7-day free trial)
+- `virtupet_biweekly_subscription` - Bi-weekly subscription ($6.99/£6.99 every 14 days with 7-day free trial)
 
 ### Credit Purchases (Consumable)
-- `se7en_one_credit` - 1 credit
-- `se7en_two_credits` - 2 credits
-- `se7en_three_credits` - 3 credits
-- `se7en_four_credits` - 4 credits
-- `se7en_five_credits` - 5 credits
-- `se7en_six_credits` - 6 credits
-- `se7en_seven_credits` - 7 credits
+- `virtupet_one_credit` - 1 credit
+- `virtupet_two_credits` - 2 credits
+- `virtupet_three_credits` - 3 credits
+- `virtupet_four_credits` - 4 credits
+- `virtupet_five_credits` - 5 credits
+- `virtupet_six_credits` - 6 credits
+- `virtupet_seven_credits` - 7 credits
 
 ## Step 1: Create Products in App Store Connect
 
@@ -45,8 +45,8 @@ First, create the subscription:
 - Select **Auto-Renewable Subscription**
 
 #### Subscription Information
-- **Reference Name**: `SE7EN Bi-Weekly Subscription`
-- **Product ID**: `se7en_biweekly_subscription` (exact match required)
+- **Reference Name**: `VirtuPet Bi-Weekly Subscription`
+- **Product ID**: `virtupet_biweekly_subscription` (exact match required)
 - **Subscription Group**: Create a new group or use existing
 - **Subscription Duration**: 14 days (2 weeks)
 - **Cleared for Sale**: ✅ Yes
@@ -64,8 +64,8 @@ First, create the subscription:
 - **Eligibility**: All Users
 
 #### Localization
-- **Display Name**: `SE7EN Subscription`
-- **Description**: `Unlimited access to SE7EN. 7-day free trial, then $6.99 every 14 days. Cancel anytime.`
+- **Display Name**: `VirtuPet Subscription`
+- **Description**: `Unlimited access to VirtuPet. 7-day free trial, then $6.99 every 14 days. Cancel anytime.`
 
 ### 1.4 Create Credit Products
 
@@ -76,7 +76,7 @@ For each credit product (1-7 credits), follow these steps:
 
 #### Product Information
 - **Reference Name**: `1 Credit` (or `2 Credits`, `3 Credits`, etc.)
-- **Product ID**: `se7en_one_credit` (use the exact IDs listed above)
+- **Product ID**: `virtupet_one_credit` (use the exact IDs listed above)
 - **Cleared for Sale**: ✅ Yes
 
 #### Pricing
@@ -118,58 +118,58 @@ This allows you to test purchases without App Store Connect approval.
 2. For each product, add:
 
 #### Subscription Product
-- **Product ID**: `se7en_biweekly_subscription`
+- **Product ID**: `virtupet_biweekly_subscription`
 - **Type**: Auto-Renewable Subscription
 - **Duration**: 14 days
 - **Price**: $6.99 / £6.99
 - **Free Trial**: 7 days
-- **Display Name**: `SE7EN Subscription`
-- **Description**: `Unlimited access to SE7EN. 7-day free trial, then $6.99 every 14 days.`
+- **Display Name**: `VirtuPet Subscription`
+- **Description**: `Unlimited access to VirtuPet. 7-day free trial, then $6.99 every 14 days.`
 
 #### Product 1: One Credit
-- **Product ID**: `se7en_one_credit`
+- **Product ID**: `virtupet_one_credit`
 - **Type**: Consumable
 - **Price**: $0.99 / £0.99
 - **Display Name**: `1 Credit`
 - **Description**: `Purchase 1 credit to restore your balance`
 
 #### Product 2: Two Credits
-- **Product ID**: `se7en_two_credits`
+- **Product ID**: `virtupet_two_credits`
 - **Type**: Consumable
 - **Price**: $1.99 / £1.99
 - **Display Name**: `2 Credits`
 - **Description**: `Purchase 2 credits to restore your balance`
 
 #### Product 3: Three Credits
-- **Product ID**: `se7en_three_credits`
+- **Product ID**: `virtupet_three_credits`
 - **Type**: Consumable
 - **Price**: $2.99 / £2.99
 - **Display Name**: `3 Credits`
 - **Description**: `Purchase 3 credits to restore your balance`
 
 #### Product 4: Four Credits
-- **Product ID**: `se7en_four_credits`
+- **Product ID**: `virtupet_four_credits`
 - **Type**: Consumable
 - **Price**: $3.99 / £3.99
 - **Display Name**: `4 Credits`
 - **Description**: `Purchase 4 credits to restore your balance`
 
 #### Product 5: Five Credits
-- **Product ID**: `se7en_five_credits`
+- **Product ID**: `virtupet_five_credits`
 - **Type**: Consumable
 - **Price**: $4.99 / £4.99
 - **Display Name**: `5 Credits`
 - **Description**: `Purchase 5 credits to restore your balance`
 
 #### Product 6: Six Credits
-- **Product ID**: `se7en_six_credits`
+- **Product ID**: `virtupet_six_credits`
 - **Type**: Consumable
 - **Price**: $5.99 / £5.99
 - **Display Name**: `6 Credits`
 - **Description**: `Purchase 6 credits to restore your balance`
 
 #### Product 7: Seven Credits
-- **Product ID**: `se7en_seven_credits`
+- **Product ID**: `virtupet_seven_credits`
 - **Type**: Consumable
 - **Price**: $6.99 / £6.99
 - **Display Name**: `7 Credits`
@@ -245,7 +245,7 @@ Before submitting to App Store:
 - [ ] All 7 products created in App Store Connect
 - [ ] Products submitted for review (or will be with app)
 - [ ] Prices set correctly ($0.99, $1.99, etc.)
-- [ ] Product IDs match exactly: `se7en_one_credit`, `se7en_two_credits`, etc.
+- [ ] Product IDs match exactly: `virtupet_one_credit`, `virtupet_two_credits`, etc.
 - [ ] StoreKit Configuration file created for testing
 - [ ] Tested all purchase flows
 - [ ] Tested restore purchases
@@ -307,8 +307,8 @@ Your StoreKit implementation is in:
 Product IDs are defined in `StoreKitService.swift`:
 ```swift
 private enum ProductIDs {
-    static let oneCredit = "se7en_one_credit"
-    static let twoCredits = "se7en_two_credits"
+    static let oneCredit = "virtupet_one_credit"
+    static let twoCredits = "virtupet_two_credits"
     // ... etc
 }
 ```
@@ -326,7 +326,7 @@ private enum ProductIDs {
 ## Quick Start Checklist
 
 1. ✅ Create 1 auto-renewable subscription in App Store Connect
-   - Product ID: `se7en_biweekly_subscription`
+   - Product ID: `virtupet_biweekly_subscription`
    - Duration: 14 days
    - Price: $6.99 / £6.99
    - Free Trial: 7 days
