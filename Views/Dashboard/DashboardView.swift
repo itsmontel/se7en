@@ -554,13 +554,18 @@ struct DashboardView: View {
                     ScrollView {
                         VStack(spacing: 0) {
                             headerSection
+                                .id("headerSection")
+                            
                             petNameSection
                                 .padding(.bottom, 8)
                                 .tutorialHighlight("tutorial_pet_section")
                                 .id("petSection")
+                            
                             screenTimeSection
                                 .tutorialHighlight("tutorial_screen_time")
+                                .tutorialHighlight("tutorial_pet_health")
                                 .id("screenTimeSection")
+                            
                             topDistractionsSection
                                 .tutorialHighlight("tutorial_top_distractions")
                                 .id("topDistractionsSection")
@@ -576,13 +581,24 @@ struct DashboardView: View {
                             }
                         }
                     }
-                    // Also scroll when tutorial step changes to top distractions
+                    // Handle scrolling when tutorial step changes
                     .onChange(of: tutorialManager.currentStep) { step in
                         if tutorialManager.isActive {
                             switch step {
                             case .petHero:
+                                // Scroll to top to show pet area
                                 withAnimation(.easeInOut(duration: 0.5)) {
-                                    scrollProxy.scrollTo("petSection", anchor: .top)
+                                    scrollProxy.scrollTo("headerSection", anchor: .top)
+                                }
+                            case .petHealth:
+                                // Scroll to show health bar area (below pet)
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    scrollProxy.scrollTo("screenTimeSection", anchor: .top)
+                                }
+                            case .dailyStreak:
+                                // Scroll to top to show streak badge
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    scrollProxy.scrollTo("headerSection", anchor: .top)
                                 }
                             case .screenTimeDisplay:
                                 withAnimation(.easeInOut(duration: 0.5)) {
@@ -707,13 +723,19 @@ struct DashboardView: View {
                 Text(pet.name)
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundColor(.textPrimary)
+            } else {
+                // Empty view to maintain layout
+                Spacer()
+                    .frame(maxWidth: 0)
             }
             
-            Spacer()
+            Spacer(minLength: 0)
             
-            // Streak icon on the right (where credits used to be)
+            // Streak icon on the right (always right-justified)
             CompactStreakView(streak: appState.currentStreak)
+                .tutorialHighlight("tutorial_daily_streak")
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
         .padding(.bottom, 0)
     }
@@ -1777,63 +1799,236 @@ struct TimeLimitCard: View {
     }
 }
 
-// MARK: - Compact Streak View for Toolbar
+// MARK: - Compact Streak View for Toolbar (with Animation)
 
 struct CompactStreakView: View {
     let streak: Int
     @Environment(\.colorScheme) var colorScheme
     
+    // Animation states
+    @State private var displayedStreak: Int = 0
+    @State private var showPlusOne = false
+    @State private var plusOneOffset: CGFloat = 0
+    @State private var plusOneOpacity: Double = 0
+    @State private var flameScale: CGFloat = 1.0
+    @State private var flameBounce: CGFloat = 0
+    @State private var glowOpacity: Double = 0
+    @State private var showParticles = false
+    @State private var particleOffsets: [CGSize] = Array(repeating: .zero, count: 6)
+    @State private var particleOpacities: [Double] = Array(repeating: 0, count: 6)
+    @State private var badgeScale: CGFloat = 1.0
+    
     var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                Circle()
+        ZStack {
+            // Glow effect behind the badge
+            RoundedRectangle(cornerRadius: 14)
+                .fill(streakColor.opacity(0.3))
+                .blur(radius: 12)
+                .scaleEffect(1.1)
+                .opacity(glowOpacity)
+            
+            // Main content
+            HStack(spacing: 10) {
+                ZStack {
+                    // Animated glow ring
+                    Circle()
+                        .stroke(streakColor.opacity(glowOpacity * 0.5), lineWidth: 2)
+                        .frame(width: 42, height: 42)
+                        .scaleEffect(1 + glowOpacity * 0.2)
+                    
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    streakColor.opacity(0.25),
+                                    streakColor.opacity(0.1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 36, height: 36)
+                    
+                    // Flame/icon with animation
+                    Image(systemName: streakIcon)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(streakColor)
+                        .scaleEffect(flameScale)
+                        .offset(y: flameBounce)
+                    
+                    // Particles
+                    if showParticles {
+                        ForEach(0..<6, id: \.self) { index in
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(streakColor)
+                                .offset(particleOffsets[index])
+                                .opacity(particleOpacities[index])
+                        }
+                    }
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    ZStack(alignment: .leading) {
+                        // Main streak number
+                        Text("\(displayedStreak)")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(.textPrimary)
+                            .contentTransition(.numericText())
+                        
+                        // +1 flying animation
+                        if showPlusOne {
+                            Text("+1")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(streakColor)
+                                .offset(x: 28, y: plusOneOffset)
+                                .opacity(plusOneOpacity)
+                        }
+                    }
+                    
+                    Text("day streak")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.textSecondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
                     .fill(
                         LinearGradient(
                             colors: [
-                                streakColor.opacity(0.2),
-                                streakColor.opacity(0.1)
+                                backgroundColor,
+                                backgroundColor.opacity(0.96)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 36, height: 36)
-                
-                Image(systemName: streakIcon)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(streakColor)
-            }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(streak)")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.textPrimary)
-                
-                Text("day streak")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.textSecondary)
+                    .shadow(color: streakColor.opacity(0.12 + glowOpacity * 0.2), radius: 6 + glowOpacity * 4, x: 0, y: 2)
+            )
+            .scaleEffect(badgeScale)
+        }
+        .onAppear {
+            displayedStreak = streak
+        }
+        .onChange(of: streak) { newStreak in
+            // Only animate if streak increased
+            if newStreak > displayedStreak {
+                triggerStreakUpAnimation(newStreak: newStreak)
+            } else {
+                displayedStreak = newStreak
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            backgroundColor,
-                            backgroundColor.opacity(0.96)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(color: streakColor.opacity(0.12), radius: 6, x: 0, y: 2)
-        )
+    }
+    
+    private func triggerStreakUpAnimation(newStreak: Int) {
+        // Haptic feedback
+        HapticFeedback.success.trigger()
+        
+        // Stage 1: Flame flies in with scale and bounce
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+            flameScale = 1.4
+        }
+        
+        // Stage 2: Badge impact bounce
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.4)) {
+                badgeScale = 1.08
+                flameBounce = -4
+            }
+        }
+        
+        // Stage 3: Show particles
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            showParticles = true
+            animateParticles()
+        }
+        
+        // Stage 4: +1 animation flies up
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            showPlusOne = true
+            plusOneOffset = 0
+            plusOneOpacity = 1.0
+            
+            withAnimation(.easeOut(duration: 0.6)) {
+                plusOneOffset = -25
+            }
+            
+            withAnimation(.easeOut(duration: 0.4).delay(0.3)) {
+                plusOneOpacity = 0
+            }
+        }
+        
+        // Stage 5: Glow pulse
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            withAnimation(.easeInOut(duration: 0.4)) {
+                glowOpacity = 0.8
+            }
+        }
+        
+        // Stage 6: Update the number with animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                displayedStreak = newStreak
+            }
+        }
+        
+        // Stage 7: Settle back
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                flameScale = 1.0
+                badgeScale = 1.0
+                flameBounce = 0
+            }
+        }
+        
+        // Stage 8: Fade out glow
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            withAnimation(.easeOut(duration: 0.5)) {
+                glowOpacity = 0
+            }
+        }
+        
+        // Stage 9: Cleanup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            showPlusOne = false
+            showParticles = false
+            plusOneOffset = 0
+        }
+    }
+    
+    private func animateParticles() {
+        // Animate particles flying outward in different directions
+        let angles: [Double] = [0, 60, 120, 180, 240, 300]
+        
+        for i in 0..<6 {
+            let angle = angles[i] * .pi / 180
+            let distance: CGFloat = CGFloat.random(in: 18...28)
+            let targetX = cos(angle) * Double(distance)
+            let targetY = sin(angle) * Double(distance)
+            
+            // Initial burst
+            withAnimation(.easeOut(duration: 0.4).delay(Double(i) * 0.03)) {
+                particleOffsets[i] = CGSize(width: targetX, height: targetY)
+                particleOpacities[i] = 1.0
+            }
+            
+            // Fade out
+            withAnimation(.easeIn(duration: 0.3).delay(0.3 + Double(i) * 0.02)) {
+                particleOpacities[i] = 0
+            }
+        }
+        
+        // Reset particles after animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            for i in 0..<6 {
+                particleOffsets[i] = .zero
+            }
+        }
     }
     
     private var backgroundColor: Color {
-        // Use appBackground in light mode to match page background, cardBackground in dark mode
         colorScheme == .light ? Color.appBackground : Color.cardBackground
     }
     

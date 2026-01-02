@@ -12,6 +12,8 @@ import SwiftUI
 enum TutorialStep: Int, CaseIterable {
     case welcome
     case petHero
+    case petHealth
+    case dailyStreak
     case screenTimeDisplay
     case topDistractions
     case tabLimits
@@ -24,7 +26,7 @@ enum TutorialStep: Int, CaseIterable {
     
     var tabIndex: Int {
         switch self {
-        case .welcome, .petHero, .screenTimeDisplay, .topDistractions:
+        case .welcome, .petHero, .petHealth, .dailyStreak, .screenTimeDisplay, .topDistractions:
             return 0 // Home (Dashboard)
         case .tabLimits, .focusMode, .puzzleUnlock:
             return 1 // Limits
@@ -43,6 +45,8 @@ enum TutorialStep: Int, CaseIterable {
         switch self {
         case .welcome: return "Welcome to VirtuPet"
         case .petHero: return "Meet Your Pet"
+        case .petHealth: return "Pet Health"
+        case .dailyStreak: return "Daily Streaks"
         case .screenTimeDisplay: return "Today's Screen Time"
         case .topDistractions: return "Top Distractions"
         case .tabLimits: return "Focus Mode"
@@ -60,7 +64,11 @@ enum TutorialStep: Int, CaseIterable {
         case .welcome:
             return "Take control of your screen time while caring for your virtual pet. Let's take a quick tour!"
         case .petHero:
-            return "This is your virtual pet! Their health reflects your daily screen time. Less screen time means a happier, healthier pet!"
+            return "This is your virtual companion! They'll be with you on your journey to healthier screen time habits."
+        case .petHealth:
+            return "Your pet's health (0-100%) is tied to your daily screen time. Under 2 hours = full health! Over 6+ hours and they start feeling unwell. Keep them happy! 💚"
+        case .dailyStreak:
+            return "Build streaks by keeping at least one app blocked each day. Longer streaks unlock achievements and keep your pet thriving! 🔥"
         case .screenTimeDisplay:
             return "See your total screen time for today updated in real-time. Watch your usage and keep your pet healthy!"
         case .topDistractions:
@@ -86,6 +94,8 @@ enum TutorialStep: Int, CaseIterable {
         switch self {
         case .welcome: return ""
         case .petHero: return "tutorial_pet_section"
+        case .petHealth: return "tutorial_pet_health"
+        case .dailyStreak: return "tutorial_daily_streak"
         case .screenTimeDisplay: return "tutorial_screen_time"
         case .topDistractions: return "tutorial_top_distractions"
         case .tabLimits: return "tutorial_tab_limits"
@@ -101,14 +111,19 @@ enum TutorialStep: Int, CaseIterable {
     var arrowDirection: ArrowDirection {
         switch self {
         case .welcome, .complete: return .none
-        // For elements that are ABOVE tooltip (tooltip appears below them)
-        // Arrow points UP from tooltip toward the element
+        // Pet section - tooltip appears BELOW the pet, arrow points UP
         case .petHero: return .up
+        // Pet health - same area
+        case .petHealth: return .up
+        // Daily streak - in header area, tooltip below, arrow up
+        case .dailyStreak: return .up
+        // Screen time and distractions - tooltip below element
         case .screenTimeDisplay: return .up
         case .topDistractions: return .up
+        // Focus mode elements
         case .focusMode: return .up
         case .puzzleUnlock: return .up
-        // For tab bar items (at BOTTOM of screen)
+        // Tab bar items (at BOTTOM of screen)
         // Tooltip appears ABOVE tab bar, arrow points DOWN toward tabs
         case .tabLimits, .tabStats, .tabAchievements, .tabSettings: return .down
         }
@@ -118,6 +133,8 @@ enum TutorialStep: Int, CaseIterable {
         switch self {
         case .welcome: return "sparkles"
         case .petHero: return "pawprint.fill"
+        case .petHealth: return "heart.fill"
+        case .dailyStreak: return "flame.fill"
         case .screenTimeDisplay: return "hourglass"
         case .topDistractions: return "chart.bar.fill"
         case .tabLimits: return "hand.raised.fill"
@@ -134,6 +151,8 @@ enum TutorialStep: Int, CaseIterable {
         switch self {
         case .welcome: return Color(red: 0.4, green: 0.8, blue: 0.6)
         case .petHero: return Color(red: 0.95, green: 0.6, blue: 0.4)
+        case .petHealth: return Color(red: 0.3, green: 0.85, blue: 0.5)
+        case .dailyStreak: return Color(red: 1.0, green: 0.5, blue: 0.2)
         case .screenTimeDisplay: return Color(red: 0.3, green: 0.7, blue: 0.9)
         case .topDistractions: return Color(red: 0.9, green: 0.5, blue: 0.3)
         case .tabLimits: return Color(red: 0.9, green: 0.3, blue: 0.4)
@@ -143,6 +162,20 @@ enum TutorialStep: Int, CaseIterable {
         case .tabAchievements: return Color(red: 0.95, green: 0.7, blue: 0.3)
         case .tabSettings: return Color(red: 0.5, green: 0.5, blue: 0.55)
         case .complete: return Color(red: 0.4, green: 0.8, blue: 0.6)
+        }
+    }
+    
+    // Custom vertical offset adjustment for each step
+    var tooltipYOffset: CGFloat {
+        switch self {
+        case .petHero: return 220  // Move down more so it doesn't cover the pet
+        case .petHealth: return 5  // Position higher, closer to the health bar
+        case .dailyStreak: return 20  // Position below the streak badge
+        case .screenTimeDisplay: return 30
+        case .topDistractions: return 25
+        case .focusMode: return 40
+        case .puzzleUnlock: return 30
+        default: return 0
         }
     }
 }
@@ -199,6 +232,30 @@ class TutorialManager: ObservableObject {
     
     private func handleStepNavigation() {
         switch currentStep {
+        case .petHero:
+            // Scroll to pet section (top)
+            scrollToSection = "header"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.scrollToSection = nil
+            }
+        case .petHealth:
+            // Scroll to health bar area
+            scrollToSection = "screenTime"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.scrollToSection = nil
+            }
+        case .dailyStreak:
+            // Scroll to top to show streak badge
+            scrollToSection = "header"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.scrollToSection = nil
+            }
+        case .screenTimeDisplay:
+            // Scroll to screen time section
+            scrollToSection = "screenTime"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.scrollToSection = nil
+            }
         case .topDistractions:
             // Scroll to top distractions section
             scrollToSection = "topDistractions"
@@ -243,9 +300,14 @@ struct TutorialHighlight: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .anchorPreference(key: TutorialHighlightKey.self, value: .bounds) { anchor in
-                [id: anchor]
-            }
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .anchorPreference(key: TutorialHighlightKey.self, value: .bounds) { anchor in
+                            [id: anchor]
+                        }
+                }
+            )
     }
 }
 
@@ -270,8 +332,14 @@ struct TutorialOverlay: View {
     @State private var sparkleOffset: [CGFloat] = [0, 0, 0, 0, 0, 0, 0, 0]
     
     // Steps that should show a circle highlight around the element
+    // Note: petHealth doesn't get circle because health bar is inside DeviceActivityReport extension
     private var shouldShowCircleHighlight: Bool {
-        [.screenTimeDisplay, .topDistractions, .puzzleUnlock].contains(tutorialManager.currentStep)
+        [.dailyStreak, .screenTimeDisplay, .topDistractions, .puzzleUnlock].contains(tutorialManager.currentStep)
+    }
+    
+    // Steps that should show a rounded rectangle highlight instead of circle
+    private var shouldShowRectHighlight: Bool {
+        [.screenTimeDisplay].contains(tutorialManager.currentStep)
     }
     
     var body: some View {
@@ -295,18 +363,33 @@ struct TutorialOverlay: View {
                     sparkleEntranceView(in: geo)
                 }
                 
-                // Circle highlight for certain elements
+                // Circle or rounded rect highlight for certain elements
                 if shouldShowCircleHighlight, let rect = highlightRect, tutorialManager.showTooltip {
-                    Circle()
-                        .stroke(tutorialManager.currentStep.iconColor, lineWidth: 3)
-                        .frame(width: rect.width + 20, height: rect.height + 20)
-                        .position(x: rect.midX, y: rect.midY)
-                    
-                    // Pulsing outer circle
-                    Circle()
-                        .stroke(tutorialManager.currentStep.iconColor.opacity(0.4), lineWidth: 2)
-                        .frame(width: rect.width + 30, height: rect.height + 30)
-                        .position(x: rect.midX, y: rect.midY)
+                    if shouldShowRectHighlight {
+                        // Rounded rectangle highlight for larger elements like screen time
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(tutorialManager.currentStep.iconColor, lineWidth: 3)
+                            .frame(width: rect.width + 24, height: rect.height + 20)
+                            .position(x: rect.midX, y: rect.midY)
+                        
+                        // Pulsing outer rect
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(tutorialManager.currentStep.iconColor.opacity(0.4), lineWidth: 2)
+                            .frame(width: rect.width + 34, height: rect.height + 30)
+                            .position(x: rect.midX, y: rect.midY)
+                    } else {
+                        // Circle highlight for smaller elements
+                        Circle()
+                            .stroke(tutorialManager.currentStep.iconColor, lineWidth: 3)
+                            .frame(width: max(rect.width, rect.height) + 20, height: max(rect.width, rect.height) + 20)
+                            .position(x: rect.midX, y: rect.midY)
+                        
+                        // Pulsing outer circle
+                        Circle()
+                            .stroke(tutorialManager.currentStep.iconColor.opacity(0.4), lineWidth: 2)
+                            .frame(width: max(rect.width, rect.height) + 30, height: max(rect.width, rect.height) + 30)
+                            .position(x: rect.midX, y: rect.midY)
+                    }
                 }
                 
                 // Tooltip with arrow
@@ -653,10 +736,10 @@ struct TutorialOverlay: View {
     
     private func calculateTooltipPosition(highlightRect: CGRect?, tooltipSize: CGSize, arrowDirection: ArrowDirection, geo: GeometryProxy, padding: CGFloat, step: TutorialStep) -> CGPoint {
         guard let highlight = highlightRect else {
-            // Center if no highlight
+            // Center if no highlight - position in middle-lower area of screen
             return CGPoint(
                 x: (geo.size.width - tooltipSize.width) / 2,
-                y: (geo.size.height - tooltipSize.height) / 2
+                y: geo.size.height * 0.55
             )
         }
         
@@ -665,26 +748,37 @@ struct TutorialOverlay: View {
         
         // Center horizontally relative to highlight
         x = highlight.midX - tooltipSize.width / 2
-        // Clamp to screen bounds
+        // Clamp to screen bounds with padding
         x = max(padding, min(x, geo.size.width - tooltipSize.width - padding))
         
         switch arrowDirection {
         case .up:
-            // Tooltip below highlight
-            if step == .topDistractions {
-                y = highlight.maxY + 20
-            } else {
-                y = highlight.maxY + 35
-            }
+            // Tooltip below highlight - use custom offset per step
+            let baseOffset: CGFloat = 20
+            y = highlight.maxY + baseOffset + step.tooltipYOffset
+            
         case .down:
-            // Tooltip above highlight
-            y = highlight.minY - tooltipSize.height - 35
+            // Tooltip above highlight (for tab bar items)
+            // Apply custom offset for special cases like Settings (negative offset moves up)
+            if step == .tabSettings {
+                // Position at top of screen for Settings
+                y = 120  // Just below progress bar
+            } else {
+                y = highlight.minY - tooltipSize.height - 25
+            }
+            
         default:
             y = geo.size.height / 2 - tooltipSize.height / 2
         }
         
-        // Clamp Y to screen
-        y = max(100, min(y, geo.size.height - tooltipSize.height - 120))
+        // Clamp Y to screen with safe area consideration
+        let minY: CGFloat = 110  // Below progress bar
+        let maxY: CGFloat = geo.size.height - tooltipSize.height - 100  // Above tab bar
+        
+        // Don't clamp for Settings (we want it at the top)
+        if step != .tabSettings {
+            y = max(minY, min(y, maxY))
+        }
         
         return CGPoint(x: x, y: y)
     }

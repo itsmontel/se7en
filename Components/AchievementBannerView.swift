@@ -51,27 +51,33 @@ struct AchievementBannerView: View {
             ZStack {
                 Circle()
                     .fill(achievementColor.opacity(0.15))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 50, height: 50)
                 
                 Image(systemName: achievement.icon)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(achievementColor)
             }
             
             // Achievement info
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("Achievement Unlocked!")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundColor(achievementColor)
                     .textCase(.uppercase)
                 
                 Text(achievement.title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.textPrimary)
                     .lineLimit(1)
+                
+                Text(achievement.description)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(.textSecondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             
-            Spacer()
+            Spacer(minLength: 8)
             
             // Arrow indicator
             Image(systemName: "chevron.right")
@@ -81,14 +87,14 @@ struct AchievementBannerView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 18)
                 .fill(Color.cardBackground)
-                .shadow(color: achievementColor.opacity(0.2), radius: 15, x: 0, y: 5)
-                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                .shadow(color: achievementColor.opacity(0.25), radius: 20, x: 0, y: 8)
+                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 4)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(achievementColor.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(achievementColor.opacity(0.3), lineWidth: 1.5)
         )
         .padding(.horizontal, 16)
         .padding(.top, 8)
