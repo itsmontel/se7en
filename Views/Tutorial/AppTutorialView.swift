@@ -520,40 +520,56 @@ struct TutorialOverlay: View {
                             endRadius: 80
                         )
                     )
-                    .frame(width: 140, height: 140)
+                    .frame(width: 100, height: 100)
                 
                 // Pet Animation
                 if let pet = appState.userPet {
                     PetAnimationView(
                         petType: pet.type,
                         healthState: .fullHealth,
-                        height: 100
+                        height: 60
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                 } else {
                     Image(systemName: "pawprint.fill")
-                        .font(.system(size: 48))
+                        .font(.system(size: 35))
                         .foregroundColor(Color.orange)
                 }
             }
             
             // Title
-            VStack(spacing: 8) {
+            VStack(spacing: 12) {
                 Text(step.title)
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundColor(.textPrimary)
                     .multilineTextAlignment(.center)
                 
                 if step == .welcome {
-                    Text("Screen Time Manager")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.blue)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(Color.blue.opacity(0.15))
-                        )
+                    // Screen Time Control badge with blue underlay (matching Step Tracker design)
+                    ZStack {
+                        // Blue underlay/shadow effect behind
+                        Capsule()
+                            .fill(Color(red: 0.75, green: 0.8, blue: 0.92).opacity(0.5))
+                            .offset(y: 2)
+                            .blur(radius: 2)
+                        
+                        // Main very light periwinkle background
+                        Capsule()
+                            .fill(Color(red: 0.85, green: 0.88, blue: 0.95))
+                        
+                        // Text in blue
+                        Text("Screen Time Control")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 0.28, green: 0.4, blue: 0.75))
+                    }
+                    .frame(width: 200, height: 40)
+                    
+                    // Subtitle text underneath
+                    Text("Care for your virtual pet, by caring for yourself")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundColor(.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 6)
                 }
             }
             

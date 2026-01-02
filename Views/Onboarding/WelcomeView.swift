@@ -26,12 +26,12 @@ struct WelcomeView: View {
                 
                 Spacer()
                 
-                // Pet animation - bigger size (no shadow/glow)
+                // Pet animation - smaller size to fit badge
                 VStack(spacing: 32) {
                     PetAnimationView(
                         petType: .dog,
                         healthState: .fullHealth,
-                        height: 240
+                        height: 180
                     )
                     .scaleEffect(petAnimation ? 1.0 : 0.8)
                     .opacity(petAnimation ? 1.0 : 0.0)
@@ -44,12 +44,32 @@ struct WelcomeView: View {
                             .textCase(.none)
                             .opacity(textAnimation ? 1.0 : 0.0)
                         
-                        Text("Your personal companion for digital wellness and healthier screen time habits")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.gray)
+                        // Screen Time Control badge with blue underlay (matching Step Tracker design)
+                        ZStack {
+                            // Blue underlay/shadow effect behind
+                            Capsule()
+                                .fill(Color(red: 0.75, green: 0.8, blue: 0.92).opacity(0.5))
+                                .offset(y: 2)
+                                .blur(radius: 2)
+                            
+                            // Main very light periwinkle background
+                            Capsule()
+                                .fill(Color(red: 0.85, green: 0.88, blue: 0.95))
+                            
+                            // Text in blue
+                            Text("Screen Time Control")
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .foregroundColor(Color(red: 0.28, green: 0.4, blue: 0.75))
+                        }
+                        .frame(width: 200, height: 40)
+                        .opacity(textAnimation ? 1.0 : 0.0)
+                        
+                        // Subtitle text underneath
+                        Text("Care for your virtual pet, by caring for yourself")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(.textSecondary)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
-                            .lineSpacing(4)
+                            .padding(.top, 6)
                             .opacity(textAnimation ? 1.0 : 0.0)
                     }
                 }
